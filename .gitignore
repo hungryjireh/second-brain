@@ -1,0 +1,4 @@
+node_modules
+.env
+.DS_Store
+second_brain_webapp_mockup.html

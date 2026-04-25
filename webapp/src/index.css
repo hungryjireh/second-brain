@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Dark-mode design tokens ─────────────────────────────── */
+:root {
+  --bg-base:      #0d0d0d;
+  --bg-surface:   #161616;
+  --bg-raised:    #1f1f1f;
+  --bg-hover:     #252525;
+  --border:       rgba(255,255,255,0.07);
+  --border-strong:rgba(255,255,255,0.12);
+  --text-primary: #f0ede8;
+  --text-secondary:#9a9690;
+  --text-muted:   #5a5753;
+  --brand:        #1D9E75;
+  --brand-dim:    rgba(29,158,117,0.15);
+  --brand-text:   #2ecf9a;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+/* Focus rings */
+*:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
