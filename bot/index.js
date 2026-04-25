@@ -25,7 +25,7 @@ function isAllowed(msg) {
 // ─── Shared processing pipeline ──────────────────────────────────────────────
 async function processText(rawText, chatId) {
   const { category, content, remind_at } = await classify(rawText);
-  const entry = insertEntry({ raw_text: rawText, category, content, remind_at });
+  const entry = await insertEntry({ raw_text: rawText, category, content, remind_at });
 
   let reply = `✅ Got it — saved as *${category}*.\n\n_${content}_`;
 

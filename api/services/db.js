@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
@@ -9,15 +9,14 @@ const DB_PATH = join(__dirname, '../../data/second_brain.db');
 // Ensure data directory exists
 mkdirSync(join(__dirname, '../../data'), { recursive: true });
 
-const db = new Database(DB_PATH);
+// Create libSQL client pointing at a local SQLite file
+export const db = createClient({ url: `file:${DB_PATH}` });
 
-// Enable WAL mode for better concurrent read performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-// Create tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS entries (
+// Initialize DB (PRAGMAs + table)
+await db.batch([
+  'PRAGMA journal_mode = WAL;',
+  'PRAGMA foreign_keys = ON;',
+  `CREATE TABLE IF NOT EXISTS entries (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     raw_text    TEXT    NOT NULL,
     category    TEXT    NOT NULL CHECK(category IN ('reminder','todo','thought','note')),
@@ -25,49 +24,54 @@ db.exec(`
     remind_at   INTEGER,
     reminded    INTEGER NOT NULL DEFAULT 0,
     created_at  INTEGER NOT NULL DEFAULT (unixepoch())
-  );
-`);
+  );`
+], 'write');
 
-console.log('[db] SQLite ready at', DB_PATH);
+console.log('[db] libSQL ready at', DB_PATH);
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers (async) ─────────────────────────────────────────────────────────
 
-export function insertEntry({ raw_text, category, content, remind_at }) {
-  const stmt = db.prepare(`
-    INSERT INTO entries (raw_text, category, content, remind_at)
-    VALUES (@raw_text, @category, @content, @remind_at)
-  `);
-  const info = stmt.run({ raw_text, category, content, remind_at: remind_at ?? null });
-  return getEntry(info.lastInsertRowid);
+export async function insertEntry({ raw_text, category, content, remind_at }) {
+  const args = [raw_text, category, content, remind_at ?? null];
+  const res = await db.execute({
+    sql: `INSERT INTO entries (raw_text, category, content, remind_at)
+          VALUES (?, ?, ?, ?) RETURNING *`,
+    args,
+  });
+  return res.rows?.[0] ?? null;
 }
 
-export function getEntry(id) {
-  return db.prepare('SELECT * FROM entries WHERE id = ?').get(id);
+export async function getEntry(id) {
+  const res = await db.execute({ sql: 'SELECT * FROM entries WHERE id = ?', args: [id] });
+  return res.rows?.[0] ?? null;
 }
 
-export function getAllEntries() {
-  return db.prepare('SELECT * FROM entries ORDER BY created_at DESC').all();
+export async function getAllEntries() {
+  const res = await db.execute({ sql: 'SELECT * FROM entries ORDER BY created_at DESC' });
+  return res.rows ?? [];
 }
 
-export function getEntriesByCategory(category) {
-  return db.prepare('SELECT * FROM entries WHERE category = ? ORDER BY created_at DESC').all(category);
+export async function getEntriesByCategory(category) {
+  const res = await db.execute({ sql: 'SELECT * FROM entries WHERE category = ? ORDER BY created_at DESC', args: [category] });
+  return res.rows ?? [];
 }
 
-export function getDueReminders() {
+export async function getDueReminders() {
   const now = Math.floor(Date.now() / 1000);
-  return db.prepare(`
-    SELECT * FROM entries
-    WHERE remind_at <= ? AND reminded = 0 AND category = 'reminder'
-  `).all(now);
+  const res = await db.execute({
+    sql: `SELECT * FROM entries WHERE remind_at <= ? AND reminded = 0 AND category = 'reminder'`,
+    args: [now],
+  });
+  return res.rows ?? [];
 }
 
-export function markReminded(id) {
-  db.prepare('UPDATE entries SET reminded = 1 WHERE id = ?').run(id);
+export async function markReminded(id) {
+  await db.execute({ sql: 'UPDATE entries SET reminded = 1 WHERE id = ?', args: [id] });
 }
 
-export function deleteEntry(id) {
-  const info = db.prepare('DELETE FROM entries WHERE id = ?').run(id);
-  return info.changes > 0;
+export async function deleteEntry(id) {
+  const res = await db.execute({ sql: 'DELETE FROM entries WHERE id = ? RETURNING id', args: [id] });
+  return (res.rows && res.rows.length > 0) || false;
 }
 
 export default db;

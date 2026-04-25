@@ -6,9 +6,9 @@ const router = Router();
 
 // GET /entries          – all entries
 // GET /entries?category=reminder  – filtered
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { category } = req.query;
-  const entries = category ? getEntriesByCategory(category) : getAllEntries();
+  const entries = category ? await getEntriesByCategory(category) : await getAllEntries();
   res.json(entries);
 });
 
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
 
   try {
     const { category, content, remind_at } = await classify(text.trim());
-    const entry = insertEntry({ raw_text: text.trim(), category, content, remind_at });
+    const entry = await insertEntry({ raw_text: text.trim(), category, content, remind_at });
     res.status(201).json(entry);
   } catch (err) {
     console.error('[POST /entries]', err.message);
@@ -28,11 +28,11 @@ router.post('/', async (req, res) => {
 });
 
 // DELETE /entries/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' });
 
-  const deleted = deleteEntry(id);
+  const deleted = await deleteEntry(id);
   if (!deleted) return res.status(404).json({ error: 'not found' });
   res.json({ deleted: true });
 });

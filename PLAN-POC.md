@@ -16,7 +16,7 @@
 | UUID primary keys | **Simplified** — SQLite auto-increment integers |
 | `source` column (voice/text) | **Optional** — keep if trivial, skip if not |
 
-Everything else is identical to the full plan: Whisper transcription, Claude classification, SQLite storage, node-cron reminders, and the React dashboard.
+Everything else is identical to the full plan: Groq Whisper transcription, Groq LLM classification, SQLite storage, node-cron reminders, and the React dashboard.
 
 ---
 
@@ -32,8 +32,8 @@ Telegram Bot  ◄─────────────────────
       ▼                                             │
 Backend (Node.js / Express)                         │
       │                                             │
-      ├──► OpenAI Whisper        (voice → text)     │
-      ├──► Claude API            (classify + parse) │
+      ├──► Groq Whisper          (voice → text)     │
+      ├──► Groq LLM              (classify + parse) │
       ├──► SQLite DB             (store entry)      │
       └──► node-cron             (1-min DB poll) ───┘
                 │
@@ -49,10 +49,10 @@ Backend (Node.js / Express)                         │
 | Layer | Technology |
 |---|---|
 | Telegram bot | `node-telegram-bot-api` |
-| Voice transcription | OpenAI Whisper API (`whisper-1`) |
-| AI classification | Anthropic Claude API |
+| Voice transcription | Groq Whisper API (`whisper-large-v3-turbo`) |
+| AI classification | Groq LLM API (`openai/gpt-oss-120b`) |
 | Backend | Node.js + Express |
-| Database | SQLite via `better-sqlite3` |
+| Database | SQLite via `@libsql/client` (libSQL) |
 | Scheduler | `node-cron` (1-min DB poll) |
 | Web frontend | React + Tailwind CSS (Vite) |
 | Auth | **None** — localhost only |
@@ -83,7 +83,7 @@ Single table. No `magic_links` table.
 second-brain-poc/
 ├── bot/
 │   ├── index.js          # Bot entry point + message handlers
-│   ├── whisper.js        # OpenAI Whisper transcription
+│   ├── whisper.js        # Groq Whisper transcription
 │   └── notify.js         # Send Telegram messages back to user
 │
 ├── api/
@@ -91,7 +91,7 @@ second-brain-poc/
 │   ├── routes/
 │   │   └── entries.js    # GET /entries, DELETE /entries/:id
 │   └── services/
-│       ├── classify.js   # Claude classification + time extraction
+│       ├── classify.js   # Groq LLM classification + time extraction
 │       ├── cron.js       # node-cron: polls DB every minute
 │       └── db.js         # SQLite connection + helpers
 │
@@ -120,18 +120,15 @@ Compared to the full plan: no `auth.js` route, no `middleware/` folder, no `Logi
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=       # Your personal chat ID — hardcoded trust boundary
 
-# OpenAI (Whisper)
-OPENAI_API_KEY=
-
-# Anthropic (Claude)
-ANTHROPIC_API_KEY=
+# Groq (Whisper transcription + LLM classification)
+GROQ_API_KEY=
 
 # App
 PORT=3000
 VITE_API_URL=http://localhost:3000
 ```
 
-Six variables total. No JWT secret, no Resend key, no SMTP config.
+Five variables total. One `GROQ_API_KEY` covers both transcription and classification. No JWT secret, no Resend key, no SMTP config.
 
 ---
 
@@ -141,8 +138,8 @@ Six variables total. No JWT secret, no Resend key, no SMTP config.
 
 1. You send a voice note to the Telegram bot
 2. Bot downloads the OGG audio file from Telegram
-3. `whisper.js` sends it to OpenAI Whisper → returns plain text
-4. `classify.js` sends the text to Claude → returns `{ category, content, remind_at }`
+3. `whisper.js` sends it to Groq Whisper (`whisper-large-v3-turbo`) → returns plain text
+4. `classify.js` sends the text to Groq (`openai/gpt-oss-120b`) → returns `{ category, content, remind_at }`
 5. Entry is saved to SQLite
 6. If `remind_at` is set, `cron.js` will pick it up automatically — nothing else to do
 7. Bot replies: *"Got it — I'll remind you to buy tomatoes at 8pm tonight."*
@@ -174,7 +171,7 @@ if (msg.chat.id.toString() !== process.env.TELEGRAM_CHAT_ID) return;
 
 ---
 
-## Claude Classification Prompt
+## Groq Classification Prompt
 
 ```
 You are a personal assistant parsing a voice/text note.
@@ -204,8 +201,8 @@ Note: "{{RAW_TEXT}}"
 ### Phase 1 — Core pipeline (day 1–2)
 - [ ] Scaffold `package.json`, `.env`, `db.js` (create `entries` table)
 - [ ] Telegram bot receives text messages + replies
-- [ ] Whisper transcription for voice messages
-- [ ] Claude classifies entry + saves to SQLite
+- [ ] Whisper transcription for voice messages (Groq `whisper-large-v3-turbo`)
+- [ ] Groq LLM classifies entry + saves to SQLite (`openai/gpt-oss-120b`)
 - [ ] Bot confirms back to user
 
 ### Phase 2 — Reminders (day 2–3)

@@ -99,7 +99,7 @@ second-brain-poc/
 │   └── services/
 │       ├── classify.js# Claude classification
 │       ├── cron.js    # node-cron: polls every minute for due reminders
-│       └── db.js      # SQLite via better-sqlite3
+│       └── db.js      # SQLite via libSQL (`@libsql/client`)
 │
 ├── webapp/
 │   ├── src/

@@ -41,7 +41,7 @@ Backend API (Node.js / Express)                     │
 | Voice transcription | OpenAI Whisper API (`whisper-1`) |
 | AI classification | Anthropic Claude API |
 | Backend | Node.js + Express |
-| Database | SQLite via `better-sqlite3` |
+| Database | SQLite via `@libsql/client` |
 | Scheduler | `node-cron` (1-min DB poll, no Redis) |
 | Web frontend | React + Tailwind CSS (Vite) |
 | Auth | Magic-link via email (Resend + JWT) |
@@ -233,6 +233,6 @@ Note: "{{RAW_TEXT}}"
 ## Deployment Notes
 
 - The **bot**, **API**, and **cron scheduler** all run in the same Node.js process — just `require` `cron.js` from `api/index.js`. No separate worker process needed.
-- SQLite works fine for a single-user personal tool. No connection pooling needed — `better-sqlite3` is synchronous.
+-- SQLite works fine for a single-user personal tool. No connection pooling needed — uses libSQL via `@libsql/client` (async client).
 - No Redis dependency — the entire backend is a single deployable service with zero infrastructure add-ons.
 - The webapp is a static build deployed to Vercel; it just needs the `VITE_API_URL` env var pointing at the backend.

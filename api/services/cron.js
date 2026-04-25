@@ -7,15 +7,15 @@ import { sendMessage } from '../../bot/notify.js';
  */
 export function startCron() {
   cron.schedule('* * * * *', async () => {
-    const due = getDueReminders();
-    if (due.length === 0) return;
+    const due = await getDueReminders();
+    if (!due || due.length === 0) return;
 
     console.log(`[cron] ${due.length} reminder(s) due`);
 
     for (const entry of due) {
       try {
         await sendMessage(`⏰ Reminder: ${entry.content}`);
-        markReminded(entry.id);
+        await markReminded(entry.id);
         console.log(`[cron] Fired reminder #${entry.id}: ${entry.content}`);
       } catch (err) {
         console.error(`[cron] Failed to send reminder #${entry.id}:`, err.message);
