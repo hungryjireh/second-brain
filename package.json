@@ -4,13 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cd webapp && npm run dev",
-    "dev:vercel": "node scripts/dev.js",
+    "start": "vercel dev",
     "setup": "npm install && cd webapp && npm install",
     "migrate": "node lib/db.js",
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
-    "start:api": "node -r dotenv/config scripts/local-api.js"
+    "start:api": "node scripts/local-api.js"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
