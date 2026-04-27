@@ -4,23 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:bot\" \"npm run dev:web\"",
-    "dev:api": "node --watch api/index.js",
-    "dev:bot": "node --watch bot/index.js",
-    "dev:web": "cd webapp && npm run dev",
+    "dev": "cd webapp && npm run dev",
+    "dev:vercel": "node scripts/dev.js",
     "setup": "npm install && cd webapp && npm install",
-    "migrate": "node api/services/db.js"
+    "migrate": "node lib/db.js",
+    "webhook:set": "node scripts/set-webhook.js",
+    "webhook:del": "node scripts/del-webhook.js",
+    "start:api": "node -r dotenv/config scripts/local-api.js"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.18.3",
+    "dotenv": "^17.4.2",
     "groq-sdk": "^0.9.1",
-    "node-cron": "^3.0.3",
-    "node-telegram-bot-api": "^0.66.0"
+    "express": "^4.18.2"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+  "engines": {
+    "node": "20.x"
   }
 }

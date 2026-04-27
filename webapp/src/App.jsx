@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar.jsx';
 import StatsBar from './components/StatsBar.jsx';
 import EntryCard from './components/EntryCard.jsx';
 
-const API = import.meta.env.VITE_API_URL ?? '';
+const API = import.meta.env.VITE_API_URL || '/api';
 
 function groupByDate(entries) {
   const groups = {};
@@ -230,7 +230,7 @@ export default function App() {
                 color: '#f87171',
               }}
             >
-              ⚠ Could not reach API: {error}. Is the backend running on port 3000?
+              ⚠ Could not reach API: {error}
             </div>
           )}
 

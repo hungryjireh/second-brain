@@ -55,7 +55,7 @@ export default function EntryCard({ entry, onDelete }) {
     }
     setDeleting(true);
     try {
-      await fetch(`/entries/${entry.id}`, { method: 'DELETE' });
+      await fetch(`/api/entries?id=${entry.id}`, { method: 'DELETE' });
       onDelete(entry.id);
     } catch {
       setDeleting(false);
