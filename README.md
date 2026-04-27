@@ -27,6 +27,30 @@ Browser
       │
       ▼
 React SPA  ──► /api/entries  ──► Turso DB
+
+---
+
+## Local development architecture
+
+When developing locally there are three common flows:
+
+- Frontend-only (Vite proxy):
+
+      Browser ──► Vite dev server (webapp) ──► `/api` proxy ──► Local backend (http://localhost:3000) ──► lib/db.js ──► Turso
+
+      - Start the frontend and rely on Vite's proxy to forward `/api` requests to your backend. Set `VITE_API_URL` to point at your backend when running `npm run dev` from `webapp` if needed.
+
+- Local API runner (lightweight):
+
+      Browser ──► Vite dev server ──► `/api` proxy ──► `npm run start:api` (scripts/local-api.js) ──► `api/*` handlers ──► lib/db.js ──► Turso
+
+      - Run the local API loader with `npm run start:api` (it preloads dotenv). Use `cp .env.example .env.local` and fill credentials so the API can connect to Turso and Groq.
+
+- Full Vercel simulator (`vercel dev`):
+
+      Browser ──► `vercel dev` (serves webapp + serverless `/api` routes) ──► `api/*` handlers ──► lib/db.js ──► Turso
+
+      - Recommended when you want parity with production serverless behavior. Start with `npm run dev:vercel` after copying `.env.example` to `.env.local`.
 ```
 
 ---
@@ -106,37 +130,56 @@ Your bot is now live. Test it by sending `/start` in Telegram.
 ---
 
 ## Local development
+There are three common local workflows:
 
-There are two common local workflows now:
-
-- **Frontend-only (Vite)** — runs the React dev server from the root (recommended when you have a backend running separately):
+- **Frontend-only (Vite)** — run the React dev server and point it at a running backend (uses Vite proxy when `VITE_API_URL` is set):
 
 ```bash
+# from project root (starts webapp dev server only)
 npm run dev
 # or inside the webapp folder:
 cd webapp
 npm run dev
 ```
 
-- **Full Vercel dev (API + cron + webapp)** — runs the guarded spawner which sets an env marker to avoid recursive `vercel dev` invocations and then starts `vercel dev`:
+- **Local API runner (lightweight)** — run the new Express-based loader which mounts the files in `api/` as HTTP routes. This is useful when you want a simple local backend without `vercel dev`.
+
+1. Copy and fill env values:
+
+```bash
+cp .env.example .env.local
+# edit .env.local and add TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, GROQ_API_KEY, etc.
+```
+
+2. Start the API server (dotenv is preloaded automatically):
+
+```bash
+npm install           # if you haven't installed deps since this change
+npm run start:api
+```
+
+3. In another terminal, start the frontend (Vite). Vite will proxy `/api` to `http://localhost:3000` by default:
+
+```bash
+npm run dev
+```
+
+- **Full Vercel simulator (`vercel dev`)** — runs the webapp and serverless functions with behavior close to production. Recommended for parity with Vercel serverless runtime:
 
 ```bash
 cp .env.example .env.local   # fill in values
 npm run dev:vercel
 ```
 
-`npm run dev` now starts only the Vite dev server. Use `npm run dev:vercel` when you want the Vercel function simulator (API + cron) together with the webapp.
-
-Note: Telegram webhooks cannot reach localhost directly. For local webhook testing use polling or a tunnel (for example ngrok).
-
-If you prefer to run the frontend while pointing at a backend on port 3000, set `VITE_API_URL` before starting Vite:
+Notes:
+- `start:api` preloads dotenv (`node -r dotenv/config scripts/local-api.js`) so `.env.local` in the project root is picked up automatically.
+- If you run the frontend separately and your backend listens on a different port, set `VITE_API_URL` when starting Vite, for example:
 
 ```bash
 cd webapp
 VITE_API_URL=http://localhost:3000 npm run dev
 ```
-
-Note: the Vite dev server is configured to proxy `/api` to the backend during local development (see `webapp/vite.config.js`). If you run the frontend separately with `npm run dev`, either set `VITE_API_URL` to your backend URL or ensure your backend is available on `http://localhost:3000` so API requests return JSON instead of the frontend HTML.
+- Telegram webhooks cannot reach localhost directly; use polling or a tunnel (ngrok) for webhook testing.
 
 ---
 
@@ -156,6 +199,8 @@ second-brain-poc/
 │   └── notify.js             # Telegram sendMessage wrapper
 │
 ├── scripts/
+│   ├── dev.js                # guarded `vercel dev` spawner (npm run dev:vercel)
+│   ├── local-api.js          # Express-based local API loader (npm run start:api)
 │   ├── set-webhook.js        # npm run webhook:set
 │   └── del-webhook.js        # npm run webhook:del
 │
@@ -168,7 +213,8 @@ second-brain-poc/
 │           └── StatsBar.jsx
 │
 ├── vercel.json               # Build, routing, cron config
-├── .env.example
+├── .env.example              # example env vars
+├── .env.local                # local env file (gitignored) used by `vercel dev` and `start:api`
 └── package.json
 ```
 
