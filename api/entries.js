@@ -7,6 +7,7 @@ import {
   getUserTimezone,
 } from '../lib/db.js';
 import { classify } from '../lib/classify.js';
+import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');
@@ -23,13 +24,25 @@ export default async function handler(req, res) {
   // OPTIONS pre-flight (CORS headers set globally in vercel.json)
   if (req.method === 'OPTIONS') return res.status(204).end();
 
+  let authUser;
+  const token = getBearerToken(req);
+  if (!token) return json(res, 401, { error: 'missing bearer token' });
+
+  try {
+    authUser = await verifyAuthToken(token);
+  } catch (err) {
+    return json(res, 401, { error: err.message || 'unauthorized' });
+  }
+  const userId = resolveAuthUserId(authUser);
+  if (!userId) return json(res, 401, { error: 'invalid auth token payload: expected UUID user id' });
+
   // ── GET /api/entries[?category=X] ──────────────────────────────────────────
   if (req.method === 'GET') {
     try {
       const { category } = req.query;
       const entries = category
-        ? await getEntriesByCategory(category)
-        : await getAllEntries();
+        ? await getEntriesByCategory(userId, category, token)
+        : await getAllEntries(userId, token);
       return json(res, 200, entries);
     } catch (err) {
       console.error('[GET /api/entries]', err);
@@ -47,14 +60,16 @@ export default async function handler(req, res) {
     }
 
     try {
-      const timezone = await getUserTimezone();
+      const timezone = await getUserTimezone(userId);
       const { category, content, remind_at } = await classify(text.trim(), { timezone });
       const entry = await insertEntry({
+        userId,
         raw_text: text.trim(),
         category,
         content,
         remind_at,
         priority: parsedPriority,
+        authToken: token,
       });
       return json(res, 201, entry);
     } catch (err) {
@@ -69,7 +84,7 @@ export default async function handler(req, res) {
     if (isNaN(id)) return json(res, 400, { error: 'invalid id' });
 
     try {
-      const deleted = await deleteEntry(id);
+      const deleted = await deleteEntry(userId, id, token);
       if (!deleted) return json(res, 404, { error: 'not found' });
       return json(res, 200, { deleted: true });
     } catch (err) {
@@ -99,12 +114,17 @@ export default async function handler(req, res) {
     }
 
     try {
-      const entry = await updateEntry(id, {
-        category,
-        content: content.trim(),
-        remind_at: remind_at ?? null,
-        priority: parsedPriority,
-      });
+      const entry = await updateEntry(
+        userId,
+        id,
+        {
+          category,
+          content: content.trim(),
+          remind_at: remind_at ?? null,
+          priority: parsedPriority,
+        },
+        token
+      );
       if (!entry) return json(res, 404, { error: 'not found' });
       return json(res, 200, entry);
     } catch (err) {

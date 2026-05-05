@@ -1,4 +1,5 @@
 import { getEntry } from '../lib/db.js';
+import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
 
 function escapeIcsText(text) {
   return String(text ?? '')
@@ -53,6 +54,17 @@ function buildReminderIcs(entry) {
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
+  const token = getBearerToken(req);
+  if (!token) return res.status(401).json({ error: 'missing bearer token' });
+
+  let authUser;
+  try {
+    authUser = await verifyAuthToken(token);
+  } catch (err) {
+    return res.status(401).json({ error: err.message || 'unauthorized' });
+  }
+  const userId = resolveAuthUserId(authUser);
+  if (!userId) return res.status(401).json({ error: 'invalid auth token payload: expected UUID user id' });
 
   const id = parseInt(req.query.id, 10);
   if (Number.isNaN(id)) {
@@ -60,7 +72,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const entry = await getEntry(id);
+    const entry = await getEntry(userId, id);
     if (!entry) return res.status(404).json({ error: 'not found' });
     if (entry.category !== 'reminder' || !entry.remind_at) {
       return res.status(400).json({ error: 'entry is not a reminder with schedule' });

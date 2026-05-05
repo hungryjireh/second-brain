@@ -1,6 +1,6 @@
 # Second Brain — Vercel Deploy
 
-> Voice/text → Groq classify → Turso store → remind via Telegram → React dashboard.
+> Voice/text → Groq classify → Supabase store → remind via Telegram → React dashboard.
 
 Everything runs on Vercel: API routes as serverless functions, the bot as a webhook endpoint, and reminders via Vercel Cron. No separate server needed.
 
@@ -16,17 +16,17 @@ Telegram  ──── POST ────►  /api/bot          (serverless funct
                                 │
                                 ├──► Groq Whisper   (voice → text)
                                 ├──► Groq LLaMA     (classify + parse)
-                                └──► Turso DB       (store entry)
+                                └──► Supabase DB       (store entry)
 
 Vercel Cron (every minute)
       │
       ▼
-/api/cron  ──► Turso DB (poll due reminders) ──► Telegram (send)
+/api/cron  ──► Supabase DB (poll due reminders) ──► Telegram (send)
 
 Browser
       │
       ▼
-React SPA  ──► /api/entries  ──► Turso DB
+React SPA  ──► /api/entries  ──► Supabase DB
 
 ---
 
@@ -36,19 +36,19 @@ When developing locally there are three common flows:
 
 - Frontend-only (Vite proxy):
 
-      Browser ──► Vite dev server (webapp) ──► `/api` proxy ──► Local backend (http://localhost:3000) ──► lib/db.js ──► Turso
+      Browser ──► Vite dev server (webapp) ──► `/api` proxy ──► Local backend (http://localhost:3000) ──► lib/db.js ──► Supabase
 
       - Start the frontend and rely on Vite's proxy to forward `/api` requests to your backend. Set `VITE_API_URL` to point at your backend when running `npm run dev` from `webapp` if needed.
 
 - Local API runner (lightweight):
 
-      Browser ──► Vite dev server ──► `/api` proxy ──► `npm run start:api` (scripts/local-api.js) ──► `api/*` handlers ──► lib/db.js ──► Turso
+      Browser ──► Vite dev server ──► `/api` proxy ──► `npm run start:api` (scripts/local-api.js) ──► `api/*` handlers ──► lib/db.js ──► Supabase
 
-      - Run the local API loader with `npm run start:api` (it preloads dotenv). Use `cp .env.example .env.local` and fill credentials so the API can connect to Turso and Groq.
+      - Run the local API loader with `npm run start:api` (it preloads dotenv). Use `cp .env.example .env.local` and fill credentials so the API can connect to Supabase and Groq.
 
 - Full Vercel simulator (`vercel dev`):
 
-      Browser ──► `vercel dev` (serves webapp + serverless `/api` routes) ──► `api/*` handlers ──► lib/db.js ──► Turso
+      Browser ──► `vercel dev` (serves webapp + serverless `/api` routes) ──► `api/*` handlers ──► lib/db.js ──► Supabase
 
       - Recommended when you want parity with production serverless behavior. Start with `npm run dev:vercel` after copying `.env.example` to `.env.local`.
 ```
@@ -63,7 +63,7 @@ When developing locally there are three common flows:
 | Bot transport | Telegram webhook → `/api/bot` |
 | Voice transcription | Groq Whisper (`whisper-large-v3-turbo`) |
 | AI classification | Groq LLaMA (`llama-3.3-70b-versatile`) |
-| Database | Turso (libSQL / SQLite-compatible) |
+| Database | Supabase (Postgres) |
 | Reminders | Vercel Cron → `/api/cron` (every minute) |
 | Frontend | React + Tailwind CSS (Vite) |
 
@@ -86,12 +86,38 @@ npm run setup        # installs root + webapp deps
 | **Telegram bot** | Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token |
 | **Telegram chat ID** | Message [@userinfobot](https://t.me/userinfobot) → copy the id |
 | **Groq API key** | [console.groq.com/keys](https://console.groq.com/keys) |
-| **Turso DB** | `brew install tursodatabase/tap/turso` → `turso auth login` → `turso db create second-brain` → `turso db show second-brain` (copy URL) → `turso db tokens create second-brain` (copy token) |
+| **Supabase project** | Create a project in the Supabase dashboard → Project Settings → API → copy `Project URL` and `service_role` key |
 
 ### 3. Run the DB migration
 
+First, create the required tables in Supabase SQL Editor:
+
+```sql
+create table if not exists public.entries (
+  id bigserial primary key,
+  user_id text not null,
+  raw_text text not null,
+  category text not null,
+  content text not null,
+  priority integer not null default 0,
+  remind_at bigint null,
+  reminded boolean not null default false,
+  created_at bigint not null default extract(epoch from now())::bigint
+);
+create index if not exists entries_user_id_created_at_idx on public.entries (user_id, created_at desc);
+
+create table if not exists public.settings (
+  user_id text not null,
+  key text not null,
+  primary key (user_id, key),
+  value text not null
+);
+```
+
+Then run:
+
 ```bash
-TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... node lib/db.js
+SUPABASE_URL=https://<project-ref>.supabase.co SUPABASE_PUBLISHABLE_KEY=<publishable-key> node lib/db.js
 ```
 
 Or add the vars to `.env.local` first, then just `npm run migrate`.
@@ -112,10 +138,13 @@ Go to **Project → Settings → Environment Variables** and add every key from 
 | `TELEGRAM_BOT_TOKEN` | BotFather |
 | `TELEGRAM_CHAT_ID` | @userinfobot |
 | `TELEGRAM_WEBHOOK_SECRET` | Any random string, e.g. `openssl rand -hex 32` |
+| `TELEGRAM_USER_ID` | The app user ID/email that should own bot-created entries |
 | `GROQ_API_KEY` | console.groq.com |
-| `TURSO_DATABASE_URL` | `turso db show second-brain` |
-| `TURSO_AUTH_TOKEN` | `turso db tokens create second-brain` |
-| `CRON_SECRET` | `openssl rand -hex 32` |
+| `SUPABASE_URL` | Supabase Project Settings → API → Project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API → `publishable` key |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `AUTH_USERNAME` | Login username for dashboard (set your own value) |
+| `AUTH_PASSWORD` | Login password for dashboard (set your own value) |
 
 ### 6. Register the Telegram webhook
 
@@ -148,7 +177,7 @@ npm run dev
 
 ```bash
 cp .env.example .env.local
-# edit .env.local and add TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, GROQ_API_KEY, etc.
+# edit .env.local and add SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, GROQ_API_KEY, AUTH_USERNAME, AUTH_PASSWORD, etc.
 ```
 
 2. Start the API server (dotenv is preloaded automatically):
@@ -193,7 +222,7 @@ second-brain-poc/
 │   └── cron.js               # GET /api/cron  — reminder poller
 │
 ├── lib/                      # Shared services (imported by api/*)
-│   ├── db.js                 # Turso/libSQL client + all query helpers
+│   ├── db.js                 # Supabase/Postgres client + all query helpers
 │   ├── classify.js           # Groq LLaMA classification
 │   ├── whisper.js            # Groq Whisper transcription
 │   └── notify.js             # Telegram sendMessage wrapper
@@ -234,7 +263,7 @@ second-brain-poc/
 
 ## Migrating to the full plan (auth)
 
-1. Add `magic_links` table to Turso
+1. Add `magic_links` table to Supabase
 2. Add `POST /api/auth/request` + `GET /api/auth/verify` (Resend + JWT)
 3. Add auth-check at the top of `api/entries.js`
 4. Add `Login.jsx` + React Router with a protected route

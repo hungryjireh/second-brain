@@ -63,7 +63,7 @@ function groupByDate(entries) {
   return groups;
 }
 
-export default function App() {
+export default function App({ authToken, onUnauthorized }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,10 +89,22 @@ export default function App() {
     month: 'short', day: 'numeric', year: 'numeric',
   });
 
+  const authedFetch = useCallback(async (url, options = {}) => {
+    const headers = new Headers(options.headers || {});
+    headers.set('Authorization', `Bearer ${authToken}`);
+
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      onUnauthorized?.();
+      throw new Error('Unauthorized');
+    }
+    return res;
+  }, [authToken, onUnauthorized]);
+
   // ── Fetch entries ────────────────────────────────────────────────────────────
   const fetchEntries = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/entries`);
+      const res = await authedFetch(`${API}/entries`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setEntries(sortEntriesByPriorityDesc(data));
@@ -101,7 +113,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authedFetch]);
 
   useEffect(() => {
     fetchEntries();
@@ -113,7 +125,7 @@ export default function App() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await fetch(`${API}/settings`);
+        const res = await authedFetch(`${API}/settings`);
         if (!res.ok) throw new Error(`API error ${res.status}`);
         const data = await res.json();
         if (data?.timezone) {
@@ -125,7 +137,7 @@ export default function App() {
       }
     }
     fetchSettings();
-  }, []);
+  }, [authedFetch]);
 
   // ── Counts ───────────────────────────────────────────────────────────────────
   const counts = useMemo(() => {
@@ -198,7 +210,7 @@ export default function App() {
     setSavingSettings(true);
     setTimezoneError(null);
     try {
-      const res = await fetch(`${API}/settings`, {
+      const res = await authedFetch(`${API}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timezone: timezoneToSave }),
@@ -236,7 +248,7 @@ export default function App() {
       const remindAt = editCategory === 'reminder'
         ? datetimeLocalToUnix(editRemindAt)
         : null;
-      const res = await fetch(`${API}/entries?id=${editingEntry.id}`, {
+      const res = await authedFetch(`${API}/entries?id=${editingEntry.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,7 +277,7 @@ export default function App() {
     if (!text || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/entries`, {
+      const res = await authedFetch(`${API}/entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -487,6 +499,7 @@ export default function App() {
                     onDelete={handleDelete}
                     onEdit={handleOpenEdit}
                     apiBase={API}
+                    authToken={authToken}
                     timezone={timezone}
                   />
                 ))}

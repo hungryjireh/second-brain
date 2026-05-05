@@ -1,4 +1,5 @@
 import { getUserTimezone, setSetting } from '../lib/db.js';
+import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');
@@ -18,9 +19,20 @@ function isValidTimezone(value) {
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
+  let authUser;
+  const token = getBearerToken(req);
+  if (!token) return json(res, 401, { error: 'missing bearer token' });
+  try {
+    authUser = await verifyAuthToken(token);
+  } catch (err) {
+    return json(res, 401, { error: err.message || 'unauthorized' });
+  }
+  const userId = resolveAuthUserId(authUser);
+  if (!userId) return json(res, 401, { error: 'invalid auth token payload: expected UUID user id' });
+
   if (req.method === 'GET') {
     try {
-      const timezone = await getUserTimezone();
+      const timezone = await getUserTimezone(userId);
       return json(res, 200, { timezone });
     } catch (err) {
       console.error('[GET /api/settings]', err);
@@ -35,7 +47,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      await setSetting('timezone', timezone);
+      await setSetting(userId, 'timezone', timezone);
       return json(res, 200, { timezone });
     } catch (err) {
       console.error('[PATCH /api/settings]', err);

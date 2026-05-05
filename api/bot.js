@@ -6,15 +6,26 @@ import { sendMessage }  from '../lib/notify.js';
 const TOKEN          = process.env.TELEGRAM_BOT_TOKEN;
 const ALLOWED_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const WEBHOOK_SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET; // optional extra guard
+const TELEGRAM_USER_ID = process.env.TELEGRAM_USER_ID || process.env.TELEGRAM_USER_EMAIL;
 
 function isAllowed(msg) {
   return msg?.chat?.id?.toString() === ALLOWED_CHAT_ID;
 }
 
 async function processText(rawText, chatId) {
-  const timezone = await getUserTimezone();
+  if (!TELEGRAM_USER_ID) {
+    throw new Error('Missing TELEGRAM_USER_ID or TELEGRAM_USER_EMAIL for bot-owned entries');
+  }
+
+  const timezone = await getUserTimezone(TELEGRAM_USER_ID);
   const { category, content, remind_at } = await classify(rawText, { timezone });
-  await insertEntry({ raw_text: rawText, category, content, remind_at });
+  await insertEntry({
+    userId: TELEGRAM_USER_ID,
+    raw_text: rawText,
+    category,
+    content,
+    remind_at,
+  });
 
   let reply = `✅ Got it — saved as *${category}*.\n\n_${content}_`;
 

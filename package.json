@@ -13,10 +13,9 @@
     "test": "npm --prefix webapp run test"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.3",
     "dotenv": "^17.4.2",
-    "groq-sdk": "^0.9.1",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "groq-sdk": "^0.9.1"
   },
   "engines": {
     "node": "20.x"

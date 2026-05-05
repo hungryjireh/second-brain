@@ -58,7 +58,7 @@ function formatRemindAt(unixTs, timezone) {
   return d.toLocaleDateString('en-SG', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
 }
 
-export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', timezone = 'Asia/Singapore' }) {
+export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', authToken, timezone = 'Asia/Singapore' }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
@@ -74,15 +74,34 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', t
     }
     setDeleting(true);
     try {
-      await fetch(`${apiBase}/entries?id=${entry.id}`, { method: 'DELETE' });
+      await fetch(`${apiBase}/entries?id=${entry.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       onDelete(entry.id);
     } catch {
       setDeleting(false);
     }
   }
 
-  function handleDownloadIcs() {
-    window.open(`${apiBase}/ics?id=${entry.id}`, '_blank', 'noopener,noreferrer');
+  async function handleDownloadIcs() {
+    try {
+      const res = await fetch(`${apiBase}/ics?id=${entry.id}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `second-brain-reminder-${entry.id}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(downloadUrl);
+    } catch {
+      // no-op
+    }
   }
 
   return (
