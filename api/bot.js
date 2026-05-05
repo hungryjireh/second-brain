@@ -26,7 +26,7 @@ async function processText(rawText, chatId) {
       hour:    '2-digit',
       minute:  '2-digit',
     });
-    reply += `\n\n⏰ I'll remind you on *${when}*.`;
+    reply += `\n\n⏰ Reminder time detected: *${when}*.\nDownload the .ics file from the web app to save this reminder to your device calendar.`;
   }
 
   await sendMessage(reply, chatId);

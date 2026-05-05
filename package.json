@@ -9,7 +9,8 @@
     "migrate": "node lib/db.js",
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
-    "start:api": "node scripts/local-api.js"
+    "start:api": "node scripts/local-api.js",
+    "test": "npm --prefix webapp run test"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

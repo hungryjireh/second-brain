@@ -269,7 +269,7 @@ export default function App() {
                   {group} · {items.length}
                 </p>
                 {items.map(entry => (
-                  <EntryCard key={entry.id} entry={entry} onDelete={handleDelete} />
+                  <EntryCard key={entry.id} entry={entry} onDelete={handleDelete} apiBase={API} />
                 ))}
               </section>
             );

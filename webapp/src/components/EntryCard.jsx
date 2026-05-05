@@ -41,7 +41,7 @@ function formatRemindAt(unixTs) {
   return d.toLocaleDateString('en-SG', { weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
 }
 
-export default function EntryCard({ entry, onDelete }) {
+export default function EntryCard({ entry, onDelete, apiBase = '/api' }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
@@ -55,11 +55,15 @@ export default function EntryCard({ entry, onDelete }) {
     }
     setDeleting(true);
     try {
-      await fetch(`/api/entries?id=${entry.id}`, { method: 'DELETE' });
+      await fetch(`${apiBase}/entries?id=${entry.id}`, { method: 'DELETE' });
       onDelete(entry.id);
     } catch {
       setDeleting(false);
     }
+  }
+
+  function handleDownloadIcs() {
+    window.open(`${apiBase}/ics?id=${entry.id}`, '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -78,7 +82,6 @@ export default function EntryCard({ entry, onDelete }) {
       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
-      {/* Top row: text + tag + delete */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>{icon}</span>
         <p
@@ -93,6 +96,36 @@ export default function EntryCard({ entry, onDelete }) {
           {entry.content}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {entry.category === 'reminder' && entry.remind_at && (
+            <button
+              onClick={handleDownloadIcs}
+              title="Download .ics"
+              style={{
+                background: 'transparent',
+                border: '0.5px solid var(--border)',
+                borderRadius: 6,
+                height: 24,
+                padding: '0 8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                fontSize: 11,
+                transition: 'all .15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'var(--brand)';
+                e.currentTarget.style.color = 'var(--brand-text)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+            >
+              .ics
+            </button>
+          )}
           <span
             style={{
               fontSize: 11,
@@ -133,7 +166,6 @@ export default function EntryCard({ entry, onDelete }) {
         </div>
       </div>
 
-      {/* Meta row */}
       <div
         style={{
           display: 'flex',
@@ -143,7 +175,6 @@ export default function EntryCard({ entry, onDelete }) {
           color: 'var(--text-muted)',
         }}
       >
-        {/* Remind-at badge */}
         {entry.remind_at && (
           <>
             <span
@@ -151,18 +182,14 @@ export default function EntryCard({ entry, onDelete }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
-                background: entry.reminded
-                  ? 'var(--bg-raised)'
-                  : 'var(--brand-dim)',
-                color: entry.reminded ? 'var(--text-muted)' : 'var(--brand-text)',
+                background: 'var(--brand-dim)',
+                color: 'var(--brand-text)',
                 padding: '2px 8px',
                 borderRadius: 10,
                 fontSize: 11,
-                textDecoration: entry.reminded ? 'line-through' : 'none',
               }}
             >
               ⏰ {formatRemindAt(entry.remind_at)}
-              {entry.reminded && ' · sent'}
             </span>
             <span
               style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--border-strong)' }}
