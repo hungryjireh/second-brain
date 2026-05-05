@@ -4,6 +4,7 @@
  *   TELEGRAM_BOT_TOKEN=xxx \
  *   TELEGRAM_WEBHOOK_SECRET=yyy \
  *   VERCEL_URL=https://your-app.vercel.app \
+ *   WEBHOOK_LOCAL_FALLBACK_URL=http://localhost:3000 \
  *   node scripts/set-webhook.js
  *
  * Or just: npm run webhook:set   (reads from .env.local via dotenv)
@@ -15,11 +16,33 @@ config({ path: '.env.local' });
 const TOKEN  = process.env.TELEGRAM_BOT_TOKEN;
 const SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 const BASE   = process.env.VERCEL_URL?.replace(/\/$/, '');
+const FALLBACK_BASE = process.env.WEBHOOK_LOCAL_FALLBACK_URL?.replace(/\/$/, '');
 
 if (!TOKEN)  { console.error('❌  TELEGRAM_BOT_TOKEN not set'); process.exit(1); }
-if (!BASE)   { console.error('❌  VERCEL_URL not set (e.g. https://your-app.vercel.app)'); process.exit(1); }
+if (!BASE && !FALLBACK_BASE) {
+  console.error('❌  Set VERCEL_URL or WEBHOOK_LOCAL_FALLBACK_URL');
+  process.exit(1);
+}
 
-const webhookUrl = `${BASE}/api/bot`;
+async function isReachable(baseUrl) {
+  try {
+    const res = await fetch(`${baseUrl}/api/bot`, { method: 'HEAD' });
+    return res.ok || res.status === 405;
+  } catch {
+    return false;
+  }
+}
+
+let activeBase = BASE || FALLBACK_BASE;
+if (BASE) {
+  const vercelReachable = await isReachable(BASE);
+  if (!vercelReachable && FALLBACK_BASE) {
+    console.warn(`⚠️  Could not reach VERCEL_URL (${BASE}); falling back to ${FALLBACK_BASE}`);
+    activeBase = FALLBACK_BASE;
+  }
+}
+
+const webhookUrl = `${activeBase}/api/bot`;
 
 const body = {
   url: webhookUrl,

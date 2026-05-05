@@ -3,9 +3,15 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const apiDir = path.join(__dirname, '..', 'api');
+const rootDir = path.join(__dirname, '..');
+
+// Match vercel dev behavior: prefer .env.local, then fall back to .env
+dotenv.config({ path: path.join(rootDir, '.env.local') });
+dotenv.config({ path: path.join(rootDir, '.env') });
 
 const app = express();
 app.use(express.json());
