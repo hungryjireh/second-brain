@@ -1,4 +1,4 @@
-import { insertEntry } from '../lib/db.js';
+import { insertEntry, getUserTimezone } from '../lib/db.js';
 import { classify }    from '../lib/classify.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage }  from '../lib/notify.js';
@@ -12,14 +12,15 @@ function isAllowed(msg) {
 }
 
 async function processText(rawText, chatId) {
-  const { category, content, remind_at } = await classify(rawText);
+  const timezone = await getUserTimezone();
+  const { category, content, remind_at } = await classify(rawText, { timezone });
   await insertEntry({ raw_text: rawText, category, content, remind_at });
 
   let reply = `✅ Got it — saved as *${category}*.\n\n_${content}_`;
 
   if (category === 'reminder' && remind_at) {
     const when = new Date(remind_at * 1000).toLocaleString('en-SG', {
-      timeZone: 'Asia/Singapore',
+      timeZone: timezone,
       weekday: 'short',
       month:   'short',
       day:     'numeric',

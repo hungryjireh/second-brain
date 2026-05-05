@@ -8,7 +8,7 @@ const NAV = [
   { key: 'note',     label: 'Notes',     color: '#EF9F27' },
 ];
 
-export default function Sidebar({ active, onSelect, counts }) {
+export default function Sidebar({ active, onSelect, counts, onOpenSettings }) {
   return (
     <aside
       style={{
@@ -84,6 +84,7 @@ export default function Sidebar({ active, onSelect, counts }) {
       <div style={{ height: 1, background: 'var(--border)', margin: '10px 16px' }} />
 
       <button
+        onClick={onOpenSettings}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '6px 16px', margin: '0 8px',

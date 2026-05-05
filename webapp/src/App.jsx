@@ -4,6 +4,44 @@ import StatsBar from './components/StatsBar.jsx';
 import EntryCard from './components/EntryCard.jsx';
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
+const PRIORITY_LEVELS = [
+  { key: 'all', label: 'All priorities' },
+  { key: 'high', label: 'High (8-10)' },
+  { key: 'medium', label: 'Medium (4-7)' },
+  { key: 'low', label: 'Low (0-3)' },
+];
+
+function getPriorityLevel(priority) {
+  const value = Number.isFinite(priority) ? priority : 0;
+  if (value >= 8) return 'high';
+  if (value >= 4) return 'medium';
+  return 'low';
+}
+
+function unixToDatetimeLocal(unixTs) {
+  if (!unixTs) return '';
+  const d = new Date(unixTs * 1000);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function datetimeLocalToUnix(value) {
+  if (!value) return null;
+  return Math.floor(new Date(value).getTime() / 1000);
+}
+
+function sortEntriesByPriorityDesc(entries) {
+  return [...entries].sort((a, b) => {
+    const priorityDiff = (b.priority ?? 0) - (a.priority ?? 0);
+    if (priorityDiff !== 0) return priorityDiff;
+    return (b.created_at ?? 0) - (a.created_at ?? 0);
+  });
+}
 
 function groupByDate(entries) {
   const groups = {};
@@ -30,11 +68,24 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activePriorityLevel, setActivePriorityLevel] = useState('all');
   const [search, setSearch] = useState('');
   const [inputText, setInputText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editCategory, setEditCategory] = useState('note');
+  const [editContent, setEditContent] = useState('');
+  const [editRemindAt, setEditRemindAt] = useState('');
+  const [editPriority, setEditPriority] = useState(0);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [timezone, setTimezone] = useState('Asia/Singapore');
+  const [timezoneDraft, setTimezoneDraft] = useState('Asia/Singapore');
+  const [timezoneError, setTimezoneError] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const today = new Date().toLocaleDateString('en-SG', {
+    timeZone: timezone,
     month: 'short', day: 'numeric', year: 'numeric',
   });
 
@@ -44,7 +95,7 @@ export default function App() {
       const res = await fetch(`${API}/entries`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
-      setEntries(data);
+      setEntries(sortEntriesByPriorityDesc(data));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,6 +109,23 @@ export default function App() {
     const interval = setInterval(fetchEntries, 30_000);
     return () => clearInterval(interval);
   }, [fetchEntries]);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const res = await fetch(`${API}/settings`);
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const data = await res.json();
+        if (data?.timezone) {
+          setTimezone(data.timezone);
+          setTimezoneDraft(data.timezone);
+        }
+      } catch (err) {
+        setTimezoneError(err.message);
+      }
+    }
+    fetchSettings();
+  }, []);
 
   // ── Counts ───────────────────────────────────────────────────────────────────
   const counts = useMemo(() => {
@@ -80,8 +148,12 @@ export default function App() {
           e.raw_text.toLowerCase().includes(q)
       );
     }
+
+    if (activePriorityLevel !== 'all') {
+      list = list.filter(e => getPriorityLevel(e.priority ?? 0) === activePriorityLevel);
+    }
     return list;
-  }, [entries, activeCategory, search]);
+  }, [entries, activeCategory, search, activePriorityLevel]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
   const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
@@ -89,6 +161,102 @@ export default function App() {
   // ── Delete ───────────────────────────────────────────────────────────────────
   function handleDelete(id) {
     setEntries(prev => prev.filter(e => e.id !== id));
+  }
+
+  function handleOpenEdit(entry) {
+    setEditingEntry(entry);
+    setEditCategory(entry.category);
+    setEditContent(entry.content);
+    setEditRemindAt(unixToDatetimeLocal(entry.remind_at));
+    setEditPriority(Number.isInteger(entry.priority) ? entry.priority : 0);
+  }
+
+  function handleCloseEdit() {
+    if (savingEdit) return;
+    setEditingEntry(null);
+  }
+
+  function handleOpenSettings() {
+    setTimezoneDraft(timezone);
+    setTimezoneError(null);
+    setSettingsOpen(true);
+  }
+
+  function handleCloseSettings() {
+    if (savingSettings) return;
+    setSettingsOpen(false);
+  }
+
+  async function handleSaveSettings() {
+    if (savingSettings) return;
+    const timezoneToSave = timezoneDraft.trim();
+    if (!timezoneToSave) {
+      setTimezoneError('Timezone is required.');
+      return;
+    }
+
+    setSavingSettings(true);
+    setTimezoneError(null);
+    try {
+      const res = await fetch(`${API}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: timezoneToSave }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `API error ${res.status}`);
+      }
+      const updated = await res.json();
+      setTimezone(updated.timezone);
+      setTimezoneDraft(updated.timezone);
+      setSettingsOpen(false);
+    } catch (err) {
+      setTimezoneError(err.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!editingEntry || savingEdit) return;
+    const content = editContent.trim();
+    const priority = Number(editPriority);
+    if (!content) {
+      alert('Content is required.');
+      return;
+    }
+    if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
+      alert('Priority must be an integer from 0 to 10.');
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const remindAt = editCategory === 'reminder'
+        ? datetimeLocalToUnix(editRemindAt)
+        : null;
+      const res = await fetch(`${API}/entries?id=${editingEntry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: editCategory,
+          content,
+          remind_at: remindAt,
+          priority,
+        }),
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const updatedEntry = await res.json();
+      setEntries(prev => sortEntriesByPriorityDesc(
+        prev.map(e => (e.id === updatedEntry.id ? updatedEntry : e))
+      ));
+      setEditingEntry(null);
+    } catch (err) {
+      alert('Failed to update entry: ' + err.message);
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   // ── Text submit ──────────────────────────────────────────────────────────────
@@ -104,7 +272,7 @@ export default function App() {
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const newEntry = await res.json();
-      setEntries(prev => [newEntry, ...prev]);
+      setEntries(prev => sortEntriesByPriorityDesc([newEntry, ...prev]));
       setInputText('');
     } catch (err) {
       alert('Failed to save: ' + err.message);
@@ -198,6 +366,7 @@ export default function App() {
           active={activeCategory}
           onSelect={setActiveCategory}
           counts={counts}
+          onOpenSettings={handleOpenSettings}
         />
 
         {/* ── Main content ── */}
@@ -212,6 +381,49 @@ export default function App() {
           }}
         >
           <StatsBar counts={counts} />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+              marginTop: -8,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: 500,
+              }}
+            >
+              Priority filter
+            </span>
+            {PRIORITY_LEVELS.map(level => {
+              const active = activePriorityLevel === level.key;
+              return (
+                <button
+                  key={level.key}
+                  onClick={() => setActivePriorityLevel(level.key)}
+                  style={{
+                    border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                    background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                    color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                    borderRadius: 999,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {level.label}
+                </button>
+              );
+            })}
+          </div>
 
           {loading && (
             <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', paddingTop: 40 }}>
@@ -247,7 +459,7 @@ export default function App() {
                 ? `No results for "${search}"`
                 : activeCategory === 'all'
                 ? 'No entries yet — send a voice note or type below.'
-                : `No ${activeCategory}s yet.`}
+                : `No ${activeCategory}s at this priority level yet.`}
             </div>
           )}
 
@@ -269,7 +481,14 @@ export default function App() {
                   {group} · {items.length}
                 </p>
                 {items.map(entry => (
-                  <EntryCard key={entry.id} entry={entry} onDelete={handleDelete} apiBase={API} />
+                  <EntryCard
+                    key={entry.id}
+                    entry={entry}
+                    onDelete={handleDelete}
+                    onEdit={handleOpenEdit}
+                    apiBase={API}
+                    timezone={timezone}
+                  />
                 ))}
               </section>
             );
@@ -349,6 +568,240 @@ export default function App() {
           100% { box-shadow: 0 0 0 0 rgba(29,158,117,0); }
         }
       `}</style>
+
+      {editingEntry && (
+        <div
+          onClick={handleCloseEdit}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(6, 10, 12, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 999,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 12,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>
+              Edit entry
+            </p>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Category</span>
+              <select
+                value={editCategory}
+                onChange={e => setEditCategory(e.target.value)}
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {CATEGORIES.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Content</span>
+              <textarea
+                rows={4}
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </label>
+            {editCategory === 'reminder' && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Reminder time</span>
+                <input
+                  type="datetime-local"
+                  value={editRemindAt}
+                  onChange={e => setEditRemindAt(e.target.value)}
+                  style={{
+                    background: 'var(--bg-raised)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    fontSize: 13,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </label>
+            )}
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Priority (0-10)</span>
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={1}
+                value={editPriority}
+                onChange={e => setEditPriority(e.target.value === '' ? '' : Number(e.target.value))}
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={handleCloseEdit}
+                disabled={savingEdit}
+                style={{
+                  border: '0.5px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  borderRadius: 8,
+                  padding: '7px 12px',
+                  fontSize: 12,
+                  cursor: savingEdit ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                style={{
+                  border: '0.5px solid var(--brand)',
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  borderRadius: 8,
+                  padding: '7px 12px',
+                  fontSize: 12,
+                  cursor: savingEdit ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {savingEdit ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {settingsOpen && (
+        <div
+          onClick={handleCloseSettings}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(6, 10, 12, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 12,
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>
+              Settings
+            </p>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Timezone</span>
+              <input
+                type="text"
+                value={timezoneDraft}
+                onChange={e => setTimezoneDraft(e.target.value)}
+                placeholder="e.g. Asia/Singapore"
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </label>
+            {timezoneError && (
+              <div style={{ color: '#f87171', fontSize: 12 }}>
+                {timezoneError}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={handleCloseSettings}
+                disabled={savingSettings}
+                style={{
+                  border: '0.5px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  cursor: savingSettings ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                style={{
+                  border: '0.5px solid var(--brand)',
+                  background: 'var(--brand)',
+                  color: '#fff',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  cursor: savingSettings ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {savingSettings ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

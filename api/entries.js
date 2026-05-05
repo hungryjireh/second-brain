@@ -1,9 +1,22 @@
-import { getAllEntries, getEntriesByCategory, insertEntry, deleteEntry } from '../lib/db.js';
+import {
+  getAllEntries,
+  getEntriesByCategory,
+  insertEntry,
+  deleteEntry,
+  updateEntry,
+  getUserTimezone,
+} from '../lib/db.js';
 import { classify } from '../lib/classify.js';
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(body));
+}
+
+function parsePriority(value, { defaultValue } = { defaultValue: 0 }) {
+  if (value === undefined) return defaultValue;
+  if (!Number.isInteger(value) || value < 0 || value > 10) return null;
+  return value;
 }
 
 export default async function handler(req, res) {
@@ -26,12 +39,23 @@ export default async function handler(req, res) {
 
   // ── POST /api/entries  { text } ────────────────────────────────────────────
   if (req.method === 'POST') {
-    const { text } = req.body ?? {};
+    const { text, priority } = req.body ?? {};
     if (!text?.trim()) return json(res, 400, { error: 'text is required' });
+    const parsedPriority = parsePriority(priority, { defaultValue: 0 });
+    if (parsedPriority === null) {
+      return json(res, 400, { error: 'priority must be an integer from 0 to 10' });
+    }
 
     try {
-      const { category, content, remind_at } = await classify(text.trim());
-      const entry = await insertEntry({ raw_text: text.trim(), category, content, remind_at });
+      const timezone = await getUserTimezone();
+      const { category, content, remind_at } = await classify(text.trim(), { timezone });
+      const entry = await insertEntry({
+        raw_text: text.trim(),
+        category,
+        content,
+        remind_at,
+        priority: parsedPriority,
+      });
       return json(res, 201, entry);
     } catch (err) {
       console.error('[POST /api/entries]', err.message);
@@ -50,6 +74,41 @@ export default async function handler(req, res) {
       return json(res, 200, { deleted: true });
     } catch (err) {
       console.error('[DELETE /api/entries]', err);
+      return json(res, 500, { error: err.message });
+    }
+  }
+
+  // ── PATCH /api/entries?id=X  { category, content, remind_at, priority } ─────
+  if (req.method === 'PATCH') {
+    const id = parseInt(req.query.id, 10);
+    if (isNaN(id)) return json(res, 400, { error: 'invalid id' });
+
+    const { category, content, remind_at, priority } = req.body ?? {};
+    const validCategories = new Set(['reminder', 'todo', 'thought', 'note']);
+
+    if (!validCategories.has(category)) {
+      return json(res, 400, { error: 'invalid category' });
+    }
+    if (!content?.trim()) return json(res, 400, { error: 'content is required' });
+    if (remind_at != null && !Number.isInteger(remind_at)) {
+      return json(res, 400, { error: 'remind_at must be an integer unix timestamp or null' });
+    }
+    const parsedPriority = parsePriority(priority, { defaultValue: undefined });
+    if (parsedPriority === null || parsedPriority === undefined) {
+      return json(res, 400, { error: 'priority must be an integer from 0 to 10' });
+    }
+
+    try {
+      const entry = await updateEntry(id, {
+        category,
+        content: content.trim(),
+        remind_at: remind_at ?? null,
+        priority: parsedPriority,
+      });
+      if (!entry) return json(res, 404, { error: 'not found' });
+      return json(res, 200, entry);
+    } catch (err) {
+      console.error('[PATCH /api/entries]', err);
       return json(res, 500, { error: err.message });
     }
   }

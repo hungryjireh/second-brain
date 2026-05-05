@@ -14,38 +14,57 @@ const CATEGORY_ICONS = {
   note:     '📝',
 };
 
-function formatDate(unixTs) {
-  if (!unixTs) return null;
-  const d = new Date(unixTs * 1000);
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterdayStart = new Date(todayStart - 86400000);
-
-  const time = d.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' });
-
-  if (d >= todayStart) return `Today · ${time}`;
-  if (d >= yesterdayStart) return `Yesterday · ${time}`;
-  return d.toLocaleDateString('en-SG', { month: 'short', day: 'numeric' }) + ` · ${time}`;
+function getPriorityColor(priority) {
+  if (priority >= 8) return '#ef4444';
+  if (priority >= 4) return '#f59e0b';
+  return 'var(--text-secondary)';
 }
 
-function formatRemindAt(unixTs) {
+function getDateKey(date, timezone) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+function formatDate(unixTs, timezone) {
   if (!unixTs) return null;
   const d = new Date(unixTs * 1000);
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const time = d.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit' });
+  const yesterday = new Date(now.getTime() - 86400000);
+  const dayKey = getDateKey(d, timezone);
+  const todayKey = getDateKey(now, timezone);
+  const yesterdayKey = getDateKey(yesterday, timezone);
+  const time = d.toLocaleTimeString('en-SG', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
 
-  if (d >= todayStart && d < new Date(todayStart.getTime() + 86400000)) {
+  if (dayKey === todayKey) return `Today · ${time}`;
+  if (dayKey === yesterdayKey) return `Yesterday · ${time}`;
+  return d.toLocaleDateString('en-SG', { timeZone: timezone, month: 'short', day: 'numeric' }) + ` · ${time}`;
+}
+
+function formatRemindAt(unixTs, timezone) {
+  if (!unixTs) return null;
+  const d = new Date(unixTs * 1000);
+  const now = new Date();
+  const dayKey = getDateKey(d, timezone);
+  const todayKey = getDateKey(now, timezone);
+  const time = d.toLocaleTimeString('en-SG', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
+
+  if (dayKey === todayKey) {
     return `${time} tonight`;
   }
-  return d.toLocaleDateString('en-SG', { weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
+  return d.toLocaleDateString('en-SG', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
 }
 
-export default function EntryCard({ entry, onDelete, apiBase = '/api' }) {
+export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', timezone = 'Asia/Singapore' }) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? '📝';
+  const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
+  const priorityColor = getPriorityColor(priority);
 
   async function handleDelete() {
     if (!confirmDelete) {
@@ -84,18 +103,62 @@ export default function EntryCard({ entry, onDelete, apiBase = '/api' }) {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>{icon}</span>
-        <p
+        <span
+          title="Priority"
           style={{
-            flex: 1,
-            fontSize: 13,
-            lineHeight: 1.55,
-            color: 'var(--text-primary)',
-            margin: 0,
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1,
+            color: priorityColor,
+            letterSpacing: '0.01em',
+            marginTop: 1,
+            flexShrink: 0,
           }}
         >
-          {entry.content}
-        </p>
+          P{priority}
+        </span>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <p
+            style={{
+              flex: 1,
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: 'var(--text-primary)',
+              margin: 0,
+            }}
+          >
+            {entry.content}
+          </p>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button
+            onClick={() => onEdit(entry)}
+            title="Edit entry"
+            style={{
+              background: 'transparent',
+              border: '0.5px solid var(--border)',
+              borderRadius: 6,
+              height: 24,
+              padding: '0 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--text-secondary)',
+              fontSize: 11,
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--brand)';
+              e.currentTarget.style.color = 'var(--brand-text)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            Edit
+          </button>
           {entry.category === 'reminder' && entry.remind_at && (
             <button
               onClick={handleDownloadIcs}
@@ -189,7 +252,7 @@ export default function EntryCard({ entry, onDelete, apiBase = '/api' }) {
                 fontSize: 11,
               }}
             >
-              ⏰ {formatRemindAt(entry.remind_at)}
+              ⏰ {formatRemindAt(entry.remind_at, timezone)}
             </span>
             <span
               style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--border-strong)' }}
@@ -197,7 +260,7 @@ export default function EntryCard({ entry, onDelete, apiBase = '/api' }) {
           </>
         )}
 
-        <span>{formatDate(entry.created_at)}</span>
+        <span>{formatDate(entry.created_at, timezone)}</span>
       </div>
     </div>
   );
