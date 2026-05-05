@@ -19,6 +19,17 @@ function formatIcsDate(unixTs) {
   return `${yyyy}${mm}${dd}T${hh}${mi}${ss}Z`;
 }
 
+function toSafeFilePart(text) {
+  const cleaned = String(text ?? '')
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+
+  return cleaned || 'reminder';
+}
+
 function buildReminderIcs(entry) {
   const now = Math.floor(Date.now() / 1000);
   const uid = `entry-${entry.id}-${entry.remind_at}@second-brain`;
@@ -56,7 +67,8 @@ export default async function handler(req, res) {
     }
 
     const ics = buildReminderIcs(entry);
-    const safeName = `second-brain-reminder-${entry.id}.ics`;
+    const reminderName = toSafeFilePart(entry.content);
+    const safeName = `second-brain-${reminderName}-${entry.id}.ics`;
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
