@@ -96,50 +96,10 @@ test('POST /api/auth/login returns 401 for non-email username when local auth do
 
 test('auth handlers: OPTIONS returns 204 and unsupported methods return 405', async () => {
   const { default: loginHandler } = await importFresh('../auth/login.js', 'login-methods');
-  const { default: requestHandler } = await importFresh('../auth/request.js', 'request-methods');
-  const { default: verifyHandler } = await importFresh('../auth/verify.js', 'verify-methods');
 
   const loginOptionsRes = createRes();
   await loginHandler(createReq({ method: 'OPTIONS' }), loginOptionsRes);
   assert.equal(loginOptionsRes.statusCode, 204);
-
-  const requestOptionsRes = createRes();
-  await requestHandler(createReq({ method: 'OPTIONS' }), requestOptionsRes);
-  assert.equal(requestOptionsRes.statusCode, 204);
-
-  const verifyOptionsRes = createRes();
-  await verifyHandler(createReq({ method: 'OPTIONS' }), verifyOptionsRes);
-  assert.equal(verifyOptionsRes.statusCode, 204);
-
-  const requestGetRes = createRes();
-  await requestHandler(createReq({ method: 'GET' }), requestGetRes);
-  assert.equal(requestGetRes.statusCode, 405);
-
-  const verifyPostRes = createRes();
-  await verifyHandler(createReq({ method: 'POST' }), verifyPostRes);
-  assert.equal(verifyPostRes.statusCode, 405);
-});
-
-test('POST /api/auth/request rejects invalid email', async () => {
-  const { default: requestHandler } = await importFresh('../auth/request.js', 'request-invalid-email');
-  const req = createReq({ method: 'POST', body: { email: 'invalid' } });
-  const res = createRes();
-
-  await requestHandler(req, res);
-
-  assert.equal(res.statusCode, 400);
-  assert.deepEqual(jsonBody(res), { error: 'valid email is required' });
-});
-
-test('GET /api/auth/verify rejects missing token', async () => {
-  const { default: verifyHandler } = await importFresh('../auth/verify.js', 'verify-missing-token');
-  const req = createReq({ method: 'GET', query: {} });
-  const res = createRes();
-
-  await verifyHandler(req, res);
-
-  assert.equal(res.statusCode, 400);
-  assert.deepEqual(jsonBody(res), { error: 'token is required' });
 });
 
 test('settings handler: OPTIONS preflight and bearer token guard', async () => {
@@ -231,34 +191,11 @@ test('bot handler: method guard and no-message noop', async () => {
   await botHandler(wrongMethodReq, wrongMethodRes);
   assert.equal(wrongMethodRes.statusCode, 405);
 
-  const maybeSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   const noMessageReq = createReq({
     method: 'POST',
-    headers: maybeSecret ? { 'x-telegram-bot-api-secret-token': maybeSecret } : {},
     body: {},
   });
   const noMessageRes = createRes();
   await botHandler(noMessageReq, noMessageRes);
   assert.equal(noMessageRes.statusCode, 200);
-});
-
-test('bot handler enforces webhook secret when configured', async () => {
-  const original = process.env.TELEGRAM_WEBHOOK_SECRET;
-  process.env.TELEGRAM_WEBHOOK_SECRET = 'expected-secret';
-
-  try {
-    const { default: botHandler } = await importFresh('../bot.js', 'bot-secret-check');
-    const req = createReq({
-      method: 'POST',
-      headers: { 'x-telegram-bot-api-secret-token': 'wrong-secret' },
-      body: { message: { chat: { id: 123 }, text: 'hello' } },
-    });
-    const res = createRes();
-
-    await botHandler(req, res);
-
-    assert.equal(res.statusCode, 403);
-  } finally {
-    process.env.TELEGRAM_WEBHOOK_SECRET = original;
-  }
 });

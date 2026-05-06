@@ -11,7 +11,6 @@ import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage } from '../lib/notify.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET; // optional extra guard
 const DEFAULT_TIMEZONE = 'Asia/Singapore';
 
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
@@ -95,11 +94,6 @@ async function getLinkedUserId(chatId) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
-
-  if (WEBHOOK_SECRET) {
-    const header = req.headers['x-telegram-bot-api-secret-token'];
-    if (header !== WEBHOOK_SECRET) return res.status(403).end();
-  }
 
   const update = req.body;
   const msg = update?.message;

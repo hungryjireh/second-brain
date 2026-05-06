@@ -50,26 +50,50 @@ create policy "users_can_select_own_telegram_links"
 on public.telegram_links
 for select
 to authenticated
-using ((select auth.uid())::text = user_id);
+using (
+  (select auth.uid())::text = user_id
+  and length(trim(chat_id)) > 0
+);
 
 create policy "users_can_insert_own_telegram_links"
 on public.telegram_links
 for insert
 to authenticated
-with check ((select auth.uid())::text = user_id);
+with check (
+  (select auth.uid())::text = user_id
+  and length(trim(chat_id)) > 0
+);
 
 create policy "users_can_update_own_telegram_links"
 on public.telegram_links
 for update
 to authenticated
-using ((select auth.uid())::text = user_id)
-with check ((select auth.uid())::text = user_id);
+using (
+  (select auth.uid())::text = user_id
+  and length(trim(chat_id)) > 0
+)
+with check (
+  (select auth.uid())::text = user_id
+  and length(trim(chat_id)) > 0
+);
 
--- Bot webhook is unauthenticated (anon), so allow read lookup by chat_id.
-create policy "bot_can_lookup_telegram_links"
-on public.telegram_links
-for select
-to anon
-using (true);
+-- Restrict anon access to a minimal RPC surface instead of table scans.
+drop function if exists public.lookup_telegram_link_by_chat_id(text);
+create function public.lookup_telegram_link_by_chat_id(p_chat_id text)
+returns table (user_id text, auth_token text)
+language sql
+security definer
+set search_path = public
+as $$
+  select tl.user_id, tl.auth_token
+  from public.telegram_links tl
+  where tl.chat_id = p_chat_id
+    and length(trim(p_chat_id)) > 0
+  limit 1;
+$$;
+
+revoke all on function public.lookup_telegram_link_by_chat_id(text) from public;
+grant execute on function public.lookup_telegram_link_by_chat_id(text) to anon;
+grant execute on function public.lookup_telegram_link_by_chat_id(text) to authenticated;
 
 commit;

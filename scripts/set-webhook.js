@@ -2,7 +2,6 @@
  * Run after every deploy to register (or re-register) the Telegram webhook.
  *
  *   TELEGRAM_BOT_TOKEN=xxx \
- *   TELEGRAM_WEBHOOK_SECRET=yyy \
  *   VERCEL_URL=https://your-app.vercel.app \
  *   WEBHOOK_LOCAL_FALLBACK_URL=http://localhost:3000 \
  *   node scripts/set-webhook.js
@@ -14,7 +13,6 @@ import { config } from 'dotenv';
 config({ path: '.env.local' });
 
 const TOKEN  = process.env.TELEGRAM_BOT_TOKEN;
-const SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 const BASE   = process.env.VERCEL_URL?.replace(/\/$/, '');
 const FALLBACK_BASE = process.env.WEBHOOK_LOCAL_FALLBACK_URL?.replace(/\/$/, '');
 
@@ -48,7 +46,6 @@ const body = {
   url: webhookUrl,
   allowed_updates: ['message'],
   drop_pending_updates: true,
-  ...(SECRET ? { secret_token: SECRET } : {}),
 };
 
 const res  = await fetch(`https://api.telegram.org/bot${TOKEN}/setWebhook`, {
@@ -61,7 +58,6 @@ const data = await res.json();
 
 if (data.ok) {
   console.log(`✅  Webhook set → ${webhookUrl}`);
-  if (SECRET) console.log('🔒  Secret token registered.');
 } else {
   console.error('❌  setWebhook failed:', data.description);
   process.exit(1);
