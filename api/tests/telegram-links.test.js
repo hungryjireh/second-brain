@@ -98,3 +98,47 @@ test('telegram RPC lookup still supports legacy plaintext auth_token rows', asyn
     process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEnv.TELEGRAM_TOKEN_ENCRYPTION_KEY;
   }
 });
+
+test('telegram link write can store one token while authorizing with another token', async () => {
+  const originalEnv = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    TELEGRAM_TOKEN_ENCRYPTION_KEY: process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY,
+  };
+  const originalFetch = global.fetch;
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
+  process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = 'test-key-material';
+
+  let lastAuthorizationHeader = null;
+
+  global.fetch = async (input, init = {}) => {
+    const url = new URL(input);
+    const path = url.pathname;
+    const method = init.method || 'GET';
+
+    if (path === '/rest/v1/telegram_links' && method === 'POST') {
+      lastAuthorizationHeader = init.headers?.Authorization || init.headers?.authorization || null;
+      return new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    throw new Error(`Unexpected fetch call in test: ${method} ${path}`);
+  };
+
+  try {
+    const { setTelegramChatIdForUser } = await importFresh('../../lib/db.js', 'telegram-separate-write-auth');
+    await setTelegramChatIdForUser(
+      'user-1',
+      'chat-1',
+      'non-expiring-token-to-store',
+      'short-lived-supabase-token-for-write'
+    );
+    assert.equal(lastAuthorizationHeader, 'Bearer short-lived-supabase-token-for-write');
+  } finally {
+    global.fetch = originalFetch;
+    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEnv.TELEGRAM_TOKEN_ENCRYPTION_KEY;
+  }
+});

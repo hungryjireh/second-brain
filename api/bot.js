@@ -142,7 +142,12 @@ export default async function handler(req, res) {
     }
     if (!isNonExpiringTelegramSessionToken(linkedUser.authToken)) {
       const permanentToken = createAuthJwt({ sub: linkedUser.userId, purpose: TELEGRAM_SESSION_TOKEN_PURPOSE }, null);
-      await setTelegramChatIdForUser(linkedUser.userId, chatId, permanentToken);
+      await setTelegramChatIdForUser(
+        linkedUser.userId,
+        chatId,
+        permanentToken,
+        linkedUser.authToken
+      );
       linkedUser.authToken = permanentToken;
     }
 
