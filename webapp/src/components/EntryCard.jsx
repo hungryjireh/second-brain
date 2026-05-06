@@ -62,6 +62,7 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
   const [deleting, setDeleting] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? '📝';
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
@@ -142,6 +143,7 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
     <div
       onClick={() => onOpenDescription?.(entry)}
       style={{
+        position: 'relative',
         background: 'var(--bg-surface)',
         border: '0.5px solid var(--border)',
         borderRadius: 10,
@@ -186,102 +188,106 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
             <span style={{ color: 'var(--text-secondary)' }}>{summary}</span>
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onEdit(entry);
-            }}
-            title="Edit entry"
-            style={{
-              background: 'transparent',
-              border: '0.5px solid var(--border)',
-              borderRadius: 6,
-              height: isMobile ? 28 : 24,
-              padding: '0 8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)',
-              fontSize: 11,
-              transition: 'all .15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'var(--brand)';
-              e.currentTarget.style.color = 'var(--brand-text)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            Edit
-          </button>
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              handleArchiveToggle();
-            }}
-            disabled={archiving}
-            title={archiveLabel}
-            style={{
-              background: 'transparent',
-              border: '0.5px solid var(--border)',
-              borderRadius: 6,
-              height: isMobile ? 28 : 24,
-              padding: '0 8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: archiving ? 'not-allowed' : 'pointer',
-              color: 'var(--text-secondary)',
-              fontSize: 11,
-              transition: 'all .15s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'var(--brand)';
-              e.currentTarget.style.color = 'var(--brand-text)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'var(--border)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            {archiving ? '…' : archiveLabel}
-          </button>
-          {entry.category === 'reminder' && entry.remind_at && (
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                handleDownloadIcs();
-              }}
-              title="Download .ics"
-              style={{
-                background: 'transparent',
-                border: '0.5px solid var(--border)',
-                borderRadius: 6,
-                height: isMobile ? 28 : 24,
-                padding: '0 8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--text-secondary)',
-                fontSize: 11,
-                transition: 'all .15s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'var(--brand)';
-                e.currentTarget.style.color = 'var(--brand-text)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-              }}
-            >
-              .ics
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: isMobile ? 'flex-end' : 'flex-start', marginLeft: isMobile ? 'auto' : 0 }}>
+          {!isMobile && (
+            <>
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  onEdit(entry);
+                }}
+                title="Edit entry"
+                style={{
+                  background: 'transparent',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 6,
+                  height: 24,
+                  padding: '0 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: 11,
+                  transition: 'all .15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--brand)';
+                  e.currentTarget.style.color = 'var(--brand-text)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  handleArchiveToggle();
+                }}
+                disabled={archiving}
+                title={archiveLabel}
+                style={{
+                  background: 'transparent',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 6,
+                  height: 24,
+                  padding: '0 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: archiving ? 'not-allowed' : 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: 11,
+                  transition: 'all .15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--brand)';
+                  e.currentTarget.style.color = 'var(--brand-text)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }}
+              >
+                {archiving ? '…' : archiveLabel}
+              </button>
+              {entry.category === 'reminder' && entry.remind_at && (
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleDownloadIcs();
+                  }}
+                  title="Download .ics"
+                  style={{
+                    background: 'transparent',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 6,
+                    height: 24,
+                    padding: '0 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'var(--text-secondary)',
+                    fontSize: 11,
+                    transition: 'all .15s',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--brand)';
+                    e.currentTarget.style.color = 'var(--brand-text)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  .ics
+                </button>
+              )}
+            </>
           )}
           <span
             style={{
@@ -296,33 +302,159 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
           >
             {tag.label}
           </span>
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              handleDelete();
-            }}
-            disabled={deleting}
-            title={confirmDelete ? 'Click again to confirm' : 'Delete'}
-            style={{
-              background: confirmDelete ? 'rgba(220,60,60,0.15)' : 'transparent',
-              border: '0.5px solid ' + (confirmDelete ? 'rgba(220,60,60,0.3)' : 'transparent'),
-              borderRadius: 6,
-              width: isMobile ? 28 : 24,
-              height: isMobile ? 28 : 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: deleting ? 'not-allowed' : 'pointer',
-              color: confirmDelete ? '#f87171' : 'var(--text-muted)',
-              fontSize: 13,
-              transition: 'all .15s',
-              padding: 0,
-            }}
-            onMouseEnter={e => { if (!confirmDelete) e.currentTarget.style.color = '#f87171'; }}
-            onMouseLeave={e => { if (!confirmDelete) e.currentTarget.style.color = 'var(--text-muted)'; }}
-          >
-            {confirmDelete ? '!' : '×'}
-          </button>
+          {isMobile && (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  setActionsOpen(v => !v);
+                }}
+                title="Open actions"
+                style={{
+                  background: 'transparent',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 6,
+                  height: 28,
+                  width: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ▾
+              </button>
+              {actionsOpen && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    top: 32,
+                    right: 0,
+                    zIndex: 20,
+                    minWidth: 124,
+                    background: 'var(--bg-surface)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 8,
+                    padding: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      onEdit(entry);
+                      setActionsOpen(false);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: 6,
+                      height: 28,
+                      padding: '0 8px',
+                      textAlign: 'left',
+                      color: 'var(--text-secondary)',
+                      fontSize: 11,
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleArchiveToggle();
+                      setActionsOpen(false);
+                    }}
+                    disabled={archiving}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: 6,
+                      height: 28,
+                      padding: '0 8px',
+                      textAlign: 'left',
+                      color: 'var(--text-secondary)',
+                      fontSize: 11,
+                    }}
+                  >
+                    {archiving ? '…' : archiveLabel}
+                  </button>
+                  {entry.category === 'reminder' && entry.remind_at && (
+                    <button
+                      onClick={() => {
+                        handleDownloadIcs();
+                        setActionsOpen(false);
+                      }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 6,
+                        height: 28,
+                        padding: '0 8px',
+                        textAlign: 'left',
+                        color: 'var(--text-secondary)',
+                        fontSize: 11,
+                      }}
+                    >
+                      Download .ics
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      handleDelete();
+                      setActionsOpen(false);
+                    }}
+                    disabled={deleting}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: 6,
+                      height: 28,
+                      padding: '0 8px',
+                      textAlign: 'left',
+                      color: confirmDelete ? '#f87171' : 'var(--text-secondary)',
+                      fontSize: 11,
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {!isMobile && (
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              disabled={deleting}
+              title={confirmDelete ? 'Click again to confirm' : 'Delete'}
+              style={{
+                background: confirmDelete ? 'rgba(220,60,60,0.15)' : 'transparent',
+                border: '0.5px solid ' + (confirmDelete ? 'rgba(220,60,60,0.3)' : 'transparent'),
+                borderRadius: 6,
+                width: 24,
+                height: 24,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: deleting ? 'not-allowed' : 'pointer',
+                color: confirmDelete ? '#f87171' : 'var(--text-muted)',
+                fontSize: 13,
+                transition: 'all .15s',
+                padding: 0,
+              }}
+              onMouseEnter={e => { if (!confirmDelete) e.currentTarget.style.color = '#f87171'; }}
+              onMouseLeave={e => { if (!confirmDelete) e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              {confirmDelete ? '!' : '×'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -360,6 +492,26 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
 
         <span>{formatDate(entry.created_at, timezone)}</span>
       </div>
+
+      {deleting && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(13,13,13,0.65)',
+            borderRadius: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            pointerEvents: 'none',
+          }}
+        >
+          <span className="entry-delete-spinner" aria-hidden="true" />
+          <span style={{ fontSize: 12, color: 'var(--text-primary)' }}>Deleting...</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -33,8 +33,24 @@ html, body, #root {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
+/* Smaller mobile horizontal scrollbar for category tabs */
+.mobile-category-scroll::-webkit-scrollbar { height: 2px; }
+
 /* Focus rings */
 *:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+
+@keyframes entry-delete-spin {
+  to { transform: rotate(360deg); }
+}
+
+.entry-delete-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 237, 232, 0.3);
+  border-top-color: var(--text-primary);
+  animation: entry-delete-spin 0.7s linear infinite;
 }

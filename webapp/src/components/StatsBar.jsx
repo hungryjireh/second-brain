@@ -12,8 +12,8 @@ export default function StatsBar({ counts, isMobile = false }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
-        gap: 8,
+        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+        gap: isMobile ? 6 : 8,
       }}
     >
       {STATS.map(({ key, label, color, dimColor }) => (
@@ -23,10 +23,10 @@ export default function StatsBar({ counts, isMobile = false }) {
             background: 'var(--bg-surface)',
             border: '0.5px solid var(--border)',
             borderRadius: 10,
-            padding: '10px 14px',
+            padding: isMobile ? '8px 6px' : '10px 14px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            gap: isMobile ? 3 : 4,
             position: 'relative',
             overflow: 'hidden',
           }}
@@ -48,7 +48,7 @@ export default function StatsBar({ counts, isMobile = false }) {
           <span
             style={{
               fontFamily: 'DM Serif Display, serif',
-              fontSize: 26,
+              fontSize: isMobile ? 20 : 26,
               color,
               lineHeight: 1,
             }}
@@ -57,10 +57,10 @@ export default function StatsBar({ counts, isMobile = false }) {
           </span>
           <span
             style={{
-              fontSize: 10,
+              fontSize: isMobile ? 9 : 10,
               color: 'var(--text-muted)',
               textTransform: 'uppercase',
-              letterSpacing: '0.07em',
+              letterSpacing: isMobile ? '0.05em' : '0.07em',
               fontWeight: 500,
             }}
           >

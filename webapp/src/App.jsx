@@ -87,7 +87,11 @@ export default function App({ authToken, onUnauthorized }) {
   const [timezoneError, setTimezoneError] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [telegramLinkKey, setTelegramLinkKey] = useState('');
+  const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
+  const [telegramLinkError, setTelegramLinkError] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     function handleResize() {
@@ -96,6 +100,10 @@ export default function App({ authToken, onUnauthorized }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) setMobileMenuOpen(false);
+  }, [isMobile]);
 
   const today = new Date().toLocaleDateString('en-SG', {
     timeZone: timezone,
@@ -220,12 +228,33 @@ export default function App({ authToken, onUnauthorized }) {
   function handleOpenSettings() {
     setTimezoneDraft(timezone);
     setTimezoneError(null);
+    setTelegramLinkKey('');
+    setTelegramLinkError(null);
     setSettingsOpen(true);
   }
 
   function handleCloseSettings() {
     if (savingSettings) return;
     setSettingsOpen(false);
+  }
+
+  async function handleGenerateTelegramLinkKey() {
+    if (loadingTelegramLinkKey) return;
+    setLoadingTelegramLinkKey(true);
+    setTelegramLinkError(null);
+    try {
+      const res = await authedFetch(`${API}/telegram/link-key`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `API error ${res.status}`);
+      }
+      const data = await res.json();
+      setTelegramLinkKey(data.key || '');
+    } catch (err) {
+      setTelegramLinkError(err.message);
+    } finally {
+      setLoadingTelegramLinkKey(false);
+    }
   }
 
   async function handleSaveSettings() {
@@ -347,6 +376,7 @@ export default function App({ authToken, onUnauthorized }) {
       {/* ── Topbar ── */}
       <header
         style={{
+          position: 'relative',
           background: 'var(--bg-surface)',
           borderBottom: '0.5px solid var(--border)',
           padding: isMobile ? '12px 12px' : '13px 20px',
@@ -357,17 +387,43 @@ export default function App({ authToken, onUnauthorized }) {
           flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            fontFamily: 'DM Serif Display, serif',
-            fontSize: 18,
-            color: 'var(--text-primary)',
-            letterSpacing: '-0.3px',
-            flexShrink: 0,
-          }}
-        >
-          second<span style={{ color: 'var(--brand)' }}>brain</span>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {isMobile && (
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              aria-label="Open menu"
+              style={{
+                width: 28,
+                height: 28,
+                border: '0.5px solid var(--border)',
+                borderRadius: 7,
+                background: 'var(--bg-raised)',
+                color: 'var(--text-secondary)',
+                fontSize: 15,
+                lineHeight: 1,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              ☰
+            </button>
+          )}
+
+          <span
+            style={{
+              fontFamily: 'DM Serif Display, serif',
+              fontSize: 18,
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.3px',
+              flexShrink: 0,
+            }}
+          >
+            second<span style={{ color: 'var(--brand)' }}>brain</span>
+          </span>
+        </div>
 
         <input
           type="text"
@@ -378,7 +434,7 @@ export default function App({ authToken, onUnauthorized }) {
             flex: isMobile ? '1 1 100%' : 1,
             maxWidth: isMobile ? '100%' : 280,
             minWidth: 0,
-            order: isMobile ? 3 : 'unset',
+            order: isMobile ? 4 : 'unset',
             background: 'var(--bg-raised)',
             border: '0.5px solid var(--border)',
             borderRadius: 20,
@@ -390,12 +446,24 @@ export default function App({ authToken, onUnauthorized }) {
           }}
         />
 
-        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}>
+        <span style={{
+          marginLeft: isMobile ? 0 : 'auto',
+          fontSize: 12,
+          color: 'var(--text-muted)',
+          flexShrink: 0,
+          order: isMobile ? 5 : 'unset',
+        }}>
           {today}
         </span>
 
         {/* Live indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          flexShrink: 0,
+          order: isMobile ? 6 : 'unset',
+        }}>
           <span
             style={{
               width: 6, height: 6, borderRadius: '50%',
@@ -406,6 +474,63 @@ export default function App({ authToken, onUnauthorized }) {
           />
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>live</span>
         </div>
+
+        {isMobile && mobileMenuOpen && (
+          <div
+            style={{
+              order: 2,
+              flex: '1 1 100%',
+              width: '100%',
+              marginTop: 2,
+              background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 10,
+              padding: 6,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+            }}
+          >
+            <button
+              onClick={() => {
+                setActiveCategory('all');
+                setMobileMenuOpen(false);
+              }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                textAlign: 'left',
+                borderRadius: 7,
+                padding: '8px 10px',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleOpenSettings();
+              }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                textAlign: 'left',
+                borderRadius: 7,
+                padding: '8px 10px',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Settings
+            </button>
+          </div>
+        )}
       </header>
 
       {/* ── Body ── */}
@@ -952,6 +1077,65 @@ export default function App({ authToken, onUnauthorized }) {
                 {timezoneError}
               </div>
             )}
+            <div
+              style={{
+                border: '0.5px solid var(--border)',
+                borderRadius: 10,
+                padding: 10,
+                background: 'var(--bg-raised)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+                Telegram account linking
+              </p>
+              <button
+                onClick={handleGenerateTelegramLinkKey}
+                disabled={loadingTelegramLinkKey}
+                style={{
+                  border: '0.5px solid var(--brand)',
+                  background: loadingTelegramLinkKey ? 'var(--bg-hover)' : 'var(--brand-dim)',
+                  color: loadingTelegramLinkKey ? 'var(--text-muted)' : 'var(--brand-text)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 12,
+                  fontFamily: 'inherit',
+                  cursor: loadingTelegramLinkKey ? 'not-allowed' : 'pointer',
+                  alignSelf: 'flex-start',
+                }}
+              >
+                {loadingTelegramLinkKey ? 'Generating…' : 'Generate Telegram link key'}
+              </button>
+              {telegramLinkKey && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <code
+                    style={{
+                      display: 'block',
+                      background: 'rgba(0,0,0,0.25)',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '8px 10px',
+                      color: 'var(--text-primary)',
+                      fontSize: 11,
+                      overflowX: 'auto',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {telegramLinkKey}
+                  </code>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>
+                    Send this in Telegram: <code>/link {'<your-key>'}</code>. This key expires in 10 minutes.
+                  </p>
+                </div>
+              )}
+              {telegramLinkError && (
+                <div style={{ color: '#f87171', fontSize: 12 }}>
+                  {telegramLinkError}
+                </div>
+              )}
+            </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
                 onClick={handleCloseSettings}

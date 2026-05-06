@@ -1,26 +1,24 @@
-import { insertEntry, getUserTimezone } from '../lib/db.js';
-import { classify }    from '../lib/classify.js';
+import {
+  insertEntry,
+  getUserTimezone,
+  getUserIdByTelegramChatId,
+  setTelegramChatIdForUser,
+} from '../lib/db.js';
+import { verifyTelegramLinkKey } from '../lib/auth.js';
+import { classify } from '../lib/classify.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
-import { sendMessage }  from '../lib/notify.js';
+import { sendMessage } from '../lib/notify.js';
 
-const TOKEN          = process.env.TELEGRAM_BOT_TOKEN;
-const ALLOWED_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const WEBHOOK_SECRET  = process.env.TELEGRAM_WEBHOOK_SECRET; // optional extra guard
-const TELEGRAM_USER_ID = process.env.TELEGRAM_USER_ID || process.env.TELEGRAM_USER_EMAIL;
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET; // optional extra guard
 
-function isAllowed(msg) {
-  return msg?.chat?.id?.toString() === ALLOWED_CHAT_ID;
-}
+const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
-async function processText(rawText, chatId) {
-  if (!TELEGRAM_USER_ID) {
-    throw new Error('Missing TELEGRAM_USER_ID or TELEGRAM_USER_EMAIL for bot-owned entries');
-  }
-
-  const timezone = await getUserTimezone(TELEGRAM_USER_ID);
+async function processText(rawText, chatId, userId) {
+  const timezone = await getUserTimezone(userId);
   const { category, content, remind_at } = await classify(rawText, { timezone });
   await insertEntry({
-    userId: TELEGRAM_USER_ID,
+    userId,
     raw_text: rawText,
     category,
     content,
@@ -33,15 +31,25 @@ async function processText(rawText, chatId) {
     const when = new Date(remind_at * 1000).toLocaleString('en-SG', {
       timeZone: timezone,
       weekday: 'short',
-      month:   'short',
-      day:     'numeric',
-      hour:    '2-digit',
-      minute:  '2-digit',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
     reply += `\n\n⏰ Reminder time detected: *${when}*.\nDownload the .ics file from the web app to save this reminder to your device calendar.`;
   }
 
   await sendMessage(reply, chatId);
+}
+
+async function linkTelegramChatToUser(chatId, linkKey) {
+  const userId = verifyTelegramLinkKey(linkKey);
+  await setTelegramChatIdForUser(userId, chatId);
+  return userId;
+}
+
+async function getLinkedUserId(chatId) {
+  return getUserIdByTelegramChatId(String(chatId));
 }
 
 export default async function handler(req, res) {
@@ -53,48 +61,67 @@ export default async function handler(req, res) {
   }
 
   const update = req.body;
-  const msg    = update?.message;
+  const msg = update?.message;
 
-  if (!msg || !isAllowed(msg)) {
+  if (!msg) {
     return res.status(200).end(); // nothing to do, respond and exit
   }
 
   const chatId = msg.chat.id;
 
   try {
-    if (msg.text?.startsWith('/start')) {
+    const text = msg.text?.trim();
+
+    if (text?.startsWith('/link')) {
+      const linkKey = text.replace('/link', '').trim();
+      if (!linkKey) {
+        await sendMessage('Please provide your link key: /link <your-key>', chatId);
+        return res.status(200).end();
+      }
+      await linkTelegramChatToUser(chatId, linkKey);
+      await sendMessage('✅ Your Telegram is now linked to your secondbrain account. Send any text or voice note to continue.', chatId);
+      return res.status(200).end();
+    }
+
+    const linkedUserId = await getLinkedUserId(chatId);
+    if (!linkedUserId) {
+      await sendMessage(`🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`, chatId);
+      return res.status(200).end();
+    }
+
+    if (text?.startsWith('/start')) {
       await sendMessage(
-        `👋 *Second Brain* is ready.\n\nSend me a voice note or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes`,
+        `👋 *Second Brain* is ready.\n\nSend me a voice note or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes\n\nNeed to relink? Use /link <your-key>.`,
         chatId
       );
-    } else if (msg.text) {
+    } else if (text) {
       await notifyTyping(chatId);
-      await processText(msg.text.trim(), chatId);
+      await processText(text, chatId, linkedUserId);
     } else if (msg.voice) {
       await notifyTyping(chatId);
       const fileInfo = await telegramGetFile(msg.voice.file_id);
       const audioUrl = `https://api.telegram.org/file/bot${TOKEN}/${fileInfo.file_path}`;
-      const rawText  = await transcribeFromUrl(audioUrl);
+      const rawText = await transcribeFromUrl(audioUrl);
 
       if (!rawText) {
         await sendMessage("🤔 Couldn't transcribe that — try speaking more clearly.", chatId);
       } else {
         await sendMessage(`🎙️ _Transcribed: "${rawText}"_`, chatId);
-        await processText(rawText, chatId);
+        await processText(rawText, chatId, linkedUserId);
       }
     }
   } catch (err) {
     console.error('[bot webhook]', err.message);
     try {
       await sendMessage(`❌ Something went wrong: ${err.message}`, chatId);
-    } catch { /* swallow */ }
+    } catch {
+      // swallow
+    }
   }
 
-  // ✅ Respond only after all async work is done
+  // Respond only after all async work is done.
   res.status(200).end();
 }
-
-// ─── Telegram API helpers ─────────────────────────────────────────────────────
 
 async function telegramGetFile(fileId) {
   const res = await fetch(
@@ -107,8 +134,8 @@ async function telegramGetFile(fileId) {
 
 async function notifyTyping(chatId) {
   await fetch(`https://api.telegram.org/bot${TOKEN}/sendChatAction`, {
-    method:  'POST',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ chat_id: chatId, action: 'typing' }),
+    body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
   }).catch(() => {}); // fire-and-forget, ignore errors
 }

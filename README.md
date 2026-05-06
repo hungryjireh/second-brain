@@ -136,9 +136,7 @@ Go to **Project → Settings → Environment Variables** and add every key from 
 | Variable | Where to get it |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | BotFather |
-| `TELEGRAM_CHAT_ID` | @userinfobot |
 | `TELEGRAM_WEBHOOK_SECRET` | Any random string, e.g. `openssl rand -hex 32` |
-| `TELEGRAM_USER_ID` | The app user ID/email that should own bot-created entries |
 | `GROQ_API_KEY` | console.groq.com |
 | `SUPABASE_URL` | Supabase Project Settings → API → Project URL |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API → `publishable` key |

@@ -11,6 +11,7 @@ const NAV = [
 export default function Sidebar({ active, onSelect, counts, onOpenSettings, isMobile = false }) {
   return (
     <aside
+      className={isMobile ? 'mobile-category-scroll' : undefined}
       style={{
         width: isMobile ? '100%' : 168,
         flexShrink: 0,
@@ -19,7 +20,10 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings, isMo
         borderBottom: isMobile ? '0.5px solid var(--border)' : 'none',
         display: 'flex',
         flexDirection: isMobile ? 'row' : 'column',
-        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        flexWrap: 'nowrap',
+        overflowX: isMobile ? 'auto' : 'visible',
+        overflowY: 'hidden',
+        WebkitOverflowScrolling: 'touch',
         padding: isMobile ? '8px' : '16px 0',
         gap: isMobile ? 6 : 2,
       }}
@@ -51,6 +55,7 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings, isMo
               transition: 'background .12s, color .12s',
               textAlign: 'left',
               width: isMobile ? 'auto' : 'calc(100% - 16px)',
+              flexShrink: 0,
             }}
             onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
@@ -83,31 +88,36 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings, isMo
         );
       })}
 
-      <div
-        style={{
-          height: isMobile ? 24 : 1,
-          width: isMobile ? 1 : 'auto',
-          background: 'var(--border)',
-          margin: isMobile ? '0 2px' : '10px 16px',
-        }}
-      />
+      {!isMobile && (
+        <>
+          <div
+            style={{
+              height: 1,
+              width: 'auto',
+              background: 'var(--border)',
+              margin: '10px 16px',
+            }}
+          />
 
-      <button
-        onClick={onOpenSettings}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: isMobile ? '6px 10px' : '6px 16px', margin: isMobile ? 0 : '0 8px',
-          borderRadius: 6, border: 'none', cursor: 'pointer',
-          background: 'transparent',
-          color: 'var(--text-muted)',
-          fontFamily: 'inherit', fontSize: 12,
-          transition: 'color .12s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
-        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-      >
-        <span style={{ fontSize: 14 }}>⚙</span> Settings
-      </button>
+          <button
+            onClick={onOpenSettings}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 16px', margin: '0 8px',
+              borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: 'transparent',
+              color: 'var(--text-muted)',
+              fontFamily: 'inherit', fontSize: 12,
+              transition: 'color .12s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            <span style={{ fontSize: 14 }}>⚙</span> Settings
+          </button>
+        </>
+      )}
     </aside>
   );
 }
