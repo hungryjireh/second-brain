@@ -1,6 +1,5 @@
 import {
   insertEntry,
-  getUserTimezone,
   getUserIdByTelegramChatId,
   setTelegramChatIdForUser,
 } from '../lib/db.js';
@@ -11,12 +10,12 @@ import { sendMessage } from '../lib/notify.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET; // optional extra guard
+const DEFAULT_TIMEZONE = 'Asia/Singapore';
 
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
 async function processText(rawText, chatId, userId) {
-  const timezone = await getUserTimezone(userId);
-  const { category, content, remind_at } = await classify(rawText, { timezone });
+  const { category, content, remind_at } = await classify(rawText);
   await insertEntry({
     userId,
     raw_text: rawText,
@@ -29,7 +28,7 @@ async function processText(rawText, chatId, userId) {
 
   if (category === 'reminder' && remind_at) {
     const when = new Date(remind_at * 1000).toLocaleString('en-SG', {
-      timeZone: timezone,
+      timeZone: DEFAULT_TIMEZONE,
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -43,8 +42,8 @@ async function processText(rawText, chatId, userId) {
 }
 
 async function linkTelegramChatToUser(chatId, linkKey) {
-  const userId = verifyTelegramLinkKey(linkKey);
-  await setTelegramChatIdForUser(userId, chatId);
+  const { userId, authToken } = verifyTelegramLinkKey(linkKey);
+  await setTelegramChatIdForUser(userId, chatId, authToken);
   return userId;
 }
 

@@ -22,6 +22,6 @@ export default async function handler(req, res) {
   const userId = resolveAuthUserId(authUser);
   if (!userId) return json(res, 401, { error: 'invalid auth token payload: expected UUID user id' });
 
-  const key = createTelegramLinkKey(userId);
+  const key = createTelegramLinkKey(userId, token);
   return json(res, 200, { key });
 }

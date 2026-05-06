@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const timezone = await getUserTimezone(userId);
+      const timezone = await getUserTimezone(userId, token);
       return json(res, 200, { timezone });
     } catch (err) {
       console.error('[GET /api/settings]', err);
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      await setSetting(userId, 'timezone', timezone);
+      await setSetting(userId, 'timezone', timezone, token);
       return json(res, 200, { timezone });
     } catch (err) {
       console.error('[PATCH /api/settings]', err);

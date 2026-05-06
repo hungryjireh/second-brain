@@ -99,7 +99,7 @@ export default async function handler(req, res) {
 
     try {
       const normalizedDescription = sourceDescription.trim();
-      const timezone = await getUserTimezone(userId);
+      const timezone = await getUserTimezone(userId, token);
       const { category, title, summary, content, remind_at } = await classify(normalizedDescription, { timezone });
       const derived = deriveEntryFields(normalizedDescription, content);
       const entry = await insertEntry({
