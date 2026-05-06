@@ -1,130 +1,213 @@
-# secondbrain
+# Second Brain — Vercel Deploy
 
-Secondbrain is a Vercel-hosted app for capturing notes, todos, thoughts, and reminders from text/voice (Telegram) and managing them in a React dashboard.
+> Voice/text → Groq classify → Supabase store → remind via Telegram → React dashboard.
 
-## Current product state
+Everything runs on Vercel: API routes as serverless functions, the bot as a webhook endpoint, and reminders via Vercel Cron. No separate server needed.
 
-### Webapp status (May 2026)
-- `webapp/` is the active frontend used in local dev and Vercel deploys
-- Auth flow is live with login-guarded routes and token-based session handling
-- Entry lifecycle is end-to-end: create, classify, edit, archive, delete, export
-- Settings and Telegram link-key UX are implemented in-app
-- Mobile/desktop responsive behavior is implemented and currently maintained
+---
 
-### Webapp features (implemented)
-- Email/username + password login at `/login`
-- Protected dashboard route using bearer token auth
-- Create entries from free-form text
-- AI-assisted classification into `reminder`, `todo`, `thought`, `note`
-- Edit entries: category, title, summary, description (markdown), remind time, priority (0-10), tags
-- Archive/unarchive entries (including "Mark Done" for reminders)
-- Delete entries
-- Search/filter by text, category, priority band, tag, and archived state
-- Virtualized entry list grouped by date buckets
-- Entry detail modal with markdown rendering
-- `.ics` export for reminder entries
-- Settings panel for timezone updates
-- Telegram account linking key generation in settings
-- Import LLM conversation JSON into entries (Claude/ChatGPT style exports)
-- Responsive layout for desktop and mobile
+## Architecture
 
-### API features (implemented)
-- `POST /api/auth/login`
-- `GET|POST|PATCH|DELETE /api/entries`
-- `GET /api/settings`
-- `PATCH /api/settings`
-- `GET /api/telegram/link-key`
-- `POST /api/bot` (Telegram webhook receiver)
-- `GET /api/ics?id=<entryId>` (calendar file export)
-
-### Not currently in this repo
-- No `/api/cron` route
-- No Vercel cron config in `vercel.json`
-
-## Stack
-- Frontend: React 18 + Vite + React Router + Tailwind (token-based custom styling)
-- Backend: Vercel serverless API routes + optional local Express route loader
-- Data: Supabase (Postgres)
-- AI: Groq (classification + Whisper transcription)
-- Bot: Telegram webhook
-- Runtime: Node 20.x
-
-## Project structure
-
-```text
-.
-├── api/
-│   ├── auth/
-│   │   └── login.js
-│   ├── telegram/
-│   │   └── link-key.js
-│   ├── bot.js
-│   ├── entries.js
-│   ├── ics.js
-│   └── settings.js
-├── lib/
-│   ├── auth.js
-│   ├── classify.js
-│   ├── db.js
-│   ├── notify.js
-│   └── whisper.js
-├── scripts/
-│   ├── local-api.js
-│   ├── set-webhook.js
-│   └── del-webhook.js
-├── webapp/
-│   ├── src/
-│   └── package.json
-├── vercel.json
-└── package.json
 ```
+You (voice/text)
+      │
+      ▼
+Telegram  ──── POST ────►  /api/bot          (serverless function)
+                                │
+                                ├──► Groq Whisper   (voice → text)
+                                ├──► Groq LLaMA     (classify + parse)
+                                └──► Supabase       (store entry)
+
+Vercel Cron (every minute)
+      │
+      ▼
+/api/cron  ──► Supabase (poll due reminders) ──► Telegram (send)
+
+Browser
+      │
+      ▼
+React SPA  ──► /api/entries  ──► Supabase
+```
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Hosting | Vercel (serverless) |
+| Bot transport | Telegram webhook → `/api/bot` |
+| Voice transcription | Groq Whisper (`whisper-large-v3-turbo`) |
+| AI classification | Groq LLaMA (`llama-3.3-70b-versatile`) |
+| Database | Supabase (Postgres + Auth + REST/RPC) |
+| Reminders | Vercel Cron → `/api/cron` (every minute) |
+| Frontend | React + Tailwind CSS (Vite) |
+
+---
+
+## One-time setup
+
+### 1. Clone and install
+
+```bash
+git clone <your-repo>
+cd second-brain-poc
+npm run setup        # installs root + webapp deps
+```
+
+### 2. Create external services
+
+| Service | Steps |
+|---|---|
+| **Telegram bot** | Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token |
+| **Telegram chat ID** | Message [@userinfobot](https://t.me/userinfobot) → copy the id |
+| **Groq API key** | [console.groq.com/keys](https://console.groq.com/keys) |
+| **Supabase project** | Create a project at [supabase.com/dashboard](https://supabase.com/dashboard), then copy `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from Project Settings → API |
+
+### 3. Run the DB migration
+
+Open the Supabase SQL editor and run the schema/migration scripts from `scripts/sql/` in order needed for your environment (at minimum: `migrate_user_scope.sql`, `enable_rls_entries.sql`, `enable_rls_settings_and_telegram_links.sql`).
+
+Then run:
+
+```bash
+node lib/db.js
+```
+
+Or add the vars to `.env.local` first, then just `npm run migrate`.
+
+### 4. Deploy to Vercel
+
+```bash
+npm i -g vercel
+vercel                    # follow prompts, links your repo
+```
+
+### 5. Add environment variables in Vercel
+
+Go to **Project → Settings → Environment Variables** and add every key from `.env.example`:
+
+| Variable | Where to get it |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | BotFather |
+| `TELEGRAM_CHAT_ID` | @userinfobot |
+| `TELEGRAM_WEBHOOK_SECRET` | Any random string, e.g. `openssl rand -hex 32` |
+| `GROQ_API_KEY` | console.groq.com |
+| `SUPABASE_URL` | Supabase Project Settings → API |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API |
+| `TELEGRAM_TOKEN_ENCRYPTION_KEY` | Random 32+ char secret (used to encrypt stored Telegram link auth tokens) |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `AUTH_USERNAME` | Local fallback login username |
+| `AUTH_PASSWORD` | Local fallback login password |
+| `CRON_SECRET` | `openssl rand -hex 32` |
+
+### 6. Register the Telegram webhook
+
+After the first successful deploy, run once:
+
+```bash
+VERCEL_URL=https://your-app.vercel.app npm run webhook:set
+```
+
+Your bot is now live. Test it by sending `/start` in Telegram.
+
+---
+
+## Current webapp state
+
+- Auth-gated SPA with `/login` route and bearer-token session stored in `localStorage`.
+- Entry workspace supports create, edit, archive/unarchive, delete, category filtering, search, priority filters, and tag-based filtering.
+- Reminder entries support schedule display and one-click `.ics` calendar export.
+- User settings currently include timezone persistence (`/api/settings`).
+- Telegram account linking is available from the UI via generated `/api/telegram/link-key`.
+- API data access is user-scoped through Supabase auth token verification and RLS-aware queries.
+
+---
 
 ## Local development
 
-1. Install dependencies:
+There are two common local workflows now:
+
+- **Frontend-only (Vite)** — runs the React dev server from the root (recommended when you have a backend running separately):
 
 ```bash
-npm install
-npm --prefix webapp install
-```
-
-2. Create local env file:
-
-```bash
-cp .env.example .env.local
-```
-
-3. Start API (root, port `3000`):
-
-```bash
-npm run start:api
-```
-
-4. Start webapp (new terminal):
-
-```bash
+npm run dev
+# or inside the webapp folder:
 cd webapp
 npm run dev
 ```
 
-The webapp uses `VITE_API_URL` when provided; otherwise it defaults to `/api`.
-
-## Tests
-
-Run all backend + webapp tests:
+- **Full Vercel dev (API + cron + webapp)** — runs the guarded spawner which sets an env marker to avoid recursive `vercel dev` invocations and then starts `vercel dev`:
 
 ```bash
-npm test
+cp .env.example .env.local   # fill in values
+npm run dev:vercel
 ```
 
-## TODO
-- Reintroduce magic-link authentication (`/api/auth/request` and `/api/auth/verify`) with secure delivery and strict DB/RLS controls.
+`npm run dev` now starts only the Vite dev server. Use `npm run dev:vercel` when you want the Vercel function simulator (API + cron) together with the webapp.
 
-## Deploy notes
-- `vercel.json` builds the frontend from `webapp/` and rewrites non-API routes to SPA `index.html`.
-- API CORS headers are configured in `vercel.json` for `/api/*`.
-- Telegram webhook can be registered with:
+Note: Telegram webhooks cannot reach localhost directly. For local webhook testing use polling or a tunnel (for example ngrok).
+
+If you prefer to run the frontend while pointing at a backend on port 3000, set `VITE_API_URL` before starting Vite:
 
 ```bash
-VERCEL_URL=https://<your-app>.vercel.app npm run webhook:set
+cd webapp
+VITE_API_URL=http://localhost:3000 npm run dev
 ```
+
+Note: the Vite dev server is configured to proxy `/api` to the backend during local development (see `webapp/vite.config.js`). If you run the frontend separately with `npm run dev`, either set `VITE_API_URL` to your backend URL or ensure your backend is available on `http://localhost:3000` so API requests return JSON instead of the frontend HTML.
+
+---
+
+## Project structure
+
+```
+second-brain-poc/
+├── api/                      # Vercel serverless functions
+│   ├── bot.js                # POST /api/bot  — Telegram webhook
+│   ├── entries.js            # GET / POST / DELETE /api/entries
+│   └── cron.js               # GET /api/cron  — reminder poller
+│
+├── lib/                      # Shared services (imported by api/*)
+│   ├── db.js                 # Supabase REST/RPC client + query helpers
+│   ├── classify.js           # Groq LLaMA classification
+│   ├── whisper.js            # Groq Whisper transcription
+│   └── notify.js             # Telegram sendMessage wrapper
+│
+├── scripts/
+│   ├── set-webhook.js        # npm run webhook:set
+│   └── del-webhook.js        # npm run webhook:del
+│
+├── webapp/                   # React + Tailwind (Vite)
+│   └── src/
+│       ├── App.jsx
+│       └── components/
+│           ├── EntryCard.jsx
+│           ├── Sidebar.jsx
+│           └── StatsBar.jsx
+│
+├── vercel.json               # Build, routing, cron config
+├── .env.example
+└── package.json
+```
+
+---
+
+## API reference
+
+| Method | Path | Body / Query | Description |
+|---|---|---|---|
+| `GET` | `/api/entries` | `?category=reminder` (optional) | All entries, newest first |
+| `POST` | `/api/entries` | `{ "text": "..." }` | Classify + save new entry |
+| `DELETE` | `/api/entries` | `?id=123` | Delete entry by ID |
+| `POST` | `/api/bot` | Telegram Update JSON | Webhook receiver |
+| `GET` | `/api/cron` | — (Vercel Cron only) | Fire due reminders |
+
+---
+
+## Migrating to the full plan (auth)
+
+1. Add magic-link request/verify routes (`POST /api/auth/request`, `GET /api/auth/verify`) using Resend
+2. Replace password login UX in `webapp/src/Login.jsx` with magic-link flow
+3. Add `RESEND_API_KEY` and any related email sender env vars in Vercel
+4. Keep Supabase bearer verification for protected API routes and remove local credential fallback when ready
