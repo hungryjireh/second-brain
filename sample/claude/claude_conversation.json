@@ -1,0 +1,103 @@
+[
+  {
+    "uuid": "[REDACTED]",
+    "name": "Adding reminders via file to iOS app",
+    "summary": "",
+    "created_at": "2026-05-05T14:35:34.303463Z",
+    "updated_at": "2026-05-05T14:35:46.275822Z",
+    "account": {
+      "uuid": "[REDACTED]"
+    },
+    "chat_messages": [
+      {
+        "uuid": "[REDACTED]",
+        "text": "is there a way for me to add a reminder to my Reminders iOS app via a file",
+        "content": [
+          {
+            "start_timestamp": "2026-05-05T14:35:34.725054Z",
+            "stop_timestamp": "2026-05-05T14:35:34.725054Z",
+            "flags": null,
+            "type": "text",
+            "text": "is there a way for me to add a reminder to my Reminders iOS app via a file",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2026-05-05T14:35:34.725179Z",
+        "updated_at": "2026-05-05T14:35:34.725179Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": "[REDACTED]"
+      },
+      {
+        "uuid": "[REDACTED]",
+        "text": "\n```\nThis block is not supported on your current device yet.\n```\n\nYes! There are a few ways to add reminders to the iOS Reminders app via a file or automation:\n\n**1. Import a `.ics` (iCalendar) file**\nThe Reminders app supports importing `.ics` files. You can create a text file with the `.ics` extension containing VTODO entries. When you open/share the file on your iPhone, iOS will prompt you to import it into Reminders.\n\nA basic example:\n```\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your App//EN\nBEGIN:VTODO\nUID:[REDACTED_EMAIL]\nSUMMARY:Buy groceries\nDUE:20260510T090000Z\nPRIORITY:5\nSTATUS:NEEDS-ACTION\nEND:VTODO\nEND:VCALENDAR\n```\n\nTo use it: Save the file → AirDrop/email it to your iPhone → tap to open → iOS imports it into Reminders.\n\n**2. Shortcuts automation**\nIf you want to script this more flexibly, you can use the iOS **Shortcuts** app with a \"Add New Reminder\" action triggered by a file (e.g., reading a `.txt` or `.csv` and looping through entries).\n\n**3. Reminders URL scheme**\nYou can open a URL like `x-apple-reminderkit://` to trigger reminder creation, though this is more limited for batch use.\n\n**The `.ics` approach is the most file-based and reliable** for one-off or bulk imports. Would you like me to help you generate an `.ics` file with specific reminders?",
+        "content": [
+          {
+            "start_timestamp": "2026-05-05T14:35:36.399971Z",
+            "stop_timestamp": "2026-05-05T14:35:36.576043Z",
+            "flags": null,
+            "type": "tool_use",
+            "id": "[REDACTED]",
+            "name": "search_mcp_registry",
+            "input": {
+              "keywords": [
+                "reminders",
+                "ios",
+                "tasks"
+              ]
+            },
+            "message": "Searching connectors",
+            "integration_name": null,
+            "integration_icon_url": null,
+            "icon_name": null,
+            "context": null,
+            "display_content": null,
+            "approval_options": null,
+            "approval_key": "[REDACTED]",
+            "is_mcp_app": null,
+            "mcp_server_url": null
+          },
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "tool_result",
+            "tool_use_id": "[REDACTED]",
+            "name": "search_mcp_registry",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"opt_in_required\": true, \"message\": \"Connector discovery requires user opt-in. The user is being prompted now \\u2014 do not call search_mcp_registry or suggest_connectors again this turn. If they opt in (next turn), call search_mcp_registry first to get connector UUIDs, then pass those UUIDs (not URLs) to suggest_connectors.\", \"results\": []}",
+                "uuid": "[REDACTED]"
+              }
+            ],
+            "is_error": true,
+            "structured_content": null,
+            "meta": null,
+            "message": null,
+            "integration_name": null,
+            "mcp_server_url": null,
+            "integration_icon_url": null,
+            "icon_name": null,
+            "display_content": null
+          },
+          {
+            "start_timestamp": "2026-05-05T14:35:38.993486Z",
+            "stop_timestamp": "2026-05-05T14:35:46.241646Z",
+            "flags": null,
+            "type": "text",
+            "text": "Yes! There are a few ways to add reminders to the iOS Reminders app via a file or automation:\n\n**1. Import a `.ics` (iCalendar) file**\nThe Reminders app supports importing `.ics` files. You can create a text file with the `.ics` extension containing VTODO entries. When you open/share the file on your iPhone, iOS will prompt you to import it into Reminders.\n\nA basic example:\n```\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Your App//EN\nBEGIN:VTODO\nUID:[REDACTED_EMAIL]\nSUMMARY:Buy groceries\nDUE:20260510T090000Z\nPRIORITY:5\nSTATUS:NEEDS-ACTION\nEND:VTODO\nEND:VCALENDAR\n```\n\nTo use it: Save the file → AirDrop/email it to your iPhone → tap to open → iOS imports it into Reminders.\n\n**2. Shortcuts automation**\nIf you want to script this more flexibly, you can use the iOS **Shortcuts** app with a \"Add New Reminder\" action triggered by a file (e.g., reading a `.txt` or `.csv` and looping through entries).\n\n**3. Reminders URL scheme**\nYou can open a URL like `x-apple-reminderkit://` to trigger reminder creation, though this is more limited for batch use.\n\n**The `.ics` approach is the most file-based and reliable** for one-off or bulk imports. Would you like me to help you generate an `.ics` file with specific reminders?",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2026-05-05T14:35:46.275822Z",
+        "updated_at": "2026-05-05T14:35:46.275822Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": "[REDACTED]"
+      }
+    ]
+  }
+]
