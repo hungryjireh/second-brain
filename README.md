@@ -4,6 +4,13 @@ Secondbrain is a Vercel-hosted app for capturing notes, todos, thoughts, and rem
 
 ## Current product state
 
+### Webapp status (May 2026)
+- `webapp/` is the active frontend used in local dev and Vercel deploys
+- Auth flow is live with login-guarded routes and token-based session handling
+- Entry lifecycle is end-to-end: create, classify, edit, archive, delete, export
+- Settings and Telegram link-key UX are implemented in-app
+- Mobile/desktop responsive behavior is implemented and currently maintained
+
 ### Webapp features (implemented)
 - Email/username + password login at `/login`
 - Protected dashboard route using bearer token auth
@@ -37,7 +44,7 @@ Secondbrain is a Vercel-hosted app for capturing notes, todos, thoughts, and rem
 ## Stack
 - Frontend: React 18 + Vite + React Router + Tailwind (token-based custom styling)
 - Backend: Vercel serverless API routes + optional local Express route loader
-- Data: Supabase Postgres
+- Data: Supabase (Postgres)
 - AI: Groq (classification + Whisper transcription)
 - Bot: Telegram webhook
 - Runtime: Node 20.x

@@ -2,6 +2,7 @@ import {
   insertEntry,
   getUserTags,
   getTelegramLinkByChatId,
+  setTelegramChatIdForUser,
   getUserTimezone,
 } from '../lib/db.js';
 import { TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
