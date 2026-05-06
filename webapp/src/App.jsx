@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import StatsBar from './components/StatsBar.jsx';
 import EntryCard from './components/EntryCard.jsx';
@@ -322,6 +322,28 @@ function sortEntriesByPriorityDesc(entries) {
   });
 }
 
+function parseImportedConversationFromEntry(entry) {
+  const rawText = String(entry?.raw_text ?? '').trim();
+  if (!rawText.startsWith('{')) return null;
+
+  try {
+    const parsed = JSON.parse(rawText);
+    if (parsed?._format !== 'chat_conversation_v1') return null;
+    if (!Array.isArray(parsed.messages) || parsed.messages.length === 0) return null;
+    return {
+      source: parsed.source ?? 'unknown',
+      messages: parsed.messages
+        .map(msg => ({
+          sender: msg?.sender === 'human' ? 'human' : 'assistant',
+          text: String(msg?.text ?? '').trim(),
+        }))
+        .filter(msg => msg.text),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function groupByDate(entries) {
   const groups = {};
   const now = new Date();
@@ -375,7 +397,11 @@ export default function App({ authToken, onUnauthorized }) {
   const [telegramLinkError, setTelegramLinkError] = useState(null);
   const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [entryCopyStatus, setEntryCopyStatus] = useState('');
+  const [entryCopyHoverField, setEntryCopyHoverField] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const importFileInputRef = useRef(null);
+  const [importingConversations, setImportingConversations] = useState(false);
 
   useEffect(() => {
     function handleResize() {
@@ -611,6 +637,21 @@ export default function App({ authToken, onUnauthorized }) {
     }
   }
 
+  async function handleCopyEntryField(label, value) {
+    try {
+      await navigator.clipboard.writeText(String(value ?? ''));
+      setEntryCopyStatus(`${label} copied`);
+    } catch {
+      setEntryCopyStatus(`Copy ${label.toLowerCase()} failed`);
+    }
+  }
+
+  function handleCloseSelectedEntry() {
+    setSelectedEntry(null);
+    setEntryCopyStatus('');
+    setEntryCopyHoverField('');
+  }
+
   async function handleSaveSettings() {
     if (savingSettings) return;
     const timezoneToSave = timezoneDraft.trim();
@@ -726,6 +767,48 @@ export default function App({ authToken, onUnauthorized }) {
 
   function handleSelectTag(tag) {
     setActiveTag(prev => (prev.toLowerCase() === String(tag).toLowerCase() ? '' : tag));
+  }
+
+  function handleOpenImportDialog() {
+    if (importingConversations) return;
+    importFileInputRef.current?.click();
+  }
+
+  async function handleImportClaudeJsonFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || importingConversations) return;
+
+    setImportingConversations(true);
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const conversations = Array.isArray(parsed) ? parsed : [parsed];
+      const res = await authedFetch(`${API}/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          import_format: 'llm_conversations',
+          conversations,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || `API error ${res.status}`);
+      }
+
+      const created = Array.isArray(body.created) ? body.created : [];
+      if (created.length === 0) {
+        alert('No valid conversations were found in the uploaded JSON.');
+        return;
+      }
+      setEntries(prev => sortEntriesByPriorityDesc([...created.map(normalizeEntryTags), ...prev]));
+      alert(`Imported ${created.length} conversation${created.length === 1 ? '' : 's'}.`);
+    } catch (err) {
+      alert(`Failed to import JSON: ${err.message}`);
+    } finally {
+      setImportingConversations(false);
+    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -890,6 +973,25 @@ export default function App({ authToken, onUnauthorized }) {
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
+                handleOpenImportDialog();
+              }}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                textAlign: 'left',
+                borderRadius: 7,
+                padding: '8px 10px',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              {importingConversations ? 'Importing…' : 'Import LLM conversations'}
+            </button>
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
                 handleOpenSettings();
               }}
               style={{
@@ -920,6 +1022,8 @@ export default function App({ authToken, onUnauthorized }) {
             onSelectTag={handleSelectTag}
             availableTags={availableTags}
             counts={counts}
+            onOpenImportConversations={handleOpenImportDialog}
+            importingConversations={importingConversations}
             onOpenSettings={handleOpenSettings}
             isMobile={false}
           />
@@ -1191,6 +1295,13 @@ export default function App({ authToken, onUnauthorized }) {
         >
           {submitting ? '…' : '↗'}
         </button>
+        <input
+          ref={importFileInputRef}
+          type="file"
+          accept=".json,application/json"
+          onChange={handleImportClaudeJsonFile}
+          style={{ display: 'none' }}
+        />
       </div>
 
       {/* Pulse animation */}
@@ -1462,8 +1573,11 @@ export default function App({ authToken, onUnauthorized }) {
       )}
 
       {selectedEntry && (
+        (() => {
+          const importedConversation = parseImportedConversationFromEntry(selectedEntry);
+          return (
         <div
-          onClick={() => setSelectedEntry(null)}
+          onClick={handleCloseSelectedEntry}
           style={{
             position: 'fixed',
             inset: 0,
@@ -1491,12 +1605,65 @@ export default function App({ authToken, onUnauthorized }) {
               overflowY: 'auto',
             }}
           >
-            <p style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)', fontWeight: 700 }}>
-              {selectedEntry.title || selectedEntry.content || 'Untitled'}
-            </p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-              {selectedEntry.summary || selectedEntry.content || ''}
-            </p>
+            <div
+              onMouseEnter={() => setEntryCopyHoverField('title')}
+              onMouseLeave={() => setEntryCopyHoverField('')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <p style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)', fontWeight: 700 }}>
+                {selectedEntry.title || selectedEntry.content || 'Untitled'}
+              </p>
+              <button
+                onClick={() => handleCopyEntryField('Title', selectedEntry.title || selectedEntry.content || '')}
+                aria-label="Copy title"
+                title="Copy title"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  padding: 0,
+                  lineHeight: 1,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  opacity: entryCopyHoverField === 'title' ? 1 : 0,
+                  pointerEvents: entryCopyHoverField === 'title' ? 'auto' : 'none',
+                }}
+              >
+                ⧉
+              </button>
+            </div>
+            <div
+              onMouseEnter={() => setEntryCopyHoverField('summary')}
+              onMouseLeave={() => setEntryCopyHoverField('')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                {selectedEntry.summary || selectedEntry.content || ''}
+              </p>
+              <button
+                onClick={() => handleCopyEntryField('Summary', selectedEntry.summary || selectedEntry.content || '')}
+                aria-label="Copy summary"
+                title="Copy summary"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  padding: 0,
+                  lineHeight: 1,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  opacity: entryCopyHoverField === 'summary' ? 1 : 0,
+                  pointerEvents: entryCopyHoverField === 'summary' ? 'auto' : 'none',
+                }}
+              >
+                ⧉
+              </button>
+            </div>
+            {entryCopyStatus && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{entryCopyStatus}</span>
+            )}
             {Array.isArray(selectedEntry.tags) && selectedEntry.tags.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {selectedEntry.tags.map(tag => (
@@ -1517,6 +1684,8 @@ export default function App({ authToken, onUnauthorized }) {
               </div>
             )}
             <div
+              onMouseEnter={() => setEntryCopyHoverField('raw_text')}
+              onMouseLeave={() => setEntryCopyHoverField('')}
               style={{
                 background: 'var(--bg-raised)',
                 border: '0.5px solid var(--border)',
@@ -1527,13 +1696,62 @@ export default function App({ authToken, onUnauthorized }) {
                 fontSize: 13,
                 lineHeight: 1.6,
                 color: 'var(--text-primary)',
+                position: 'relative',
               }}
             >
-              {renderMarkdownContent(selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || '')}
+              <button
+                onClick={() => handleCopyEntryField('Raw text', selectedEntry.raw_text || '')}
+                aria-label="Copy raw text"
+                title="Copy raw text"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  padding: 0,
+                  lineHeight: 1,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  opacity: entryCopyHoverField === 'raw_text' ? 1 : 0,
+                  pointerEvents: entryCopyHoverField === 'raw_text' ? 'auto' : 'none',
+                }}
+              >
+                ⧉
+              </button>
+              {importedConversation
+                ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {importedConversation.messages.map((msg, idx) => {
+                      const fromHuman = msg.sender === 'human';
+                      return (
+                        <div key={`${msg.sender}-${idx}`} style={{ display: 'flex', justifyContent: fromHuman ? 'flex-end' : 'flex-start' }}>
+                          <div
+                            style={{
+                              maxWidth: '92%',
+                              borderRadius: 12,
+                              padding: '8px 10px',
+                              background: fromHuman ? 'rgba(29,158,117,0.18)' : 'rgba(255,255,255,0.03)',
+                              border: `0.5px solid ${fromHuman ? 'rgba(29,158,117,0.38)' : 'var(--border)'}`,
+                            }}
+                          >
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                              {fromHuman ? 'You' : 'Assistant'}
+                            </div>
+                            <div>{renderMarkdownContent(msg.text)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+                : renderMarkdownContent(selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || '')}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setSelectedEntry(null)}
+                onClick={handleCloseSelectedEntry}
                 style={{
                   border: '0.5px solid var(--border)',
                   background: 'transparent',
@@ -1549,6 +1767,8 @@ export default function App({ authToken, onUnauthorized }) {
             </div>
           </div>
         </div>
+          );
+        })()
       )}
 
       {settingsOpen && (

@@ -83,6 +83,9 @@ test('insertEntry persists classifier string tags into tags and entry_tags table
     if (path === '/rest/v1/tags' && method === 'GET') {
       const userId = (url.searchParams.get('user_id') || '').replace('eq.', '');
       const normalizedIn = url.searchParams.get('normalized_name') || '';
+      if (!normalizedIn) {
+        return jsonResponse(200, tagsTable.filter(t => t.user_id === userId));
+      }
       const values = normalizedIn
         .replace(/^in\.\(/, '')
         .replace(/\)$/, '')
@@ -234,6 +237,9 @@ test('replaceEntryTags deletes user tags that are no longer referenced', async (
     if (path === '/rest/v1/tags' && method === 'GET') {
       const scopedUserId = (url.searchParams.get('user_id') || '').replace('eq.', '');
       const normalizedIn = url.searchParams.get('normalized_name') || '';
+      if (!normalizedIn) {
+        return jsonResponse(200, tagsTable.filter(t => t.user_id === scopedUserId));
+      }
       const values = normalizedIn
         .replace(/^in\.\(/, '')
         .replace(/\)$/, '')
@@ -331,6 +337,102 @@ test('replaceEntryTags deletes user tags that are no longer referenced', async (
         .sort((a, b) => a - b),
       [1]
     );
+  } finally {
+    global.fetch = originalFetch;
+    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+  }
+});
+
+test('replaceEntryTags enforces a maximum of 10 user tags', async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
+
+  const userId = '11111111-1111-4111-8111-111111111111';
+  const tagsTable = Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    user_id: userId,
+    name: `Tag ${i + 1}`,
+    normalized_name: `tag-${i + 1}`,
+  }));
+
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      async text() {
+        return body === null ? '' : JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input, options = {}) => {
+    const method = options.method || 'GET';
+    const url = new URL(String(input));
+    const path = url.pathname;
+    const body = options.body ? JSON.parse(options.body) : undefined;
+
+    if (path === '/rest/v1/entry_tags' && method === 'DELETE') {
+      return jsonResponse(204, null);
+    }
+
+    if (path === '/rest/v1/tags' && method === 'GET') {
+      const scopedUserId = (url.searchParams.get('user_id') || '').replace('eq.', '');
+      const normalizedIn = url.searchParams.get('normalized_name') || '';
+      if (!normalizedIn) {
+        return jsonResponse(200, tagsTable.filter(t => t.user_id === scopedUserId));
+      }
+      const values = normalizedIn
+        .replace(/^in\.\(/, '')
+        .replace(/\)$/, '')
+        .split(',')
+        .map(s => s.trim().replace(/^"|"$/g, ''))
+        .filter(Boolean);
+      const rows = tagsTable.filter(
+        t => t.user_id === scopedUserId && values.includes(t.normalized_name)
+      );
+      return jsonResponse(200, rows);
+    }
+
+    if (path === '/rest/v1/tags' && method === 'POST') {
+      const row = body?.[0] ?? {};
+      tagsTable.push({
+        id: tagsTable.length + 1,
+        user_id: row.user_id,
+        name: row.name,
+        normalized_name: row.normalized_name,
+      });
+      return jsonResponse(201, null);
+    }
+
+    if (path === '/rest/v1/entry_tags' && method === 'POST') {
+      return jsonResponse(201, null);
+    }
+
+    if (path === '/rest/v1/entry_tags' && method === 'GET') {
+      return jsonResponse(200, []);
+    }
+
+    if (path === '/rest/v1/tags' && method === 'DELETE') {
+      return jsonResponse(204, null);
+    }
+
+    throw new Error(`Unhandled fetch: ${method} ${path}`);
+  };
+
+  try {
+    const { replaceEntryTags } = await importFresh('../../lib/db.js', 'replace-tags-max-limit');
+    await assert.rejects(
+      () => replaceEntryTags(userId, 9, ['new-tag'], 'token'),
+      /maximum of 10 tags is allowed per user/i
+    );
+    assert.equal(tagsTable.length, 10);
   } finally {
     global.fetch = originalFetch;
     process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;

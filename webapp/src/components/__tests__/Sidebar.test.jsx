@@ -13,7 +13,7 @@ describe('Sidebar', () => {
       />
     );
 
-    expect(screen.getByText('Tags')).toBeInTheDocument();
+    expect(screen.getByText('TAGS (2/10)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /#work/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /#ideas/i })).toBeInTheDocument();
   });
@@ -47,6 +47,21 @@ describe('Sidebar', () => {
 
     await user.click(screen.getByRole('button', { name: /settings/i }));
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens import conversations from desktop sidebar', async () => {
+    const user = userEvent.setup();
+    const onOpenImportConversations = vi.fn();
+
+    render(
+      <Sidebar
+        onOpenSettings={vi.fn()}
+        onOpenImportConversations={onOpenImportConversations}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /import llm conversations/i }));
+    expect(onOpenImportConversations).toHaveBeenCalledTimes(1);
   });
 
   it('hides settings button on mobile sidebar', () => {

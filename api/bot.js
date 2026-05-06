@@ -1,5 +1,6 @@
 import {
   insertEntry,
+  getUserTags,
   getTelegramLinkByChatId,
   setTelegramChatIdForUser,
   getUserTimezone,
@@ -45,7 +46,11 @@ function parseTags(input) {
 
 async function processText(rawText, chatId, userId, authToken) {
   const timezone = await getUserTimezone(userId, authToken);
-  const { category, title, summary, content, remind_at, tags } = await classify(rawText, { timezone });
+  const existingTags = await getUserTags(userId, authToken);
+  const { category, title, summary, content, remind_at, tags } = await classify(rawText, {
+    timezone,
+    existingTags,
+  });
   const normalizedTitle = typeof title === 'string' ? title.trim() : '';
   const normalizedSummary = typeof summary === 'string' ? summary.trim() : '';
   const normalizedContent = typeof content === 'string' ? content.trim() : '';

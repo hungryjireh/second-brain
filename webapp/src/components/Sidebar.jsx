@@ -2,12 +2,15 @@ import React from 'react';
 
 export default function Sidebar({
   onOpenSettings,
+  onOpenImportConversations,
+  importingConversations = false,
   isMobile = false,
   activeTag = '',
   onSelectTag = () => {},
   availableTags = [],
 }) {
   const safeTags = Array.isArray(availableTags) ? availableTags : [];
+  const maxUserTags = 10;
 
   const sectionTitleStyle = {
     fontSize: 11,
@@ -57,7 +60,7 @@ export default function Sidebar({
         gap: isMobile ? 6 : 2,
       }}
     >
-      <span style={sectionTitleStyle}>Tags</span>
+      <span style={sectionTitleStyle}>{`TAGS (${safeTags.length}/${maxUserTags})`}</span>
       {safeTags.map(tag => {
         const isActive = activeTag.toLowerCase() === tag.toLowerCase();
         return (
@@ -100,6 +103,40 @@ export default function Sidebar({
           />
 
           <button
+            onClick={onOpenImportConversations}
+            disabled={importingConversations}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 16px', margin: '0 8px',
+              borderRadius: 6, border: 'none', cursor: importingConversations ? 'not-allowed' : 'pointer',
+              background: 'transparent',
+              color: 'var(--text-muted)',
+              fontFamily: 'inherit', fontSize: 12,
+              transition: 'color .12s',
+              flexShrink: 0,
+              opacity: importingConversations ? 0.7 : 1,
+              textAlign: 'left',
+            }}
+            onMouseEnter={e => { if (!importingConversations) e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 14,
+                display: 'inline-flex',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: 14,
+                lineHeight: 1,
+              }}
+            >
+              ⬆
+            </span>
+            <span>{importingConversations ? 'Importing…' : 'Import LLM conversations'}</span>
+          </button>
+
+          <button
             onClick={onOpenSettings}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -114,7 +151,20 @@ export default function Sidebar({
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
           >
-            <span style={{ fontSize: 14 }}>⚙</span> Settings
+            <span
+              aria-hidden="true"
+              style={{
+                width: 14,
+                display: 'inline-flex',
+                justifyContent: 'center',
+                flexShrink: 0,
+                fontSize: 14,
+                lineHeight: 1,
+              }}
+            >
+              ⚙
+            </span>
+            <span>Settings</span>
           </button>
         </>
       )}
