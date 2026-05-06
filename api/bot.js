@@ -2,10 +2,9 @@ import {
   insertEntry,
   getUserTags,
   getTelegramLinkByChatId,
-  setTelegramChatIdForUser,
   getUserTimezone,
 } from '../lib/db.js';
-import { createAuthJwt, TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
+import { TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
 import { classify } from '../lib/classify.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage } from '../lib/notify.js';
@@ -104,7 +103,7 @@ function maybeReadJwtPayloadWithoutVerifying(token) {
   }
 }
 
-function isNonExpiringTelegramSessionToken(token) {
+function isLegacyLocalTelegramSessionToken(token) {
   const payload = maybeReadJwtPayloadWithoutVerifying(token);
   return payload?.purpose === TELEGRAM_SESSION_TOKEN_PURPOSE && !payload?.exp;
 }
@@ -140,15 +139,9 @@ export default async function handler(req, res) {
       await sendMessage(`🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`, chatId);
       return res.status(200).end();
     }
-    if (!isNonExpiringTelegramSessionToken(linkedUser.authToken)) {
-      const permanentToken = createAuthJwt({ sub: linkedUser.userId, purpose: TELEGRAM_SESSION_TOKEN_PURPOSE }, null);
-      await setTelegramChatIdForUser(
-        linkedUser.userId,
-        chatId,
-        permanentToken,
-        linkedUser.authToken
-      );
-      linkedUser.authToken = permanentToken;
+    if (isLegacyLocalTelegramSessionToken(linkedUser.authToken)) {
+      await sendMessage(`🔒 Please relink your account to refresh your session:\n/link <your-key>`, chatId);
+      return res.status(200).end();
     }
 
     if (text?.startsWith('/start')) {
