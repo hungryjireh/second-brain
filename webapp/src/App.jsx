@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import Sidebar from './components/Sidebar.jsx';
 import StatsBar from './components/StatsBar.jsx';
 import EntryCard from './components/EntryCard.jsx';
@@ -365,6 +366,7 @@ function groupByDate(entries) {
 }
 
 export default function App({ authToken, onUnauthorized }) {
+  const mainScrollRef = useRef(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900);
   const [isCompactMobile, setIsCompactMobile] = useState(() => window.innerWidth <= 480);
   const [entries, setEntries] = useState([]);
@@ -400,6 +402,7 @@ export default function App({ authToken, onUnauthorized }) {
   const [entryCopyStatus, setEntryCopyStatus] = useState('');
   const [entryCopyHoverField, setEntryCopyHoverField] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const importFileInputRef = useRef(null);
   const [importingConversations, setImportingConversations] = useState(false);
 
@@ -413,7 +416,10 @@ export default function App({ authToken, onUnauthorized }) {
   }, []);
 
   useEffect(() => {
-    if (!isMobile) setMobileMenuOpen(false);
+    if (!isMobile) {
+      setMobileMenuOpen(false);
+      setMobileFilterOpen(false);
+    }
   }, [isMobile]);
 
   const today = new Date().toLocaleDateString('en-SG', {
@@ -451,9 +457,6 @@ export default function App({ authToken, onUnauthorized }) {
 
   useEffect(() => {
     fetchEntries();
-    // Poll every 30s to pick up new bot entries
-    const interval = setInterval(fetchEntries, 30_000);
-    return () => clearInterval(interval);
   }, [fetchEntries]);
 
   useEffect(() => {
@@ -543,6 +546,34 @@ export default function App({ authToken, onUnauthorized }) {
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
   const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
+  const virtualRows = useMemo(() => {
+    const rows = [];
+    for (const group of groupOrder) {
+      const items = grouped[group];
+      if (!items || items.length === 0) continue;
+      rows.push({
+        type: 'header',
+        key: `header-${group}`,
+        group,
+        count: items.length,
+      });
+      for (const entry of items) {
+        rows.push({
+          type: 'entry',
+          key: `entry-${entry.id}`,
+          entry,
+        });
+      }
+    }
+    return rows;
+  }, [grouped]);
+  const rowVirtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => mainScrollRef.current,
+    estimateSize: index => (virtualRows[index]?.type === 'header' ? 30 : (isMobile ? 190 : 170)),
+    overscan: 8,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
   const editTagList = useMemo(() => parseTagInput(editTags), [editTags]);
   const canAddMoreTags = editTagList.length < MAX_ENTRY_TAGS;
 
@@ -840,27 +871,57 @@ export default function App({ authToken, onUnauthorized }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, order: isMobile ? 1 : 'unset' }}>
           {isMobile && (
-            <button
-              onClick={() => setMobileMenuOpen(prev => !prev)}
-              aria-label="Open menu"
-              style={{
-                width: 28,
-                height: 28,
-                border: '0.5px solid var(--border)',
-                borderRadius: 7,
-                background: 'var(--bg-raised)',
-                color: 'var(--text-secondary)',
-                fontSize: 15,
-                lineHeight: 1,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              ☰
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  setMobileFilterOpen(false);
+                  setMobileMenuOpen(prev => !prev);
+                }}
+                aria-label="Open menu"
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 7,
+                  background: 'var(--bg-raised)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 15,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                ☰
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setMobileFilterOpen(prev => !prev);
+                }}
+                aria-label="Open filters"
+                style={{
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 7,
+                  background: 'var(--bg-raised)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  fontFamily: 'inherit',
+                  padding: '0 9px',
+                  height: 28,
+                }}
+              >
+                Filter
+              </button>
+            </>
           )}
 
           <span
@@ -1010,69 +1071,42 @@ export default function App({ authToken, onUnauthorized }) {
             </button>
           </div>
         )}
-      </header>
 
-      {/* ── Body ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
-        {!isMobile && (
-          <Sidebar
-            active={activeCategory}
-            onSelect={handleSelectCategory}
-            activeTag={activeTag}
-            onSelectTag={handleSelectTag}
-            availableTags={availableTags}
-            counts={counts}
-            onOpenImportConversations={handleOpenImportDialog}
-            importingConversations={importingConversations}
-            onOpenSettings={handleOpenSettings}
-            isMobile={false}
-          />
-        )}
-
-        {/* ── Main content ── */}
-        <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: isMobile ? '12px' : '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isMobile ? 14 : 20,
-          }}
-        >
-          <StatsBar
-            counts={counts}
-            isMobile={isMobile}
-            activeCategory={activeCategory}
-            onSelectCategory={handleSelectCategory}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -8 }}>
-            <div style={{ display: 'flex' }}>
-              <button
-                onClick={() => setShowArchived(prev => !prev)}
-                style={{
-                  border: `0.5px solid ${showArchived ? 'var(--brand)' : 'var(--border)'}`,
-                  background: showArchived ? 'var(--brand-dim)' : 'var(--bg-surface)',
-                  color: showArchived ? 'var(--brand-text)' : 'var(--text-secondary)',
-                  borderRadius: 999,
-                  padding: '4px 10px',
-                  fontSize: 11,
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  transition: 'all .15s',
-                }}
-              >
-                {showArchived ? 'Hide Archived/Done' : 'Show Archived/Done'}
-              </button>
-            </div>
-            <div
+        {isMobile && mobileFilterOpen && (
+          <div
+            style={{
+              order: 4,
+              flex: '1 1 100%',
+              width: '100%',
+              marginTop: 2,
+              background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 10,
+              padding: 8,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <label
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: 8,
-                flexWrap: 'wrap',
+                alignSelf: 'flex-end',
+                gap: 6,
+                fontSize: 11,
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
               }}
             >
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={e => setShowArchived(e.target.checked)}
+              />
+              Show Archived/Done
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span
                 style={{
                   fontSize: 11,
@@ -1082,7 +1116,7 @@ export default function App({ authToken, onUnauthorized }) {
                   fontWeight: 500,
                 }}
               >
-                Priority filter
+                Priority
               </span>
               {PRIORITY_LEVELS.map(level => {
                 const active = activePriorityLevel === level.key;
@@ -1107,50 +1141,203 @@ export default function App({ authToken, onUnauthorized }) {
                 );
               })}
             </div>
-            {isMobile && (
-              <div
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  flexWrap: 'wrap',
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    fontWeight: 500,
-                  }}
-                >
-                  Tags filter
-                </span>
-                {availableTags.map(tag => {
-                  const active = activeTag.toLowerCase() === tag.toLowerCase();
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => handleSelectTag(tag)}
-                      style={{
-                        border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
-                        background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
-                        color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
-                        borderRadius: 999,
-                        padding: '4px 10px',
-                        fontSize: 11,
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        transition: 'all .15s',
-                      }}
-                    >
-                      #{tag}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                {`Tags (${availableTags.length}/10)`}
+              </span>
+              {availableTags.map(tag => {
+                const active = activeTag.toLowerCase() === tag.toLowerCase();
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => handleSelectTag(tag)}
+                    style={{
+                      border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                      background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* ── Body ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
+        {!isMobile && (
+          <Sidebar
+            active={activeCategory}
+            onSelect={handleSelectCategory}
+            activeTag={activeTag}
+            onSelectTag={handleSelectTag}
+            availableTags={availableTags}
+            counts={counts}
+            onOpenImportConversations={handleOpenImportDialog}
+            importingConversations={importingConversations}
+            onOpenSettings={handleOpenSettings}
+            isMobile={false}
+          />
+        )}
+
+        {/* ── Main content ── */}
+        <main
+          ref={mainScrollRef}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: isMobile ? '12px' : '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? 14 : 20,
+          }}
+        >
+          <StatsBar
+            counts={counts}
+            isMobile={isMobile}
+            activeCategory={activeCategory}
+            onSelectCategory={handleSelectCategory}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -8 }}>
+            <div style={{ display: isMobile ? 'none' : 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                }}
+              >
+                FILTER
+              </span>
+              <label
+                style={{
+                  display: isMobile ? 'none' : 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginLeft: 'auto',
+                  fontSize: 11,
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={e => setShowArchived(e.target.checked)}
+                />
+                Show Archived/Done
+              </label>
+            </div>
+            <div
+              style={{
+                display: isMobile ? 'none' : 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                }}
+              >
+                Priority
+              </span>
+              {PRIORITY_LEVELS.map(level => {
+                const active = activePriorityLevel === level.key;
+                return (
+                  <button
+                    key={level.key}
+                    onClick={() => setActivePriorityLevel(prev => (prev === level.key ? '' : level.key))}
+                    style={{
+                      border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                      background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    {level.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              style={{
+                display: isMobile ? 'none' : 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                }}
+              >
+                {`Tags (${availableTags.length}/10)`}
+              </span>
+              {availableTags.map(tag => {
+                const active = activeTag.toLowerCase() === tag.toLowerCase();
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => handleSelectTag(tag)}
+                    style={{
+                      border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                      background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    #{tag}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {loading && (
@@ -1193,40 +1380,62 @@ export default function App({ authToken, onUnauthorized }) {
             </div>
           )}
 
-          {groupOrder.map(group => {
-            const items = grouped[group];
-            if (!items || items.length === 0) return null;
-            return (
-              <section key={group} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    margin: 0,
-                  }}
-                >
-                  {group} · {items.length}
-                </p>
-                {items.map(entry => (
-                  <EntryCard
-                    key={entry.id}
-                    entry={entry}
-                    onDelete={handleDelete}
-                    onArchive={handleArchive}
-                    onEdit={handleOpenEdit}
-                    onOpenDescription={setSelectedEntry}
-                    apiBase={API}
-                    authToken={authToken}
-                    timezone={timezone}
-                    isMobile={isMobile}
-                  />
-                ))}
-              </section>
-            );
-          })}
+          {virtualRows.length > 0 && (
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: 'relative',
+                width: '100%',
+              }}
+            >
+              {virtualItems.map(virtualItem => {
+                const row = virtualRows[virtualItem.index];
+                if (!row) return null;
+
+                return (
+                  <div
+                    key={row.key}
+                    ref={rowVirtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    {row.type === 'header' ? (
+                      <p
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: 'var(--text-muted)',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          margin: 0,
+                        }}
+                      >
+                        {row.group} · {row.count}
+                      </p>
+                    ) : (
+                      <EntryCard
+                        entry={row.entry}
+                        onDelete={handleDelete}
+                        onArchive={handleArchive}
+                        onEdit={handleOpenEdit}
+                        onOpenDescription={setSelectedEntry}
+                        apiBase={API}
+                        authToken={authToken}
+                        timezone={timezone}
+                        isMobile={isMobile}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </main>
       </div>
 

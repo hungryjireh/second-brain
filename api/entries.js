@@ -1,6 +1,8 @@
 import {
   getAllEntries,
   getEntriesByCategory,
+  decodeEntriesCursor,
+  MAX_ENTRIES_PAGE_SIZE,
   insertEntry,
   deleteEntry,
   updateEntry,
@@ -227,6 +229,13 @@ function normalizeEntry(entry) {
   };
 }
 
+function parseEntriesLimit(value) {
+  if (value === undefined) return undefined;
+  const n = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(n) || n < 1 || n > MAX_ENTRIES_PAGE_SIZE) return null;
+  return n;
+}
+
 export default async function handler(req, res) {
   // OPTIONS pre-flight (CORS headers set globally in vercel.json)
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -246,11 +255,34 @@ export default async function handler(req, res) {
   // ── GET /api/entries[?category=X] ──────────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const { category } = req.query;
-      const entries = category
-        ? await getEntriesByCategory(userId, category, token)
-        : await getAllEntries(userId, token);
-      return json(res, 200, entries.map(normalizeEntry));
+      const { category, limit: rawLimit, cursor: rawCursor } = req.query;
+      const limit = parseEntriesLimit(rawLimit);
+      if (limit === null) {
+        return json(res, 400, { error: `limit must be an integer between 1 and ${MAX_ENTRIES_PAGE_SIZE}` });
+      }
+
+      const cursor = rawCursor === undefined ? undefined : String(rawCursor);
+      if (cursor !== undefined && decodeEntriesCursor(cursor) === null) {
+        return json(res, 400, { error: 'invalid cursor. expected "<created_at>:<id>"' });
+      }
+
+      const pageOptions = { limit, cursor };
+      const result = category
+        ? await getEntriesByCategory(userId, category, token, pageOptions)
+        : await getAllEntries(userId, token, pageOptions);
+
+      if (Array.isArray(result)) {
+        return json(res, 200, result.map(normalizeEntry));
+      }
+
+      return json(res, 200, {
+        entries: result.entries.map(normalizeEntry),
+        page: {
+          limit: result.limit,
+          has_more: result.hasMore,
+          next_cursor: result.nextCursor,
+        },
+      });
     } catch (err) {
       console.error('[GET /api/entries]', err);
       return json(res, 500, { error: err.message });

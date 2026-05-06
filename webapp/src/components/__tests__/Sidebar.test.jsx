@@ -3,36 +3,14 @@ import userEvent from '@testing-library/user-event';
 import Sidebar from '../Sidebar.jsx';
 
 describe('Sidebar', () => {
-  it('renders tags header with available tags', () => {
+  it('does not render tags in desktop sidebar', () => {
     render(
       <Sidebar
-        activeTag=""
-        onSelectTag={vi.fn()}
-        availableTags={['work', 'ideas']}
         onOpenSettings={vi.fn()}
       />
     );
 
-    expect(screen.getByText('TAGS (2/10)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /#work/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /#ideas/i })).toBeInTheDocument();
-  });
-
-  it('calls onSelectTag with clicked tag', async () => {
-    const user = userEvent.setup();
-    const onSelectTag = vi.fn();
-
-    render(
-      <Sidebar
-        activeTag=""
-        onSelectTag={onSelectTag}
-        availableTags={['work']}
-        onOpenSettings={vi.fn()}
-      />
-    );
-
-    await user.click(screen.getByRole('button', { name: /#work/i }));
-    expect(onSelectTag).toHaveBeenCalledWith('work');
+    expect(screen.queryByText(/tags \(\d+\/10\)/i)).not.toBeInTheDocument();
   });
 
   it('opens settings from desktop sidebar', async () => {

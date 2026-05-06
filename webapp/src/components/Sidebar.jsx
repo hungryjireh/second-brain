@@ -5,42 +5,7 @@ export default function Sidebar({
   onOpenImportConversations,
   importingConversations = false,
   isMobile = false,
-  activeTag = '',
-  onSelectTag = () => {},
-  availableTags = [],
 }) {
-  const safeTags = Array.isArray(availableTags) ? availableTags : [];
-  const maxUserTags = 10;
-
-  const sectionTitleStyle = {
-    fontSize: 11,
-    color: 'var(--text-muted)',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    fontWeight: 500,
-    padding: isMobile ? '6px 8px 2px' : '0 16px 4px',
-  };
-
-  const itemStyle = isActive => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: isMobile ? '6px 10px' : '7px 16px',
-    margin: isMobile ? 0 : '0 8px',
-    borderRadius: 6,
-    border: 'none',
-    cursor: 'pointer',
-    background: isActive ? 'var(--bg-raised)' : 'transparent',
-    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-    fontFamily: 'inherit',
-    fontSize: 13,
-    fontWeight: isActive ? 500 : 400,
-    transition: 'background .12s, color .12s',
-    textAlign: 'left',
-    width: isMobile ? 'auto' : 'calc(100% - 16px)',
-    flexShrink: 0,
-  });
-
   return (
     <aside
       className={isMobile ? 'mobile-category-scroll' : undefined}
@@ -60,48 +25,8 @@ export default function Sidebar({
         gap: isMobile ? 6 : 2,
       }}
     >
-      <span style={sectionTitleStyle}>{`TAGS (${safeTags.length}/${maxUserTags})`}</span>
-      {safeTags.map(tag => {
-        const isActive = activeTag.toLowerCase() === tag.toLowerCase();
-        return (
-          <button
-            key={tag}
-            onClick={() => onSelectTag(tag)}
-            style={itemStyle(isActive)}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-          >
-            <span
-              aria-hidden="true"
-              style={{
-                width: 8,
-                color: '#666',
-                opacity: isActive ? 1 : 0.5,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                lineHeight: 1,
-                flexShrink: 0,
-              }}
-            >
-              •
-            </span>
-            <span style={{ flex: 1 }}>#{tag}</span>
-          </button>
-        );
-      })}
-
       {!isMobile && (
         <>
-          <div
-            style={{
-              height: 1,
-              width: 'auto',
-              background: 'var(--border)',
-              margin: '10px 16px',
-            }}
-          />
-
           <button
             onClick={onOpenImportConversations}
             disabled={importingConversations}
