@@ -27,6 +27,14 @@ function compactWhitespace(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeMarkdownBullets(value) {
+  return String(value ?? '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map(line => line.replace(/^(\s*)[•●◦▪‣]\s+(.+)$/, '$1- $2'))
+    .join('\n');
+}
+
 function parseTags(input) {
   if (input === undefined) return undefined;
   if (!Array.isArray(input)) return null;
@@ -64,7 +72,7 @@ function truncateChars(value, maxChars) {
 }
 
 function deriveEntryFields(description, classifiedContent = '') {
-  const rawDescription = String(description ?? '').trim();
+  const rawDescription = normalizeMarkdownBullets(String(description ?? '')).trim();
   const normalizedDescription = compactWhitespace(rawDescription);
   const normalizedClassified = compactWhitespace(classifiedContent);
   const titleSource = normalizedClassified || normalizedDescription;

@@ -365,6 +365,13 @@ function groupByDate(entries) {
   return groups;
 }
 
+function getTimezoneOptions() {
+  if (typeof Intl.supportedValuesOf === 'function') {
+    return Intl.supportedValuesOf('timeZone');
+  }
+  return ['Asia/Singapore'];
+}
+
 export default function App({ authToken, onUnauthorized }) {
   const mainScrollRef = useRef(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900);
@@ -404,6 +411,7 @@ export default function App({ authToken, onUnauthorized }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const importFileInputRef = useRef(null);
+  const editDescriptionRef = useRef(null);
   const [importingConversations, setImportingConversations] = useState(false);
 
   useEffect(() => {
@@ -576,6 +584,10 @@ export default function App({ authToken, onUnauthorized }) {
   const virtualItems = rowVirtualizer.getVirtualItems();
   const editTagList = useMemo(() => parseTagInput(editTags), [editTags]);
   const canAddMoreTags = editTagList.length < MAX_ENTRY_TAGS;
+  const timezoneOptions = useMemo(() => {
+    const options = getTimezoneOptions();
+    return options.includes(timezoneDraft) ? options : [timezoneDraft, ...options];
+  }, [timezoneDraft]);
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   function handleDelete(id) {
@@ -622,6 +634,29 @@ export default function App({ authToken, onUnauthorized }) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     handleAddEditTag();
+  }
+
+  function handleAddDescriptionBulletPoint() {
+    const textarea = editDescriptionRef.current;
+    if (!textarea) {
+      setEditContent(prev => (prev ? `${prev}\n- ` : '- '));
+      return;
+    }
+
+    const value = editContent;
+    const selectionStart = textarea.selectionStart ?? value.length;
+    const selectionEnd = textarea.selectionEnd ?? value.length;
+    const lineStart = value.lastIndexOf('\n', Math.max(selectionStart - 1, 0)) + 1;
+    const hasContentBeforeCursor = value.slice(lineStart, selectionStart).trim().length > 0;
+    const prefix = hasContentBeforeCursor ? '\n- ' : '- ';
+    const nextValue = `${value.slice(0, selectionStart)}${prefix}${value.slice(selectionEnd)}`;
+    const nextCaret = selectionStart + prefix.length;
+
+    setEditContent(nextValue);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextCaret, nextCaret);
+    });
   }
 
   function handleOpenSettings() {
@@ -685,7 +720,7 @@ export default function App({ authToken, onUnauthorized }) {
 
   async function handleSaveSettings() {
     if (savingSettings) return;
-    const timezoneToSave = timezoneDraft.trim();
+    const timezoneToSave = timezoneDraft;
     if (!timezoneToSave) {
       setTimezoneError('Timezone is required.');
       return;
@@ -1612,7 +1647,46 @@ export default function App({ authToken, onUnauthorized }) {
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Description</span>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <button
+                  type="button"
+                  onClick={handleAddDescriptionBulletPoint}
+                  aria-label="Add bullet point"
+                  title="Add bullet point"
+                  style={{
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '6px 8px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: 'var(--bg-raised)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <svg
+                    width="18"
+                    height="14"
+                    viewBox="0 0 18 14"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <circle cx="2" cy="2.5" r="1.25" fill="currentColor" />
+                    <circle cx="2" cy="7" r="1.25" fill="currentColor" />
+                    <circle cx="2" cy="11.5" r="1.25" fill="currentColor" />
+                    <rect x="5" y="1.5" width="11.5" height="1.75" rx="0.875" fill="currentColor" />
+                    <rect x="5" y="6" width="11.5" height="1.75" rx="0.875" fill="currentColor" />
+                    <rect x="5" y="10.5" width="11.5" height="1.75" rx="0.875" fill="currentColor" />
+                  </svg>
+                </button>
+              </div>
               <textarea
+                ref={editDescriptionRef}
                 rows={4}
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
@@ -2015,11 +2089,9 @@ export default function App({ authToken, onUnauthorized }) {
             </p>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Timezone</span>
-              <input
-                type="text"
+              <select
                 value={timezoneDraft}
                 onChange={e => setTimezoneDraft(e.target.value)}
-                placeholder="e.g. Asia/Singapore"
                 style={{
                   background: 'var(--bg-raised)',
                   border: '0.5px solid var(--border)',
@@ -2029,7 +2101,11 @@ export default function App({ authToken, onUnauthorized }) {
                   color: 'var(--text-primary)',
                   fontFamily: 'inherit',
                 }}
-              />
+              >
+                {timezoneOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
             </label>
             {timezoneError && (
               <div style={{ color: '#f87171', fontSize: 12 }}>
