@@ -61,13 +61,14 @@ function truncateChars(value, maxChars) {
 }
 
 function deriveEntryFields(description, classifiedContent = '') {
-  const normalizedDescription = compactWhitespace(description);
+  const rawDescription = String(description ?? '').trim();
+  const normalizedDescription = compactWhitespace(rawDescription);
   const normalizedClassified = compactWhitespace(classifiedContent);
   const titleSource = normalizedClassified || normalizedDescription;
   const summarySource = normalizedClassified || normalizedDescription;
   const title = truncateChars(truncateWords(titleSource, 8), 80) || 'Untitled';
   const summary = truncateChars(truncateWords(summarySource, 22), 180) || 'No summary.';
-  return { title, summary, raw_text: normalizedDescription };
+  return { title, summary, raw_text: rawDescription };
 }
 
 function normalizeEntry(entry) {

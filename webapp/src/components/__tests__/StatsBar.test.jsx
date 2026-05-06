@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import StatsBar from '../StatsBar.jsx';
 
 describe('StatsBar', () => {
@@ -26,5 +27,32 @@ describe('StatsBar', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
     const zeroNodes = screen.getAllByText('0');
     expect(zeroNodes).toHaveLength(3);
+  });
+
+  it('calls onSelectCategory when a stat card is clicked', async () => {
+    const user = userEvent.setup();
+    const onSelectCategory = vi.fn();
+
+    render(
+      <StatsBar
+        counts={{ reminder: 2, todo: 3, thought: 1, note: 4 }}
+        onSelectCategory={onSelectCategory}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /TODOs/i }));
+    expect(onSelectCategory).toHaveBeenCalledWith('todo');
+  });
+
+  it('marks the active category as pressed', () => {
+    render(
+      <StatsBar
+        counts={{ reminder: 2, todo: 3, thought: 1, note: 4 }}
+        activeCategory="thought"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Thoughts/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Reminders/i })).toHaveAttribute('aria-pressed', 'false');
   });
 });

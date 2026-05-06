@@ -1,16 +1,6 @@
 import React from 'react';
 
-const NAV = [
-  { key: 'reminder', label: 'Reminders', color: '#1D9E75' },
-  { key: 'todo',     label: 'TODOs',     color: '#378ADD' },
-  { key: 'thought',  label: 'Thoughts',  color: '#7F77DD' },
-  { key: 'note',     label: 'Notes',     color: '#EF9F27' },
-];
-
 export default function Sidebar({
-  active,
-  onSelect,
-  counts,
   onOpenSettings,
   isMobile = false,
   activeTag = '',
@@ -67,57 +57,6 @@ export default function Sidebar({
         gap: isMobile ? 6 : 2,
       }}
     >
-      <span style={sectionTitleStyle}>Category</span>
-      {NAV.map(({ key, label, color }) => {
-        const isActive = active === key;
-        const count = counts?.[key] ?? 0;
-
-        return (
-          <button
-            key={key}
-            onClick={() => onSelect(key)}
-            style={itemStyle(isActive)}
-            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-          >
-            <span
-              style={{
-                width: 7, height: 7,
-                borderRadius: '50%',
-                background: color,
-                flexShrink: 0,
-                opacity: isActive ? 1 : 0.5,
-              }}
-            />
-            <span style={{ flex: 1 }}>{label}</span>
-            {count > 0 && (
-              <span
-                style={{
-                  fontSize: 11,
-                  color: 'var(--text-muted)',
-                  background: 'var(--bg-raised)',
-                  padding: '1px 6px',
-                  borderRadius: 10,
-                  border: '0.5px solid var(--border)',
-                }}
-              >
-                {count}
-              </span>
-            )}
-          </button>
-        );
-      })}
-
-      <div
-        style={{
-          height: 1,
-          width: 'auto',
-          background: 'var(--border)',
-          margin: isMobile ? '6px 8px' : '10px 16px',
-          flexShrink: 0,
-        }}
-      />
-
       <span style={sectionTitleStyle}>Tags</span>
       {safeTags.map(tag => {
         const isActive = activeTag.toLowerCase() === tag.toLowerCase();

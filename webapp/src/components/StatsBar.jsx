@@ -7,7 +7,12 @@ const STATS = [
   { key: 'note',     label: 'Notes',     color: '#EF9F27', dimColor: 'rgba(239,159,39,0.12)' },
 ];
 
-export default function StatsBar({ counts, isMobile = false }) {
+export default function StatsBar({
+  counts,
+  isMobile = false,
+  activeCategory = '',
+  onSelectCategory = () => {},
+}) {
   return (
     <div
       style={{
@@ -16,12 +21,16 @@ export default function StatsBar({ counts, isMobile = false }) {
         gap: isMobile ? 6 : 8,
       }}
     >
-      {STATS.map(({ key, label, color, dimColor }) => (
-        <div
+      {STATS.map(({ key, label, color, dimColor }) => {
+        const isActive = activeCategory === key;
+        return (
+        <button
           key={key}
+          onClick={() => onSelectCategory(key)}
+          aria-pressed={isActive}
           style={{
-            background: 'var(--bg-surface)',
-            border: '0.5px solid var(--border)',
+            background: isActive ? 'var(--brand-dim)' : 'var(--bg-surface)',
+            border: `0.5px solid ${isActive ? 'var(--brand)' : 'var(--border)'}`,
             borderRadius: 10,
             padding: isMobile ? '8px 6px' : '10px 14px',
             display: 'flex',
@@ -29,6 +38,10 @@ export default function StatsBar({ counts, isMobile = false }) {
             gap: isMobile ? 3 : 4,
             position: 'relative',
             overflow: 'hidden',
+            cursor: 'pointer',
+            textAlign: 'left',
+            fontFamily: 'inherit',
+            transition: 'all .15s',
           }}
         >
           {/* Accent glow top-left */}
@@ -49,7 +62,7 @@ export default function StatsBar({ counts, isMobile = false }) {
             style={{
               fontFamily: 'DM Serif Display, serif',
               fontSize: isMobile ? 20 : 26,
-              color,
+              color: isActive ? 'var(--brand-text)' : color,
               lineHeight: 1,
             }}
           >
@@ -58,7 +71,7 @@ export default function StatsBar({ counts, isMobile = false }) {
           <span
             style={{
               fontSize: isMobile ? 9 : 10,
-              color: 'var(--text-muted)',
+              color: isActive ? 'var(--brand-text)' : 'var(--text-muted)',
               textTransform: 'uppercase',
               letterSpacing: isMobile ? '0.05em' : '0.07em',
               fontWeight: 500,
@@ -66,8 +79,8 @@ export default function StatsBar({ counts, isMobile = false }) {
           >
             {label}
           </span>
-        </div>
-      ))}
+        </button>
+      )})}
     </div>
   );
 }

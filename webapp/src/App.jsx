@@ -7,11 +7,238 @@ const API = import.meta.env.VITE_API_URL || '/api';
 const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
 const MAX_ENTRY_TAGS = 3;
 const PRIORITY_LEVELS = [
-  { key: 'all', label: 'All priorities' },
   { key: 'high', label: 'High (8-10)' },
   { key: 'medium', label: 'Medium (4-7)' },
   { key: 'low', label: 'Low (0-3)' },
 ];
+
+function renderInlineMarkdown(text, keyPrefix = 'inline') {
+  const source = String(text ?? '');
+  const out = [];
+  const pattern = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    if (match.index > lastIndex) out.push(source.slice(lastIndex, match.index));
+    if (match[2] && match[3]) {
+      out.push(
+        <a key={`${keyPrefix}-link-${match.index}`} href={match[3]} target="_blank" rel="noreferrer">
+          {match[2]}
+        </a>
+      );
+    } else if (match[4]) {
+      out.push(<strong key={`${keyPrefix}-strong-${match.index}`}>{match[4]}</strong>);
+    } else if (match[5]) {
+      out.push(<em key={`${keyPrefix}-em-${match.index}`}>{match[5]}</em>);
+    } else if (match[6]) {
+      out.push(
+        <code key={`${keyPrefix}-code-${match.index}`} style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 4px', borderRadius: 4 }}>
+          {match[6]}
+        </code>
+      );
+    }
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < source.length) out.push(source.slice(lastIndex));
+  return out;
+}
+
+function parseMarkdownTableRow(line) {
+  const trimmed = String(line ?? '').trim();
+  if (!trimmed.includes('|')) return null;
+  const normalized = trimmed.replace(/^\|/, '').replace(/\|$/, '');
+  const cells = normalized.split('|').map(cell => cell.trim());
+  return cells.length > 0 ? cells : null;
+}
+
+function isMarkdownTableSeparator(line, expectedCols) {
+  const cells = parseMarkdownTableRow(line);
+  if (!cells || cells.length !== expectedCols) return false;
+  return cells.every(cell => /^:?-{3,}:?$/.test(cell));
+}
+
+function renderMarkdownContent(markdown) {
+  const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) {
+      i += 1;
+      continue;
+    }
+    if (line.startsWith('```')) {
+      const fence = line.slice(3).trim();
+      const codeLines = [];
+      i += 1;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeLines.push(lines[i]);
+        i += 1;
+      }
+      if (i < lines.length) i += 1;
+      blocks.push(
+        <pre key={`code-${i}`} style={{ margin: '8px 0', padding: 10, borderRadius: 8, overflowX: 'auto', background: 'rgba(0,0,0,0.25)' }}>
+          <code>{codeLines.join('\n')}{fence ? '\n' : ''}</code>
+        </pre>
+      );
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      const text = heading[2];
+      const HeadingTag = `h${level}`;
+      blocks.push(
+        <HeadingTag key={`heading-${i}`} style={{ margin: '8px 0 6px', fontSize: `${Math.max(20 - level * 2, 13)}px`, lineHeight: 1.35 }}>
+          {renderInlineMarkdown(text, `h-${i}`)}
+        </HeadingTag>
+      );
+      i += 1;
+      continue;
+    }
+    const tableHeader = parseMarkdownTableRow(line);
+    if (
+      tableHeader &&
+      i + 1 < lines.length &&
+      isMarkdownTableSeparator(lines[i + 1], tableHeader.length)
+    ) {
+      const rows = [];
+      i += 2;
+      while (i < lines.length) {
+        const row = parseMarkdownTableRow(lines[i]);
+        if (!row) break;
+        if (row.length !== tableHeader.length) break;
+        rows.push(row);
+        i += 1;
+      }
+      blocks.push(
+        <div key={`table-${i}`} style={{ margin: '10px 0', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                {tableHeader.map((cell, idx) => (
+                  <th
+                    key={`th-${i}-${idx}`}
+                    style={{
+                      border: '0.5px solid var(--border)',
+                      padding: '6px 8px',
+                      textAlign: 'left',
+                      background: 'rgba(255,255,255,0.03)',
+                    }}
+                  >
+                    {renderInlineMarkdown(cell, `th-${i}-${idx}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => (
+                <tr key={`tr-${i}-${rowIdx}`}>
+                  {row.map((cell, cellIdx) => (
+                    <td
+                      key={`td-${i}-${rowIdx}-${cellIdx}`}
+                      style={{ border: '0.5px solid var(--border)', padding: '6px 8px', verticalAlign: 'top' }}
+                    >
+                      {renderInlineMarkdown(cell, `td-${i}-${rowIdx}-${cellIdx}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+    if (/^(-{3,}|\*{3,})$/.test(line.trim())) {
+      blocks.push(<hr key={`hr-${i}`} style={{ border: 0, borderTop: '0.5px solid var(--border)', margin: '10px 0' }} />);
+      i += 1;
+      continue;
+    }
+    const bullet = line.match(/^(\s*)[-*]\s+(.+)$/);
+    if (bullet) {
+      const items = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i].match(/^(\s*)[-*]\s+(.+)$/);
+        if (!itemMatch) break;
+        items.push(itemMatch[2]);
+        i += 1;
+      }
+      blocks.push(
+        <ul key={`ul-${i}`} style={{ margin: '8px 0', paddingLeft: 22 }}>
+          {items.map((item, idx) => (
+            <li key={`li-${i}-${idx}`} style={{ margin: '2px 0' }}>
+              {renderInlineMarkdown(item, `li-${i}-${idx}`)}
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+    const numbered = line.match(/^\d+\.\s+(.+)$/);
+    if (numbered) {
+      const items = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i].match(/^\d+\.\s+(.+)$/);
+        if (!itemMatch) break;
+        items.push(itemMatch[1]);
+        i += 1;
+      }
+      blocks.push(
+        <ol key={`ol-${i}`} style={{ margin: '8px 0', paddingLeft: 22 }}>
+          {items.map((item, idx) => (
+            <li key={`oli-${i}-${idx}`} style={{ margin: '2px 0' }}>
+              {renderInlineMarkdown(item, `oli-${i}-${idx}`)}
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+    const quote = line.match(/^>\s?(.+)$/);
+    if (quote) {
+      const quoteLines = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i].match(/^>\s?(.+)$/);
+        if (!itemMatch) break;
+        quoteLines.push(itemMatch[1]);
+        i += 1;
+      }
+      blocks.push(
+        <blockquote
+          key={`quote-${i}`}
+          style={{
+            margin: '8px 0',
+            padding: '2px 0 2px 10px',
+            borderLeft: '2px solid var(--border)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {renderInlineMarkdown(quoteLines.join('\n'), `q-${i}`)}
+        </blockquote>
+      );
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !lines[i].startsWith('```')) {
+      if (/^(#{1,6})\s+(.+)$/.test(lines[i])) break;
+      if (/^(\s*)[-*]\s+(.+)$/.test(lines[i])) break;
+      if (/^\d+\.\s+(.+)$/.test(lines[i])) break;
+      if (/^>\s?(.+)$/.test(lines[i])) break;
+      if (/^(-{3,}|\*{3,})$/.test(lines[i].trim())) break;
+      para.push(lines[i]);
+      i += 1;
+    }
+    if (para.length) {
+      blocks.push(
+        <p key={`p-${i}`} style={{ margin: '8px 0', whiteSpace: 'pre-wrap' }}>
+          {renderInlineMarkdown(para.join('\n'), `p-${i}`)}
+        </p>
+      );
+    }
+  }
+  return blocks;
+}
 
 function getPriorityLevel(priority) {
   const value = Number.isFinite(priority) ? priority : 0;
@@ -123,7 +350,7 @@ export default function App({ authToken, onUnauthorized }) {
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('');
   const [activeTag, setActiveTag] = useState('');
-  const [activePriorityLevel, setActivePriorityLevel] = useState('all');
+  const [activePriorityLevel, setActivePriorityLevel] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [inputText, setInputText] = useState('');
@@ -275,7 +502,7 @@ export default function App({ authToken, onUnauthorized }) {
       );
     }
 
-    if (activePriorityLevel !== 'all') {
+    if (activePriorityLevel) {
       list = list.filter(e => getPriorityLevel(e.priority ?? 0) === activePriorityLevel);
     }
 
@@ -685,16 +912,18 @@ export default function App({ authToken, onUnauthorized }) {
 
       {/* ── Body ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
-        <Sidebar
-          active={activeCategory}
-          onSelect={handleSelectCategory}
-          activeTag={activeTag}
-          onSelectTag={handleSelectTag}
-          availableTags={availableTags}
-          counts={counts}
-          onOpenSettings={handleOpenSettings}
-          isMobile={isMobile}
-        />
+        {!isMobile && (
+          <Sidebar
+            active={activeCategory}
+            onSelect={handleSelectCategory}
+            activeTag={activeTag}
+            onSelectTag={handleSelectTag}
+            availableTags={availableTags}
+            counts={counts}
+            onOpenSettings={handleOpenSettings}
+            isMobile={false}
+          />
+        )}
 
         {/* ── Main content ── */}
         <main
@@ -707,7 +936,12 @@ export default function App({ authToken, onUnauthorized }) {
             gap: isMobile ? 14 : 20,
           }}
         >
-          <StatsBar counts={counts} isMobile={isMobile} />
+          <StatsBar
+            counts={counts}
+            isMobile={isMobile}
+            activeCategory={activeCategory}
+            onSelectCategory={handleSelectCategory}
+          />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -8 }}>
             <div style={{ display: 'flex' }}>
               <button
@@ -751,7 +985,7 @@ export default function App({ authToken, onUnauthorized }) {
                 return (
                   <button
                     key={level.key}
-                    onClick={() => setActivePriorityLevel(level.key)}
+                    onClick={() => setActivePriorityLevel(prev => (prev === level.key ? '' : level.key))}
                     style={{
                       border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
                       background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
@@ -769,6 +1003,50 @@ export default function App({ authToken, onUnauthorized }) {
                 );
               })}
             </div>
+            {isMobile && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    fontWeight: 500,
+                  }}
+                >
+                  Tags filter
+                </span>
+                {availableTags.map(tag => {
+                  const active = activeTag.toLowerCase() === tag.toLowerCase();
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => handleSelectTag(tag)}
+                      style={{
+                        border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                        background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                        color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                        borderRadius: 999,
+                        padding: '4px 10px',
+                        fontSize: 11,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all .15s',
+                      }}
+                    >
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {loading && (
@@ -1246,13 +1524,12 @@ export default function App({ authToken, onUnauthorized }) {
                 padding: 12,
                 maxHeight: '50vh',
                 overflowY: 'auto',
-                whiteSpace: 'pre-wrap',
                 fontSize: 13,
                 lineHeight: 1.6,
                 color: 'var(--text-primary)',
               }}
             >
-              {selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || ''}
+              {renderMarkdownContent(selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || '')}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
