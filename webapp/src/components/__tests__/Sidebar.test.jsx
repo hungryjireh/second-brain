@@ -11,7 +11,7 @@ describe('Sidebar', () => {
 
     render(
       <Sidebar
-        active="all"
+        active=""
         onSelect={onSelect}
         counts={counts}
         onOpenSettings={vi.fn()}
@@ -22,20 +22,58 @@ describe('Sidebar', () => {
     expect(onSelect).toHaveBeenCalledWith('todo');
   });
 
-  it('shows aggregate count for All and category-specific counts', () => {
+  it('shows category-specific counts', () => {
     render(
       <Sidebar
-        active="all"
+        active=""
         onSelect={vi.fn()}
         counts={counts}
         onOpenSettings={vi.fn()}
       />
     );
 
-    expect(screen.getByRole('button', { name: 'All 6' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reminders 1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'TODOs 2' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Notes 3' })).toBeInTheDocument();
+  });
+
+  it('renders category and tags headers with available tags', () => {
+    render(
+      <Sidebar
+        active=""
+        onSelect={vi.fn()}
+        counts={counts}
+        activeTag=""
+        onSelectTag={vi.fn()}
+        availableTags={['work', 'ideas']}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Category')).toBeInTheDocument();
+    expect(screen.getByText('Tags')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /#work/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /#ideas/i })).toBeInTheDocument();
+  });
+
+  it('calls onSelectTag with clicked tag', async () => {
+    const user = userEvent.setup();
+    const onSelectTag = vi.fn();
+
+    render(
+      <Sidebar
+        active=""
+        onSelect={vi.fn()}
+        counts={counts}
+        activeTag=""
+        onSelectTag={onSelectTag}
+        availableTags={['work']}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /#work/i }));
+    expect(onSelectTag).toHaveBeenCalledWith('work');
   });
 
   it('opens settings from desktop sidebar', async () => {
@@ -44,7 +82,7 @@ describe('Sidebar', () => {
 
     render(
       <Sidebar
-        active="all"
+        active=""
         onSelect={vi.fn()}
         counts={counts}
         onOpenSettings={onOpenSettings}
@@ -58,7 +96,7 @@ describe('Sidebar', () => {
   it('hides settings button on mobile sidebar', () => {
     render(
       <Sidebar
-        active="all"
+        active=""
         onSelect={vi.fn()}
         counts={counts}
         onOpenSettings={vi.fn()}

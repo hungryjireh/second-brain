@@ -24,6 +24,31 @@ function compactWhitespace(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function parseTags(input) {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input)) return null;
+
+  const deduped = new Map();
+  for (const raw of input) {
+    if (typeof raw !== 'string') return null;
+    const label = compactWhitespace(raw.replace(/^#+/, ''));
+    if (!label) continue;
+    const normalized = label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 32);
+    if (!normalized) continue;
+    if (!deduped.has(normalized)) {
+      deduped.set(normalized, {
+        name: label.slice(0, 32),
+        normalized_name: normalized,
+      });
+    }
+  }
+  return [...deduped.values()].slice(0, 12);
+}
+
 function truncateWords(value, maxWords) {
   const words = compactWhitespace(value).split(' ').filter(Boolean);
   return words.slice(0, maxWords).join(' ');
@@ -54,6 +79,7 @@ function normalizeEntry(entry) {
     raw_text: rawText,
     title: entry.title ?? fallback.title,
     summary: entry.summary ?? entry.content ?? fallback.summary,
+    tags: Array.isArray(entry.tags) ? entry.tags : [],
   };
 }
 
@@ -87,21 +113,26 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST /api/entries  { description } ─────────────────────────────────────
+  // ── POST /api/entries  { description, tags? } ─────────────────────────────
   if (req.method === 'POST') {
-    const { description, text, priority } = req.body ?? {};
+    const { description, text, priority, tags } = req.body ?? {};
     const sourceDescription = description ?? text;
     if (!sourceDescription?.trim()) return json(res, 400, { error: 'description is required' });
     const parsedPriority = parsePriority(priority, { defaultValue: 0 });
     if (parsedPriority === null) {
       return json(res, 400, { error: 'priority must be an integer from 0 to 10' });
     }
+    const parsedTags = parseTags(tags);
+    if (parsedTags === null) {
+      return json(res, 400, { error: 'tags must be an array of strings' });
+    }
 
     try {
       const normalizedDescription = sourceDescription.trim();
       const timezone = await getUserTimezone(userId, token);
-      const { category, title, summary, content, remind_at } = await classify(normalizedDescription, { timezone });
+      const { category, title, summary, content, remind_at, tags: classifiedTags } = await classify(normalizedDescription, { timezone });
       const derived = deriveEntryFields(normalizedDescription, content);
+      const normalizedClassifiedTags = parseTags(classifiedTags);
       const entry = await insertEntry({
         userId,
         raw_text: derived.raw_text,
@@ -110,6 +141,7 @@ export default async function handler(req, res) {
         summary: compactWhitespace(summary) || derived.summary,
         remind_at,
         priority: parsedPriority,
+        tags: parsedTags ?? normalizedClassifiedTags ?? [],
         authToken: token,
       });
       return json(res, 201, normalizeEntry(entry));
@@ -134,7 +166,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── PATCH /api/entries?id=X  { category?, title?, summary?, description?, remind_at?, priority?, is_archived? } ─
+  // ── PATCH /api/entries?id=X  { category?, title?, summary?, description?, remind_at?, priority?, is_archived?, tags? } ─
   if (req.method === 'PATCH') {
     const id = parseInt(req.query.id, 10);
     if (isNaN(id)) return json(res, 400, { error: 'invalid id' });
@@ -148,6 +180,7 @@ export default async function handler(req, res) {
       remind_at,
       priority,
       is_archived,
+      tags,
     } = req.body ?? {};
     const validCategories = new Set(['reminder', 'todo', 'thought', 'note']);
     const updates = {};
@@ -198,6 +231,13 @@ export default async function handler(req, res) {
         return json(res, 400, { error: 'is_archived must be a boolean' });
       }
       updates.is_archived = is_archived;
+    }
+    if (tags !== undefined) {
+      const parsedTags = parseTags(tags);
+      if (parsedTags === null) {
+        return json(res, 400, { error: 'tags must be an array of strings' });
+      }
+      updates.tags = parsedTags;
     }
 
     if (Object.keys(updates).length === 0) {

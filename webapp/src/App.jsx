@@ -5,6 +5,7 @@ import EntryCard from './components/EntryCard.jsx';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
+const MAX_ENTRY_TAGS = 3;
 const PRIORITY_LEVELS = [
   { key: 'all', label: 'All priorities' },
   { key: 'high', label: 'High (8-10)' },
@@ -33,6 +34,57 @@ function unixToDatetimeLocal(unixTs) {
 function datetimeLocalToUnix(value) {
   if (!value) return null;
   return Math.floor(new Date(value).getTime() / 1000);
+}
+
+function parseTagInput(value) {
+  const seen = new Set();
+  const tags = [];
+  for (const raw of String(value ?? '').split(',')) {
+    const normalized = normalizeTagValue(raw);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    tags.push(normalized);
+  }
+  return tags.slice(0, MAX_ENTRY_TAGS);
+}
+
+function tagsToInput(tags) {
+  return normalizeTagList(tags).join(', ');
+}
+
+function normalizeTagValue(tag) {
+  const source = typeof tag === 'object' && tag !== null
+    ? String(tag.normalized_name ?? tag.name ?? '')
+    : String(tag ?? '');
+
+  return source
+    .trim()
+    .replace(/^#+/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
+}
+
+function normalizeTagList(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) return [];
+  const seen = new Set();
+  const out = [];
+  for (const raw of tags) {
+    const normalized = normalizeTagValue(raw);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+  }
+  return out;
+}
+
+function normalizeEntryTags(entry) {
+  if (!entry || typeof entry !== 'object') return entry;
+  return {
+    ...entry,
+    tags: normalizeTagList(entry.tags),
+  };
 }
 
 function sortEntriesByPriorityDesc(entries) {
@@ -69,7 +121,8 @@ export default function App({ authToken, onUnauthorized }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('');
+  const [activeTag, setActiveTag] = useState('');
   const [activePriorityLevel, setActivePriorityLevel] = useState('all');
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState('');
@@ -82,6 +135,8 @@ export default function App({ authToken, onUnauthorized }) {
   const [editContent, setEditContent] = useState('');
   const [editRemindAt, setEditRemindAt] = useState('');
   const [editPriority, setEditPriority] = useState(0);
+  const [editTags, setEditTags] = useState('');
+  const [editTagDraft, setEditTagDraft] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [timezone, setTimezone] = useState('Asia/Singapore');
   const [timezoneDraft, setTimezoneDraft] = useState('Asia/Singapore');
@@ -133,7 +188,7 @@ export default function App({ authToken, onUnauthorized }) {
       const res = await authedFetch(`${API}/entries`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
-      setEntries(sortEntriesByPriorityDesc(data));
+      setEntries(sortEntriesByPriorityDesc(data.map(normalizeEntryTags)));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -176,9 +231,33 @@ export default function App({ authToken, onUnauthorized }) {
     return c;
   }, [entries]);
 
+  const availableTags = useMemo(() => {
+    const seen = new Set();
+    const tags = [];
+    for (const entry of entries) {
+      if (entry.is_deleted) continue;
+      if (entry.is_archived) continue;
+      if (!Array.isArray(entry.tags)) continue;
+      for (const tag of entry.tags) {
+        const value = normalizeTagValue(tag);
+        if (!value) continue;
+        if (seen.has(value)) continue;
+        seen.add(value);
+        tags.push(value);
+      }
+    }
+    return tags.sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+  }, [entries]);
+
+  useEffect(() => {
+    if (!activeTag) return;
+    const exists = availableTags.some(tag => tag.toLowerCase() === activeTag.toLowerCase());
+    if (!exists) setActiveTag('');
+  }, [activeTag, availableTags]);
+
   // ── Filtered + searched entries ──────────────────────────────────────────────
   const filtered = useMemo(() => {
-    let list = activeCategory === 'all'
+    let list = !activeCategory
       ? entries
       : entries.filter(e => e.category === activeCategory);
 
@@ -191,18 +270,28 @@ export default function App({ authToken, onUnauthorized }) {
         e =>
           (e.title || '').toLowerCase().includes(q) ||
           (e.summary || '').toLowerCase().includes(q) ||
-          (e.description || e.raw_text || '').toLowerCase().includes(q)
+          (e.description || e.raw_text || '').toLowerCase().includes(q) ||
+          (Array.isArray(e.tags) && e.tags.some(tag => tag.toLowerCase().includes(q)))
       );
     }
 
     if (activePriorityLevel !== 'all') {
       list = list.filter(e => getPriorityLevel(e.priority ?? 0) === activePriorityLevel);
     }
+
+    if (activeTag) {
+      const selectedTag = activeTag.toLowerCase();
+      list = list.filter(
+        e => Array.isArray(e.tags) && e.tags.some(tag => tag.toLowerCase() === selectedTag)
+      );
+    }
     return list;
-  }, [entries, activeCategory, search, activePriorityLevel, showArchived]);
+  }, [entries, activeCategory, search, activePriorityLevel, showArchived, activeTag]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
   const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
+  const editTagList = useMemo(() => parseTagInput(editTags), [editTags]);
+  const canAddMoreTags = editTagList.length < MAX_ENTRY_TAGS;
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   function handleDelete(id) {
@@ -223,11 +312,32 @@ export default function App({ authToken, onUnauthorized }) {
     setEditContent(entry.description ?? entry.raw_text ?? entry.content ?? '');
     setEditRemindAt(unixToDatetimeLocal(entry.remind_at));
     setEditPriority(Number.isInteger(entry.priority) ? entry.priority : 0);
+    setEditTags(tagsToInput(entry.tags));
+    setEditTagDraft('');
   }
 
   function handleCloseEdit() {
     if (savingEdit) return;
     setEditingEntry(null);
+  }
+
+  function handleRemoveEditTag(tagToRemove) {
+    const remainingTags = parseTagInput(editTags).filter(tag => tag !== tagToRemove);
+    setEditTags(tagsToInput(remainingTags));
+  }
+
+  function handleAddEditTag() {
+    const nextTag = normalizeTagValue(editTagDraft);
+    if (!nextTag || !canAddMoreTags) return;
+    const mergedTags = parseTagInput([...parseTagInput(editTags), nextTag].join(','));
+    setEditTags(tagsToInput(mergedTags));
+    setEditTagDraft('');
+  }
+
+  function handleEditTagDraftKeyDown(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    handleAddEditTag();
   }
 
   function handleOpenSettings() {
@@ -311,6 +421,7 @@ export default function App({ authToken, onUnauthorized }) {
     const title = editTitle.trim();
     const summary = editSummary.trim();
     const priority = Number(editPriority);
+    const tags = parseTagInput(editTags);
     if (!content) {
       alert('Description is required.');
       return;
@@ -335,12 +446,13 @@ export default function App({ authToken, onUnauthorized }) {
           description: content,
           remind_at: remindAt,
           priority,
+          tags,
         }),
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const updatedEntry = await res.json();
       setEntries(prev => sortEntriesByPriorityDesc(
-        prev.map(e => (e.id === updatedEntry.id ? updatedEntry : e))
+        prev.map(e => (e.id === updatedEntry.id ? normalizeEntryTags(updatedEntry) : e))
       ));
       setEditingEntry(null);
     } catch (err) {
@@ -359,11 +471,13 @@ export default function App({ authToken, onUnauthorized }) {
       const res = await authedFetch(`${API}/entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: text }),
+        body: JSON.stringify({
+          description: text,
+        }),
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const newEntry = await res.json();
-      setEntries(prev => sortEntriesByPriorityDesc([newEntry, ...prev]));
+      setEntries(prev => sortEntriesByPriorityDesc([normalizeEntryTags(newEntry), ...prev]));
       setInputText('');
     } catch (err) {
       alert('Failed to save: ' + err.message);
@@ -377,6 +491,14 @@ export default function App({ authToken, onUnauthorized }) {
       e.preventDefault();
       handleSubmit();
     }
+  }
+
+  function handleSelectCategory(category) {
+    setActiveCategory(prev => (prev === category ? '' : category));
+  }
+
+  function handleSelectTag(tag) {
+    setActiveTag(prev => (prev.toLowerCase() === String(tag).toLowerCase() ? '' : tag));
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -521,7 +643,7 @@ export default function App({ authToken, onUnauthorized }) {
           >
             <button
               onClick={() => {
-                setActiveCategory('all');
+                setActiveCategory('');
                 setMobileMenuOpen(false);
               }}
               style={{
@@ -565,7 +687,10 @@ export default function App({ authToken, onUnauthorized }) {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
         <Sidebar
           active={activeCategory}
-          onSelect={setActiveCategory}
+          onSelect={handleSelectCategory}
+          activeTag={activeTag}
+          onSelectTag={handleSelectTag}
+          availableTags={availableTags}
           counts={counts}
           onOpenSettings={handleOpenSettings}
           isMobile={isMobile}
@@ -678,7 +803,7 @@ export default function App({ authToken, onUnauthorized }) {
             >
               {search
                 ? `No results for "${search}"`
-                : activeCategory === 'all'
+                : !activeCategory
                 ? (showArchived
                   ? 'No archived/done entries yet.'
                   : 'No active entries — click "Show Archived/Done" to view completed items.')
@@ -944,6 +1069,84 @@ export default function App({ authToken, onUnauthorized }) {
                 }}
               />
             </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tags</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={editTagDraft}
+                  onChange={e => setEditTagDraft(e.target.value)}
+                  onKeyDown={handleEditTagDraftKeyDown}
+                  placeholder={canAddMoreTags ? 'Type a tag and press Enter' : `Maximum ${MAX_ENTRY_TAGS} tags reached`}
+                  disabled={!canAddMoreTags}
+                  style={{
+                    flex: 1,
+                    background: 'var(--bg-raised)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 20,
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddEditTag}
+                  disabled={!normalizeTagValue(editTagDraft) || !canAddMoreTags}
+                  style={{
+                    border: '0.5px solid var(--border)',
+                    background: normalizeTagValue(editTagDraft) && canAddMoreTags ? 'var(--brand)' : 'var(--bg-raised)',
+                    color: normalizeTagValue(editTagDraft) && canAddMoreTags ? '#fff' : 'var(--text-muted)',
+                    borderRadius: 999,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    cursor: normalizeTagValue(editTagDraft) && canAddMoreTags ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {editTagList.length}/{MAX_ENTRY_TAGS} tags
+              </span>
+              {editTagList.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {editTagList.map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleRemoveEditTag(tag)}
+                      title={`Remove ${tag}`}
+                      style={{
+                        border: '0.5px solid var(--border)',
+                        background: 'var(--bg-raised)',
+                        color: 'var(--text-secondary)',
+                        borderRadius: 999,
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        transition: 'border-color 120ms ease, color 120ms ease',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = 'var(--danger)';
+                        e.currentTarget.style.color = 'var(--danger)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.color = 'var(--text-secondary)';
+                      }}
+                    >
+                      {tag} ×
+                    </button>
+                  ))}
+                </div>
+              )}
+              {editTagList.length === 0 && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>No tags</span>
+              )}
+            </label>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
               <button
                 onClick={handleCloseEdit}
@@ -1016,6 +1219,25 @@ export default function App({ authToken, onUnauthorized }) {
             <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
               {selectedEntry.summary || selectedEntry.content || ''}
             </p>
+            {Array.isArray(selectedEntry.tags) && selectedEntry.tags.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {selectedEntry.tags.map(tag => (
+                  <span
+                    key={tag}
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--brand-text)',
+                      background: 'var(--brand-dim)',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 999,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 background: 'var(--bg-raised)',

@@ -510,6 +510,32 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
 
         <span>{formatDate(entry.created_at, timezone)}</span>
       </div>
+      {Array.isArray(entry.tags) && entry.tags.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'wrap',
+          }}
+        >
+          {entry.tags.map(tagName => (
+            <span
+              key={tagName}
+              style={{
+                fontSize: 11,
+                color: 'var(--brand-text)',
+                background: 'var(--brand-dim)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 999,
+                padding: '2px 8px',
+              }}
+            >
+              #{tagName}
+            </span>
+          ))}
+        </div>
+      )}
 
       {deleting && (
         <div

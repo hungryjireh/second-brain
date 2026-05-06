@@ -9,8 +9,8 @@
     "migrate": "node lib/db.js",
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
-    "start:api": "node scripts/local-api.js",
-    "test": "node --test tests/api/**/*.test.js && npm --prefix webapp run test"
+    "start:api": "node --watch --watch-path=api --watch-path=lib scripts/local-api.js",
+    "test": "node --test api/tests/**/*.test.js && npm --prefix webapp run test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
