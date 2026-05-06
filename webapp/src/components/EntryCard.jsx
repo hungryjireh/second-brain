@@ -58,13 +58,16 @@ function formatRemindAt(unixTs, timezone) {
   return d.toLocaleDateString('en-SG', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' }) + ` · ${time}`;
 }
 
-export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', authToken, timezone = 'Asia/Singapore' }) {
+export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDescription, apiBase = '/api', authToken, timezone = 'Asia/Singapore', isMobile = false }) {
   const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? '📝';
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
   const priorityColor = getPriorityColor(priority);
+  const title = entry.title || entry.content || 'Untitled';
+  const summary = entry.summary || entry.content || '';
 
   async function handleDelete() {
     if (!confirmDelete) {
@@ -74,10 +77,14 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
     }
     setDeleting(true);
     try {
-      await fetch(`${apiBase}/entries?id=${entry.id}`, {
+      const res = await fetch(`${apiBase}/entries?id=${entry.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authToken}` },
       });
+      if (!res.ok) {
+        setDeleting(false);
+        return;
+      }
       onDelete(entry.id);
     } catch {
       setDeleting(false);
@@ -104,8 +111,36 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
     }
   }
 
+  async function handleArchiveToggle() {
+    if (archiving) return;
+    setArchiving(true);
+    try {
+      const res = await fetch(`${apiBase}/entries?id=${entry.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ is_archived: !entry.is_archived }),
+      });
+      if (!res.ok) {
+        setArchiving(false);
+        return;
+      }
+      const updatedEntry = await res.json();
+      onArchive?.(updatedEntry);
+    } catch {
+      setArchiving(false);
+    }
+  }
+
+  const archiveLabel = entry.category === 'reminder'
+    ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
+    : (entry.is_archived ? 'Unarchive' : 'Archive');
+
   return (
     <div
+      onClick={() => onOpenDescription?.(entry)}
       style={{
         background: 'var(--bg-surface)',
         border: '0.5px solid var(--border)',
@@ -115,7 +150,8 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
         flexDirection: 'column',
         gap: 8,
         transition: 'border-color .15s, opacity .15s',
-        opacity: deleting ? 0.4 : 1,
+        opacity: deleting || archiving ? 0.4 : 1,
+        cursor: 'pointer',
       }}
       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-strong)'}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
@@ -146,18 +182,22 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
               margin: 0,
             }}
           >
-            {entry.content}
+            <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.4 }}>{title}</strong>
+            <span style={{ color: 'var(--text-secondary)' }}>{summary}</span>
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, flexWrap: 'wrap', justifyContent: isMobile ? 'flex-end' : 'flex-start' }}>
           <button
-            onClick={() => onEdit(entry)}
+            onClick={e => {
+              e.stopPropagation();
+              onEdit(entry);
+            }}
             title="Edit entry"
             style={{
               background: 'transparent',
               border: '0.5px solid var(--border)',
               borderRadius: 6,
-              height: 24,
+              height: isMobile ? 28 : 24,
               padding: '0 8px',
               display: 'flex',
               alignItems: 'center',
@@ -178,15 +218,50 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
           >
             Edit
           </button>
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              handleArchiveToggle();
+            }}
+            disabled={archiving}
+            title={archiveLabel}
+            style={{
+              background: 'transparent',
+              border: '0.5px solid var(--border)',
+              borderRadius: 6,
+              height: isMobile ? 28 : 24,
+              padding: '0 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: archiving ? 'not-allowed' : 'pointer',
+              color: 'var(--text-secondary)',
+              fontSize: 11,
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--brand)';
+              e.currentTarget.style.color = 'var(--brand-text)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            {archiving ? '…' : archiveLabel}
+          </button>
           {entry.category === 'reminder' && entry.remind_at && (
             <button
-              onClick={handleDownloadIcs}
+              onClick={e => {
+                e.stopPropagation();
+                handleDownloadIcs();
+              }}
               title="Download .ics"
               style={{
                 background: 'transparent',
                 border: '0.5px solid var(--border)',
                 borderRadius: 6,
-                height: 24,
+                height: isMobile ? 28 : 24,
                 padding: '0 8px',
                 display: 'flex',
                 alignItems: 'center',
@@ -222,15 +297,18 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
             {tag.label}
           </span>
           <button
-            onClick={handleDelete}
+            onClick={e => {
+              e.stopPropagation();
+              handleDelete();
+            }}
             disabled={deleting}
             title={confirmDelete ? 'Click again to confirm' : 'Delete'}
             style={{
               background: confirmDelete ? 'rgba(220,60,60,0.15)' : 'transparent',
               border: '0.5px solid ' + (confirmDelete ? 'rgba(220,60,60,0.3)' : 'transparent'),
               borderRadius: 6,
-              width: 24,
-              height: 24,
+              width: isMobile ? 28 : 24,
+              height: isMobile ? 28 : 24,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -253,6 +331,7 @@ export default function EntryCard({ entry, onDelete, onEdit, apiBase = '/api', a
           display: 'flex',
           alignItems: 'center',
           gap: 8,
+          flexWrap: 'wrap',
           fontSize: 11,
           color: 'var(--text-muted)',
         }}

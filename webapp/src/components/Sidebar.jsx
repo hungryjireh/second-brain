@@ -8,18 +8,20 @@ const NAV = [
   { key: 'note',     label: 'Notes',     color: '#EF9F27' },
 ];
 
-export default function Sidebar({ active, onSelect, counts, onOpenSettings }) {
+export default function Sidebar({ active, onSelect, counts, onOpenSettings, isMobile = false }) {
   return (
     <aside
       style={{
-        width: 168,
+        width: isMobile ? '100%' : 168,
         flexShrink: 0,
         background: 'var(--bg-surface)',
-        borderRight: '0.5px solid var(--border)',
+        borderRight: isMobile ? 'none' : '0.5px solid var(--border)',
+        borderBottom: isMobile ? '0.5px solid var(--border)' : 'none',
         display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 0',
-        gap: 2,
+        flexDirection: isMobile ? 'row' : 'column',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        padding: isMobile ? '8px' : '16px 0',
+        gap: isMobile ? 6 : 2,
       }}
     >
       {NAV.map(({ key, label, color }) => {
@@ -36,8 +38,8 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings }) {
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              padding: '7px 16px',
-              margin: '0 8px',
+              padding: isMobile ? '6px 10px' : '7px 16px',
+              margin: isMobile ? 0 : '0 8px',
               borderRadius: 6,
               border: 'none',
               cursor: 'pointer',
@@ -48,7 +50,7 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings }) {
               fontWeight: isActive ? 500 : 400,
               transition: 'background .12s, color .12s',
               textAlign: 'left',
-              width: 'calc(100% - 16px)',
+              width: isMobile ? 'auto' : 'calc(100% - 16px)',
             }}
             onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
@@ -81,13 +83,20 @@ export default function Sidebar({ active, onSelect, counts, onOpenSettings }) {
         );
       })}
 
-      <div style={{ height: 1, background: 'var(--border)', margin: '10px 16px' }} />
+      <div
+        style={{
+          height: isMobile ? 24 : 1,
+          width: isMobile ? 1 : 'auto',
+          background: 'var(--border)',
+          margin: isMobile ? '0 2px' : '10px 16px',
+        }}
+      />
 
       <button
         onClick={onOpenSettings}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          padding: '6px 16px', margin: '0 8px',
+          padding: isMobile ? '6px 10px' : '6px 16px', margin: isMobile ? 0 : '0 8px',
           borderRadius: 6, border: 'none', cursor: 'pointer',
           background: 'transparent',
           color: 'var(--text-muted)',

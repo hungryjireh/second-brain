@@ -7,12 +7,12 @@ const STATS = [
   { key: 'note',     label: 'Notes',     color: '#EF9F27', dimColor: 'rgba(239,159,39,0.12)' },
 ];
 
-export default function StatsBar({ counts }) {
+export default function StatsBar({ counts, isMobile = false }) {
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
         gap: 8,
       }}
     >

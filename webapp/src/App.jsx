@@ -64,16 +64,20 @@ function groupByDate(entries) {
 }
 
 export default function App({ authToken, onUnauthorized }) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activePriorityLevel, setActivePriorityLevel] = useState('all');
+  const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [inputText, setInputText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editCategory, setEditCategory] = useState('note');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSummary, setEditSummary] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editRemindAt, setEditRemindAt] = useState('');
   const [editPriority, setEditPriority] = useState(0);
@@ -83,6 +87,15 @@ export default function App({ authToken, onUnauthorized }) {
   const [timezoneError, setTimezoneError] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 900);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const today = new Date().toLocaleDateString('en-SG', {
     timeZone: timezone,
@@ -142,7 +155,11 @@ export default function App({ authToken, onUnauthorized }) {
   // ── Counts ───────────────────────────────────────────────────────────────────
   const counts = useMemo(() => {
     const c = { reminder: 0, todo: 0, thought: 0, note: 0 };
-    for (const e of entries) if (c[e.category] !== undefined) c[e.category]++;
+    for (const e of entries) {
+      if (e.is_deleted) continue;
+      if (e.is_archived) continue;
+      if (c[e.category] !== undefined) c[e.category]++;
+    }
     return c;
   }, [entries]);
 
@@ -152,12 +169,16 @@ export default function App({ authToken, onUnauthorized }) {
       ? entries
       : entries.filter(e => e.category === activeCategory);
 
+    list = list.filter(e => !e.is_deleted);
+    list = list.filter(e => showArchived ? e.is_archived : !e.is_archived);
+
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
         e =>
-          e.content.toLowerCase().includes(q) ||
-          e.raw_text.toLowerCase().includes(q)
+          (e.title || '').toLowerCase().includes(q) ||
+          (e.summary || '').toLowerCase().includes(q) ||
+          (e.description || e.raw_text || '').toLowerCase().includes(q)
       );
     }
 
@@ -165,7 +186,7 @@ export default function App({ authToken, onUnauthorized }) {
       list = list.filter(e => getPriorityLevel(e.priority ?? 0) === activePriorityLevel);
     }
     return list;
-  }, [entries, activeCategory, search, activePriorityLevel]);
+  }, [entries, activeCategory, search, activePriorityLevel, showArchived]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
   const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
@@ -175,10 +196,18 @@ export default function App({ authToken, onUnauthorized }) {
     setEntries(prev => prev.filter(e => e.id !== id));
   }
 
+  function handleArchive(updatedEntry) {
+    setEntries(prev => sortEntriesByPriorityDesc(
+      prev.map(e => (e.id === updatedEntry.id ? updatedEntry : e))
+    ));
+  }
+
   function handleOpenEdit(entry) {
     setEditingEntry(entry);
     setEditCategory(entry.category);
-    setEditContent(entry.content);
+    setEditTitle(entry.title ?? '');
+    setEditSummary(entry.summary ?? '');
+    setEditContent(entry.description ?? entry.raw_text ?? entry.content ?? '');
     setEditRemindAt(unixToDatetimeLocal(entry.remind_at));
     setEditPriority(Number.isInteger(entry.priority) ? entry.priority : 0);
   }
@@ -233,9 +262,11 @@ export default function App({ authToken, onUnauthorized }) {
   async function handleSaveEdit() {
     if (!editingEntry || savingEdit) return;
     const content = editContent.trim();
+    const title = editTitle.trim();
+    const summary = editSummary.trim();
     const priority = Number(editPriority);
     if (!content) {
-      alert('Content is required.');
+      alert('Description is required.');
       return;
     }
     if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
@@ -253,7 +284,9 @@ export default function App({ authToken, onUnauthorized }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category: editCategory,
-          content,
+          title,
+          summary,
+          description: content,
           remind_at: remindAt,
           priority,
         }),
@@ -280,7 +313,7 @@ export default function App({ authToken, onUnauthorized }) {
       const res = await authedFetch(`${API}/entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ description: text }),
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const newEntry = await res.json();
@@ -316,10 +349,11 @@ export default function App({ authToken, onUnauthorized }) {
         style={{
           background: 'var(--bg-surface)',
           borderBottom: '0.5px solid var(--border)',
-          padding: '13px 20px',
+          padding: isMobile ? '12px 12px' : '13px 20px',
           display: 'flex',
           alignItems: 'center',
           gap: 16,
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
           flexShrink: 0,
         }}
       >
@@ -341,8 +375,10 @@ export default function App({ authToken, onUnauthorized }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
-            flex: 1,
-            maxWidth: 280,
+            flex: isMobile ? '1 1 100%' : 1,
+            maxWidth: isMobile ? '100%' : 280,
+            minWidth: 0,
+            order: isMobile ? 3 : 'unset',
             background: 'var(--bg-raised)',
             border: '0.5px solid var(--border)',
             borderRadius: 20,
@@ -373,12 +409,13 @@ export default function App({ authToken, onUnauthorized }) {
       </header>
 
       {/* ── Body ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
         <Sidebar
           active={activeCategory}
           onSelect={setActiveCategory}
           counts={counts}
           onOpenSettings={handleOpenSettings}
+          isMobile={isMobile}
         />
 
         {/* ── Main content ── */}
@@ -386,55 +423,74 @@ export default function App({ authToken, onUnauthorized }) {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '20px',
+            padding: isMobile ? '12px' : '20px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 20,
+            gap: isMobile ? 14 : 20,
           }}
         >
-          <StatsBar counts={counts} />
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              flexWrap: 'wrap',
-              marginTop: -8,
-            }}
-          >
-            <span
+          <StatsBar counts={counts} isMobile={isMobile} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: -8 }}>
+            <div style={{ display: 'flex' }}>
+              <button
+                onClick={() => setShowArchived(prev => !prev)}
+                style={{
+                  border: `0.5px solid ${showArchived ? 'var(--brand)' : 'var(--border)'}`,
+                  background: showArchived ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                  color: showArchived ? 'var(--brand-text)' : 'var(--text-secondary)',
+                  borderRadius: 999,
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  transition: 'all .15s',
+                }}
+              >
+                {showArchived ? 'Hide Archived/Done' : 'Show Archived/Done'}
+              </button>
+            </div>
+            <div
               style={{
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
               }}
             >
-              Priority filter
-            </span>
-            {PRIORITY_LEVELS.map(level => {
-              const active = activePriorityLevel === level.key;
-              return (
-                <button
-                  key={level.key}
-                  onClick={() => setActivePriorityLevel(level.key)}
-                  style={{
-                    border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
-                    background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
-                    color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
-                    borderRadius: 999,
-                    padding: '4px 10px',
-                    fontSize: 11,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    transition: 'all .15s',
-                  }}
-                >
-                  {level.label}
-                </button>
-              );
-            })}
+              <span
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                }}
+              >
+                Priority filter
+              </span>
+              {PRIORITY_LEVELS.map(level => {
+                const active = activePriorityLevel === level.key;
+                return (
+                  <button
+                    key={level.key}
+                    onClick={() => setActivePriorityLevel(level.key)}
+                    style={{
+                      border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
+                      background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
+                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      borderRadius: 999,
+                      padding: '4px 10px',
+                      fontSize: 11,
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'all .15s',
+                    }}
+                  >
+                    {level.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {loading && (
@@ -470,8 +526,10 @@ export default function App({ authToken, onUnauthorized }) {
               {search
                 ? `No results for "${search}"`
                 : activeCategory === 'all'
-                ? 'No entries yet — send a voice note or type below.'
-                : `No ${activeCategory}s at this priority level yet.`}
+                ? (showArchived
+                  ? 'No archived/done entries yet.'
+                  : 'No active entries — click "Show Archived/Done" to view completed items.')
+                : `No ${activeCategory}s at this priority level${showArchived ? ' in archived/done' : ' (excluding archived/done)'} yet.`}
             </div>
           )}
 
@@ -497,10 +555,13 @@ export default function App({ authToken, onUnauthorized }) {
                     key={entry.id}
                     entry={entry}
                     onDelete={handleDelete}
+                    onArchive={handleArchive}
                     onEdit={handleOpenEdit}
+                    onOpenDescription={setSelectedEntry}
                     apiBase={API}
                     authToken={authToken}
                     timezone={timezone}
+                    isMobile={isMobile}
                   />
                 ))}
               </section>
@@ -514,7 +575,7 @@ export default function App({ authToken, onUnauthorized }) {
         style={{
           background: 'var(--bg-surface)',
           borderTop: '0.5px solid var(--border)',
-          padding: '12px 20px',
+          padding: isMobile ? '10px 12px' : '12px 20px',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -604,10 +665,12 @@ export default function App({ authToken, onUnauthorized }) {
               background: 'var(--bg-surface)',
               border: '0.5px solid var(--border)',
               borderRadius: 12,
-              padding: 16,
+              padding: isMobile ? 12 : 16,
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
+              maxHeight: '88vh',
+              overflowY: 'auto',
             }}
           >
             <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>
@@ -634,7 +697,42 @@ export default function App({ authToken, onUnauthorized }) {
               </select>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Content</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Title</span>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Summary</span>
+              <textarea
+                rows={2}
+                value={editSummary}
+                onChange={e => setEditSummary(e.target.value)}
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Description</span>
               <textarea
                 rows={4}
                 value={editContent}
@@ -690,7 +788,7 @@ export default function App({ authToken, onUnauthorized }) {
                 }}
               />
             </label>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
               <button
                 onClick={handleCloseEdit}
                 disabled={savingEdit}
@@ -726,6 +824,78 @@ export default function App({ authToken, onUnauthorized }) {
         </div>
       )}
 
+      {selectedEntry && (
+        <div
+          onClick={() => setSelectedEntry(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(6, 10, 12, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 560,
+              background: 'var(--bg-surface)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 12,
+              padding: isMobile ? 12 : 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              maxHeight: '88vh',
+              overflowY: 'auto',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)', fontWeight: 700 }}>
+              {selectedEntry.title || selectedEntry.content || 'Untitled'}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+              {selectedEntry.summary || selectedEntry.content || ''}
+            </p>
+            <div
+              style={{
+                background: 'var(--bg-raised)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 10,
+                padding: 12,
+                maxHeight: '50vh',
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: 'var(--text-primary)',
+              }}
+            >
+              {selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || ''}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSelectedEntry(null)}
+                style={{
+                  border: '0.5px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  borderRadius: 8,
+                  padding: '7px 12px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {settingsOpen && (
         <div
           onClick={handleCloseSettings}
@@ -748,10 +918,12 @@ export default function App({ authToken, onUnauthorized }) {
               background: 'var(--bg-surface)',
               border: '0.5px solid var(--border)',
               borderRadius: 12,
-              padding: 16,
+              padding: isMobile ? 12 : 16,
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
+              maxHeight: '88vh',
+              overflowY: 'auto',
             }}
           >
             <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>

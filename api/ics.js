@@ -34,6 +34,8 @@ function toSafeFilePart(text) {
 function buildReminderIcs(entry) {
   const now = Math.floor(Date.now() / 1000);
   const uid = `entry-${entry.id}-${entry.remind_at}@second-brain`;
+  const title = entry.title || entry.content || 'Reminder';
+  const description = entry.description || entry.raw_text || entry.summary || entry.content || title;
 
   return [
     'BEGIN:VCALENDAR',
@@ -45,8 +47,8 @@ function buildReminderIcs(entry) {
     `UID:${uid}`,
     `DTSTAMP:${formatIcsDate(now)}`,
     `DTSTART:${formatIcsDate(entry.remind_at)}`,
-    `SUMMARY:${escapeIcsText(entry.content)}`,
-    `DESCRIPTION:${escapeIcsText(entry.raw_text || entry.content)}`,
+    `SUMMARY:${escapeIcsText(title)}`,
+    `DESCRIPTION:${escapeIcsText(description)}`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
     }
 
     const ics = buildReminderIcs(entry);
-    const reminderName = toSafeFilePart(entry.content);
+    const reminderName = toSafeFilePart(entry.title || entry.content || 'reminder');
     const safeName = `second-brain-${reminderName}-${entry.id}.ics`;
 
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
