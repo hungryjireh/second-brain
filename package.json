@@ -10,7 +10,7 @@
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
     "start:api": "node scripts/local-api.js",
-    "test": "npm --prefix webapp run test"
+    "test": "node --test tests/api/**/*.test.js && npm --prefix webapp run test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

@@ -2,6 +2,7 @@ import {
   insertEntry,
   getTelegramLinkByChatId,
   setTelegramChatIdForUser,
+  getUserTimezone,
 } from '../lib/db.js';
 import { verifyTelegramLinkKey } from '../lib/auth.js';
 import { classify } from '../lib/classify.js';
@@ -15,17 +16,23 @@ const DEFAULT_TIMEZONE = 'Asia/Singapore';
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
 async function processText(rawText, chatId, userId, authToken) {
-  const { category, content, remind_at } = await classify(rawText);
+  const timezone = await getUserTimezone(userId, authToken);
+  const { category, title, summary, content, remind_at } = await classify(rawText, { timezone });
+  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+  const normalizedSummary = typeof summary === 'string' ? summary.trim() : '';
+  const normalizedContent = typeof content === 'string' ? content.trim() : '';
+
   await insertEntry({
     userId,
     raw_text: rawText,
     category,
-    content,
+    title: normalizedTitle || normalizedContent || rawText,
+    summary: normalizedSummary || normalizedContent || rawText,
     remind_at,
     authToken,
   });
 
-  let reply = `✅ Got it — saved as *${category}*.\n\n_${content}_`;
+  let reply = `✅ Got it — saved as *${category}*.\n\n_${normalizedContent || rawText}_`;
 
   if (category === 'reminder' && remind_at) {
     const when = new Date(remind_at * 1000).toLocaleString('en-SG', {

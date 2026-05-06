@@ -65,6 +65,7 @@ function groupByDate(entries) {
 
 export default function App({ authToken, onUnauthorized }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900);
+  const [isCompactMobile, setIsCompactMobile] = useState(() => window.innerWidth <= 480);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -90,12 +91,14 @@ export default function App({ authToken, onUnauthorized }) {
   const [telegramLinkKey, setTelegramLinkKey] = useState('');
   const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
   const [telegramLinkError, setTelegramLinkError] = useState(null);
+  const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     function handleResize() {
       setIsMobile(window.innerWidth <= 900);
+      setIsCompactMobile(window.innerWidth <= 480);
     }
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -107,7 +110,9 @@ export default function App({ authToken, onUnauthorized }) {
 
   const today = new Date().toLocaleDateString('en-SG', {
     timeZone: timezone,
-    month: 'short', day: 'numeric', year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    ...(isMobile ? {} : { year: 'numeric' }),
   });
 
   const authedFetch = useCallback(async (url, options = {}) => {
@@ -230,6 +235,7 @@ export default function App({ authToken, onUnauthorized }) {
     setTimezoneError(null);
     setTelegramLinkKey('');
     setTelegramLinkError(null);
+    setTelegramCopyStatus('');
     setSettingsOpen(true);
   }
 
@@ -242,6 +248,7 @@ export default function App({ authToken, onUnauthorized }) {
     if (loadingTelegramLinkKey) return;
     setLoadingTelegramLinkKey(true);
     setTelegramLinkError(null);
+    setTelegramCopyStatus('');
     try {
       const res = await authedFetch(`${API}/telegram/link-key`);
       if (!res.ok) {
@@ -254,6 +261,16 @@ export default function App({ authToken, onUnauthorized }) {
       setTelegramLinkError(err.message);
     } finally {
       setLoadingTelegramLinkKey(false);
+    }
+  }
+
+  async function handleCopyTelegramLinkKey() {
+    if (!telegramLinkKey) return;
+    try {
+      await navigator.clipboard.writeText(telegramLinkKey);
+      setTelegramCopyStatus('Copied');
+    } catch {
+      setTelegramCopyStatus('Copy failed');
     }
   }
 
@@ -368,7 +385,7 @@ export default function App({ authToken, onUnauthorized }) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: isMobile ? '100dvh' : '100vh',
         background: 'var(--bg-base)',
         overflow: 'hidden',
       }}
@@ -379,15 +396,17 @@ export default function App({ authToken, onUnauthorized }) {
           position: 'relative',
           background: 'var(--bg-surface)',
           borderBottom: '0.5px solid var(--border)',
-          padding: isMobile ? '12px 12px' : '13px 20px',
+          padding: isMobile
+            ? 'calc(8px + env(safe-area-inset-top, 0px)) 12px 10px'
+            : '13px 20px',
           display: 'flex',
           alignItems: 'center',
-          gap: 16,
+          gap: isMobile ? 8 : 16,
           flexWrap: isMobile ? 'wrap' : 'nowrap',
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, order: isMobile ? 1 : 'unset' }}>
           {isMobile && (
             <button
               onClick={() => setMobileMenuOpen(prev => !prev)}
@@ -434,7 +453,7 @@ export default function App({ authToken, onUnauthorized }) {
             flex: isMobile ? '1 1 100%' : 1,
             maxWidth: isMobile ? '100%' : 280,
             minWidth: 0,
-            order: isMobile ? 4 : 'unset',
+            order: isMobile ? 3 : 'unset',
             background: 'var(--bg-raised)',
             border: '0.5px solid var(--border)',
             borderRadius: 20,
@@ -446,39 +465,48 @@ export default function App({ authToken, onUnauthorized }) {
           }}
         />
 
-        <span style={{
-          marginLeft: isMobile ? 0 : 'auto',
-          fontSize: 12,
-          color: 'var(--text-muted)',
-          flexShrink: 0,
-          order: isMobile ? 5 : 'unset',
-        }}>
-          {today}
-        </span>
-
-        {/* Live indicator */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
+          gap: isCompactMobile ? 6 : 8,
           flexShrink: 0,
-          order: isMobile ? 6 : 'unset',
+          marginLeft: 'auto',
+          order: isMobile ? 2 : 'unset',
         }}>
-          <span
-            style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: 'var(--brand)',
-              boxShadow: '0 0 0 0 var(--brand)',
-              animation: 'pulse 2s infinite',
-            }}
-          />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>live</span>
+          <span style={{
+            fontSize: isCompactMobile ? 11 : 12,
+            color: 'var(--text-muted)',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}>
+            {today}
+          </span>
+
+          {/* Live indicator */}
+          {!isCompactMobile && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              flexShrink: 0,
+            }}>
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: 'var(--brand)',
+                  boxShadow: '0 0 0 0 var(--brand)',
+                  animation: 'pulse 2s infinite',
+                }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>live</span>
+            </div>
+          )}
         </div>
 
         {isMobile && mobileMenuOpen && (
           <div
             style={{
-              order: 2,
+              order: 4,
               flex: '1 1 100%',
               width: '100%',
               marginTop: 2,
@@ -698,9 +726,12 @@ export default function App({ authToken, onUnauthorized }) {
       {/* ── Input row ── */}
       <div
         style={{
+          position: isMobile ? 'sticky' : 'static',
+          bottom: isMobile ? 0 : 'auto',
+          zIndex: isMobile ? 15 : 'auto',
           background: 'var(--bg-surface)',
           borderTop: '0.5px solid var(--border)',
-          padding: isMobile ? '10px 12px' : '12px 20px',
+          padding: isMobile ? '10px 12px calc(10px + env(safe-area-inset-bottom, 0px))' : '12px 20px',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -1110,6 +1141,29 @@ export default function App({ authToken, onUnauthorized }) {
               </button>
               {telegramLinkKey && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      onClick={handleCopyTelegramLinkKey}
+                      style={{
+                        border: '0.5px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--text-secondary)',
+                        borderRadius: 8,
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        alignSelf: 'flex-start',
+                      }}
+                    >
+                      Copy key
+                    </button>
+                    {telegramCopyStatus && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {telegramCopyStatus}
+                      </span>
+                    )}
+                  </div>
                   <code
                     style={{
                       display: 'block',
