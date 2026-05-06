@@ -181,4 +181,45 @@ describe('EntryCard', () => {
       expect(onArchive).toHaveBeenCalledWith(updatedEntry);
     });
   });
+
+  it('uses mobile share for .ics when available', async () => {
+    const user = userEvent.setup();
+    const entry = makeEntry({ category: 'reminder', remind_at: 1_710_123_456 });
+    const shareSpy = vi.fn().mockResolvedValue(undefined);
+    const canShareSpy = vi.fn().mockReturnValue(true);
+    vi.stubGlobal('navigator', {
+      userAgent: 'iPhone',
+      share: shareSpy,
+      canShare: canShareSpy,
+    });
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['BEGIN:VCALENDAR'], { type: 'text/calendar' }),
+    });
+
+    render(
+      <EntryCard
+        entry={entry}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onEdit={vi.fn()}
+        onOpenDescription={vi.fn()}
+        authToken="token"
+        isMobile
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: '▾' }));
+    await user.click(screen.getByRole('button', { name: 'Download .ics' }));
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('/api/ics?id=42', expect.any(Object));
+      expect(canShareSpy).toHaveBeenCalled();
+      expect(shareSpy).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Reminder',
+        files: expect.any(Array),
+      }));
+    });
+  });
 });

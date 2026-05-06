@@ -99,14 +99,32 @@ export default function EntryCard({ entry, onDelete, onArchive, onEdit, onOpenDe
       });
       if (!res.ok) return;
       const blob = await res.blob();
+      const fileName = `second-brain-reminder-${entry.id}.ics`;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      const shareFn = navigator.share?.bind(navigator);
+      const canShareFn = navigator.canShare?.bind(navigator);
+
+      // Mobile browsers (notably iOS Safari) may block blob anchor downloads.
+      // Prefer native sharing when available, then fall back to anchor download.
+      if (isMobile && shareFn && typeof File !== 'undefined') {
+        const file = new File([blob], fileName, { type: 'text/calendar;charset=utf-8' });
+        if (!canShareFn || canShareFn({ files: [file] })) {
+          await shareFn({
+            title: 'Reminder',
+            files: [file],
+          });
+          return;
+        }
+      }
+
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `second-brain-reminder-${entry.id}.ics`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
     } catch {
       // no-op
     }
