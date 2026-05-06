@@ -5,7 +5,7 @@ import {
   setTelegramChatIdForUser,
   getUserTimezone,
 } from '../lib/db.js';
-import { verifyTelegramLinkKey } from '../lib/auth.js';
+import { createAuthJwt, TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
 import { classify } from '../lib/classify.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage } from '../lib/notify.js';
@@ -92,6 +92,23 @@ async function getLinkedUserId(chatId) {
   return getTelegramLinkByChatId(String(chatId));
 }
 
+function maybeReadJwtPayloadWithoutVerifying(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(Buffer.from(normalized + padding, 'base64').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function isNonExpiringTelegramSessionToken(token) {
+  const payload = maybeReadJwtPayloadWithoutVerifying(token);
+  return payload?.purpose === TELEGRAM_SESSION_TOKEN_PURPOSE && !payload?.exp;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -122,6 +139,11 @@ export default async function handler(req, res) {
     if (!linkedUser?.userId || !linkedUser?.authToken) {
       await sendMessage(`🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`, chatId);
       return res.status(200).end();
+    }
+    if (!isNonExpiringTelegramSessionToken(linkedUser.authToken)) {
+      const permanentToken = createAuthJwt({ sub: linkedUser.userId, purpose: TELEGRAM_SESSION_TOKEN_PURPOSE }, null);
+      await setTelegramChatIdForUser(linkedUser.userId, chatId, permanentToken);
+      linkedUser.authToken = permanentToken;
     }
 
     if (text?.startsWith('/start')) {
