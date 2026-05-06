@@ -1,6 +1,6 @@
 import {
   insertEntry,
-  getUserIdByTelegramChatId,
+  getTelegramLinkByChatId,
   setTelegramChatIdForUser,
 } from '../lib/db.js';
 import { verifyTelegramLinkKey } from '../lib/auth.js';
@@ -14,7 +14,7 @@ const DEFAULT_TIMEZONE = 'Asia/Singapore';
 
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
-async function processText(rawText, chatId, userId) {
+async function processText(rawText, chatId, userId, authToken) {
   const { category, content, remind_at } = await classify(rawText);
   await insertEntry({
     userId,
@@ -22,6 +22,7 @@ async function processText(rawText, chatId, userId) {
     category,
     content,
     remind_at,
+    authToken,
   });
 
   let reply = `✅ Got it — saved as *${category}*.\n\n_${content}_`;
@@ -48,7 +49,7 @@ async function linkTelegramChatToUser(chatId, linkKey) {
 }
 
 async function getLinkedUserId(chatId) {
-  return getUserIdByTelegramChatId(String(chatId));
+  return getTelegramLinkByChatId(String(chatId));
 }
 
 export default async function handler(req, res) {
@@ -82,8 +83,8 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
-    const linkedUserId = await getLinkedUserId(chatId);
-    if (!linkedUserId) {
+    const linkedUser = await getLinkedUserId(chatId);
+    if (!linkedUser?.userId || !linkedUser?.authToken) {
       await sendMessage(`🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`, chatId);
       return res.status(200).end();
     }
@@ -95,7 +96,7 @@ export default async function handler(req, res) {
       );
     } else if (text) {
       await notifyTyping(chatId);
-      await processText(text, chatId, linkedUserId);
+      await processText(text, chatId, linkedUser.userId, linkedUser.authToken);
     } else if (msg.voice) {
       await notifyTyping(chatId);
       const fileInfo = await telegramGetFile(msg.voice.file_id);
@@ -106,13 +107,17 @@ export default async function handler(req, res) {
         await sendMessage("🤔 Couldn't transcribe that — try speaking more clearly.", chatId);
       } else {
         await sendMessage(`🎙️ _Transcribed: "${rawText}"_`, chatId);
-        await processText(rawText, chatId, linkedUserId);
+        await processText(rawText, chatId, linkedUser.userId, linkedUser.authToken);
       }
     }
   } catch (err) {
     console.error('[bot webhook]', err.message);
     try {
-      await sendMessage(`❌ Something went wrong: ${err.message}`, chatId);
+      if (/JWT|token|expired|unauthorized|401/i.test(err.message || '')) {
+        await sendMessage(`🔒 Your login session expired. Please relink your account:\n/link <your-key>`, chatId);
+      } else {
+        await sendMessage(`❌ Something went wrong: ${err.message}`, chatId);
+      }
     } catch {
       // swallow
     }

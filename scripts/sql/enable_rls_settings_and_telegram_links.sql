@@ -32,10 +32,12 @@ with check ((select auth.uid())::text = user_id);
 create table if not exists public.telegram_links (
   user_id text primary key,
   chat_id text not null unique,
+  auth_token text,
   created_at bigint not null default extract(epoch from now())::bigint
 );
 
 create index if not exists telegram_links_chat_id_idx on public.telegram_links (chat_id);
+alter table if exists public.telegram_links add column if not exists auth_token text;
 
 alter table if exists public.telegram_links enable row level security;
 
