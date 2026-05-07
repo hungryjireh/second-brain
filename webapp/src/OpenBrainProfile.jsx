@@ -139,7 +139,16 @@ export default function OpenBrainProfile() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', padding: 20, background: 'var(--bg-base)' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 20,
+        background:
+          'radial-gradient(circle at 15% 15%, rgba(29,158,117,0.08), transparent 40%), var(--bg-base)',
+      }}
+    >
       <button
         type="button"
         onClick={() => setIsDrawerOpen(prev => !prev)}
@@ -214,7 +223,7 @@ export default function OpenBrainProfile() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/write');
+                navigate('/open-brain?card=write');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -227,7 +236,7 @@ export default function OpenBrainProfile() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/you');
+                navigate('/open-brain?card=you');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -240,7 +249,7 @@ export default function OpenBrainProfile() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/update-profile');
+                navigate('/open-brain?card=update-profile');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -275,7 +284,6 @@ export default function OpenBrainProfile() {
           margin: '0 auto',
           border: '0.5px solid var(--border)',
           borderRadius: 16,
-          background: 'var(--bg-surface)',
           boxShadow: '0 18px 40px rgba(0,0,0,0.35)',
           overflow: 'hidden',
         }}

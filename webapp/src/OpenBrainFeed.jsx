@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import OpenBrainProfile from './OpenBrainProfile.jsx';
 import OpenBrainWrite from './OpenBrainWrite.jsx';
+import UpdateProfile from './UpdateProfile.jsx';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const FEED_PROMPT_ENDPOINTS = ['/api/feed-prompts', '/api/static/feed-prompts.json', '/feed-prompts.json'];
@@ -238,6 +240,8 @@ export default function OpenBrainFeed() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showInlineHome, setShowInlineHome] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCard = searchParams.get('card');
   const menuItemStyle = {
     display: 'flex',
     alignItems: 'center',
@@ -254,6 +258,10 @@ export default function OpenBrainFeed() {
     transition: 'color .12s',
     textAlign: 'left',
   };
+
+  useEffect(() => {
+    setShowInlineHome(activeCard === 'write');
+  }, [activeCard]);
 
   useEffect(() => {
     let isMounted = true;
@@ -316,6 +324,14 @@ export default function OpenBrainFeed() {
   }, [navigate]);
 
   const activeList = useMemo(() => (tab === 'following' ? feed.following : feed.everyone), [tab, feed]);
+
+  if (activeCard === 'update-profile') {
+    return <UpdateProfile />;
+  }
+
+  if (activeCard === 'you') {
+    return <OpenBrainProfile />;
+  }
 
   const handleReact = async (thoughtId, type, currentlyActive) => {
     const token = localStorage.getItem('authToken');
@@ -461,7 +477,16 @@ export default function OpenBrainFeed() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', padding: 20, background: 'var(--bg-base)' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 20,
+        background:
+          'radial-gradient(circle at 15% 15%, rgba(29,158,117,0.08), transparent 40%), var(--bg-base)',
+      }}
+    >
       <button
         type="button"
         onClick={() => setIsDrawerOpen(prev => !prev)}
@@ -536,7 +561,7 @@ export default function OpenBrainFeed() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/write');
+                navigate('/open-brain?card=write');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -549,7 +574,7 @@ export default function OpenBrainFeed() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/you');
+                navigate('/open-brain?card=you');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -562,7 +587,7 @@ export default function OpenBrainFeed() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/update-profile');
+                navigate('/open-brain?card=update-profile');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -604,7 +629,6 @@ export default function OpenBrainFeed() {
           margin: '0 auto',
           border: '0.5px solid var(--border)',
           borderRadius: 16,
-          background: 'var(--bg-surface)',
           boxShadow: '0 18px 40px rgba(0,0,0,0.35)',
           overflow: 'hidden',
         }}
@@ -615,7 +639,11 @@ export default function OpenBrainFeed() {
             {!hasPostedToday ? (
               <button
                 type="button"
-                onClick={() => setShowInlineHome(current => !current)}
+                onClick={() => {
+                  const next = !showInlineHome;
+                  setShowInlineHome(next);
+                  setSearchParams(next ? { card: 'write' } : {});
+                }}
                 aria-label={showInlineHome ? 'Hide new draft card' : 'Open new draft card'}
                 title={showInlineHome ? 'Hide new draft' : 'New draft'}
                 style={{

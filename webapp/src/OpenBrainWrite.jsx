@@ -636,7 +636,7 @@ export default function OpenBrainWrite({ embedded = false }) {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/write');
+                navigate('/open-brain?card=write');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -661,7 +661,7 @@ export default function OpenBrainWrite({ embedded = false }) {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/you');
+                navigate('/open-brain?card=you');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
@@ -686,7 +686,7 @@ export default function OpenBrainWrite({ embedded = false }) {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain/update-profile');
+                navigate('/open-brain?card=update-profile');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}

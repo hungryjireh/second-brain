@@ -6,10 +6,8 @@ import CreateProfile from './CreateProfile.jsx';
 import Login from './Login.jsx';
 import OpenBrainFeed from './OpenBrainFeed.jsx';
 import OpenBrainProfile from './OpenBrainProfile.jsx';
-import OpenBrainWrite from './OpenBrainWrite.jsx';
 import SharedThoughtPage from './SharedThoughtPage.jsx';
 import NotFoundPage from './NotFoundPage.jsx';
-import UpdateProfile from './UpdateProfile.jsx';
 import './index.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -113,8 +111,8 @@ function AppHome() {
           <AppLogo name="second-brain" />
         </Link>
 
-        <a
-          href="/open-brain"
+        <Link
+          to="/open-brain"
           aria-label="Visit open-brain"
           style={{
             display: 'block',
@@ -126,7 +124,7 @@ function AppHome() {
           }}
         >
           <AppLogo name="open-brain" />
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -182,58 +180,6 @@ function ProtectedOpenBrain() {
   if (status === 'missing') return <Navigate to="/open-brain/create-profile" replace />;
 
   return <OpenBrainFeed />;
-}
-
-function ProtectedOpenBrainWrite() {
-  const [status, setStatus] = React.useState('loading');
-  const token = localStorage.getItem('authToken');
-
-  if (!token) return <Navigate to="/login" replace />;
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function checkProfile() {
-      try {
-        const res = await fetch(`${API}/open-brain/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!isMounted) return;
-        if (res.status === 404) {
-          setStatus('missing');
-          return;
-        }
-        if (res.status === 401) {
-          localStorage.removeItem('authToken');
-          setStatus('unauthorized');
-          return;
-        }
-        if (!res.ok) {
-          setStatus('error');
-          return;
-        }
-
-        setStatus('ready');
-      } catch {
-        if (isMounted) setStatus('error');
-      }
-    }
-
-    checkProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [token]);
-
-  if (status === 'loading') return null;
-  if (status === 'unauthorized') return <Navigate to="/login" replace />;
-  if (status === 'missing') return <Navigate to="/open-brain/create-profile" replace />;
-
-  return <OpenBrainWrite />;
 }
 
 function ProtectedCreateProfile() {
@@ -313,13 +259,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/apps" element={<AppHome />} />
         <Route path="/open-brain" element={<ProtectedOpenBrain />} />
-        <Route path="/open-brain/write" element={<ProtectedOpenBrainWrite />} />
         <Route path="/open-brain/feed" element={<OpenBrainFeed />} />
-        <Route path="/open-brain/you" element={<OpenBrainProfile />} />
         <Route path="/open-brain/u/:username" element={<OpenBrainProfile />} />
         <Route path="/open-brain/t/:slug" element={<SharedThoughtPage />} />
         <Route path="/open-brain/create-profile" element={<ProtectedCreateProfile />} />
-        <Route path="/open-brain/update-profile" element={<UpdateProfile />} />
         <Route path="/second-brain/*" element={<ProtectedApp />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
