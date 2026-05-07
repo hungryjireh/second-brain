@@ -137,6 +137,42 @@ create index if not exists entries_user_id_is_deleted_created_at_idx
 
 commit;
 
+-- ===== optimize_entries_listing_indexes.sql =====
+begin;
+
+-- Supports default list pagination:
+-- where user_id = ? and is_deleted = false
+-- order by created_at desc, id desc
+create index if not exists entries_user_id_is_deleted_created_at_id_idx
+  on public.entries (user_id, is_deleted, created_at desc, id desc);
+
+-- Supports category-scoped pagination:
+-- where user_id = ? and is_deleted = false and category = ?
+-- order by created_at desc, id desc
+create index if not exists entries_user_id_is_deleted_category_created_at_id_idx
+  on public.entries (user_id, is_deleted, category, created_at desc, id desc);
+
+commit;
+
+-- ===== optimize_entries_active_partial_indexes.sql =====
+begin;
+
+-- Smaller, faster index for active-entry pagination:
+-- where user_id = ? and is_deleted = false
+-- order by created_at desc, id desc
+create index if not exists entries_active_user_created_at_id_idx
+  on public.entries (user_id, created_at desc, id desc)
+  where is_deleted = false;
+
+-- Smaller, faster index for active-entry category pagination:
+-- where user_id = ? and is_deleted = false and category = ?
+-- order by created_at desc, id desc
+create index if not exists entries_active_user_category_created_at_id_idx
+  on public.entries (user_id, category, created_at desc, id desc)
+  where is_deleted = false;
+
+commit;
+
 -- ===== add_tags_tables.sql =====
 begin;
 
