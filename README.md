@@ -1,8 +1,8 @@
 # Second Brain — Vercel Deploy
 
-> Voice/text → Groq classify → Supabase store → remind via Telegram → React dashboard.
+> Voice/text → Groq classify → Supabase store → calendar reminder export → React dashboard.
 
-Everything runs on Vercel: API routes as serverless functions, the bot as a webhook endpoint, and reminders via Vercel Cron. No separate server needed.
+Everything runs on Vercel: API routes as serverless functions and the bot as a webhook endpoint. No separate server needed.
 
 ---
 
@@ -18,15 +18,15 @@ Telegram  ──── POST ────►  /api/bot          (serverless funct
                                 ├──► Groq LLaMA     (classify + parse)
                                 └──► Supabase       (store entry)
 
-Vercel Cron (every minute)
-      │
-      ▼
-/api/cron  ──► Supabase (poll due reminders) ──► Telegram (send)
-
 Browser
       │
       ▼
-React SPA  ──► /api/entries  ──► Supabase
+React SPA  ──► /api/entries, /api/settings, /api/ics, /api/telegram/link-key  ──► Supabase
+
+Reminder delivery
+      │
+      ▼
+No backend polling: reminder notifications are handled by the user's calendar app via downloaded `.ics` files from `/api/ics`.
 ```
 
 ---
@@ -40,7 +40,7 @@ React SPA  ──► /api/entries  ──► Supabase
 | Voice transcription | Groq Whisper (`whisper-large-v3-turbo`) |
 | AI classification | Groq LLaMA (`llama-3.3-70b-versatile`) |
 | Database | Supabase (Postgres + Auth + REST/RPC) |
-| Reminders | Vercel Cron → `/api/cron` (every minute) |
+| Reminders | Calendar-based (`.ics` export via `/api/ics`) |
 | Frontend | React + Tailwind CSS (Vite) |
 
 ---
@@ -146,7 +146,7 @@ npm run dev:vercel
 
 `npm run dev` now starts only the Vite dev server. Use `npm run dev:vercel` when you want the Vercel function simulator (API + cron) together with the webapp.
 
-Note: Telegram webhooks cannot reach localhost directly. For local webhook testing use polling or a tunnel (for example ngrok).
+Note: Telegram webhooks cannot reach localhost directly. For local webhook testing, use a tunnel (for example ngrok).
 
 If you prefer to run the frontend while pointing at a backend on port 3000, set `VITE_API_URL` before starting Vite:
 
@@ -164,29 +164,39 @@ Note: the Vite dev server is configured to proxy `/api` to the backend during lo
 ```
 second-brain-poc/
 ├── api/                      # Vercel serverless functions
-│   ├── bot.js                # POST /api/bot  — Telegram webhook
-│   ├── entries.js            # GET / POST / DELETE /api/entries
-│   └── cron.js               # GET /api/cron  — reminder poller
+│   ├── bot.js                # POST /api/bot
+│   ├── entries.js            # GET / POST / PATCH / DELETE /api/entries
+│   ├── ics.js                # GET /api/ics?id=...
+│   ├── settings.js           # GET / PATCH /api/settings
+│   ├── auth/
+│   │   └── login.js          # POST /api/auth/login
+│   ├── telegram/
+│   │   └── link-key.js       # GET /api/telegram/link-key
+│   └── tests/                # Node test suites for API handlers/auth/tags
 │
 ├── lib/                      # Shared services (imported by api/*)
-│   ├── db.js                 # Supabase REST/RPC client + query helpers
+│   ├── auth.js               # token helpers + auth verification
 │   ├── classify.js           # Groq LLaMA classification
-│   ├── whisper.js            # Groq Whisper transcription
-│   └── notify.js             # Telegram sendMessage wrapper
+│   ├── db.js                 # Supabase REST/RPC access helpers
+│   ├── notify.js             # Telegram sendMessage wrapper
+│   └── whisper.js            # Groq Whisper transcription
 │
 ├── scripts/
+│   ├── local-api.js          # local API server (Express)
 │   ├── set-webhook.js        # npm run webhook:set
-│   └── del-webhook.js        # npm run webhook:del
+│   ├── del-webhook.js        # npm run webhook:del
+│   └── sql/                  # Supabase migration SQL
 │
 ├── webapp/                   # React + Tailwind (Vite)
 │   └── src/
 │       ├── App.jsx
-│       └── components/
-│           ├── EntryCard.jsx
-│           ├── Sidebar.jsx
-│           └── StatsBar.jsx
+│       ├── Login.jsx
+│       ├── main.jsx
+│       ├── index.css
+│       ├── components/
+│       └── __tests__/
 │
-├── vercel.json               # Build, routing, cron config
+├── vercel.json               # Build + routing config
 ├── .env.example
 └── package.json
 ```
@@ -195,19 +205,32 @@ second-brain-poc/
 
 ## API reference
 
+All protected routes require `Authorization: Bearer <token>`.
+
 | Method | Path | Body / Query | Description |
 |---|---|---|---|
-| `GET` | `/api/entries` | `?category=reminder` (optional) | All entries, newest first |
-| `POST` | `/api/entries` | `{ "text": "..." }` | Classify + save new entry |
-| `DELETE` | `/api/entries` | `?id=123` | Delete entry by ID |
-| `POST` | `/api/bot` | Telegram Update JSON | Webhook receiver |
-| `GET` | `/api/cron` | — (Vercel Cron only) | Fire due reminders |
+| `POST` | `/api/auth/login` | `{ "username": "...", "password": "..." }` | Returns auth token for webapp session |
+| `GET` | `/api/entries` | `?category=<string>&cursor=<opaque>&limit=<1-100>` | List entries (optional category filter + cursor pagination) |
+| `POST` | `/api/entries` | `{ "description": "...", "priority?": 0-10, "tags?": ["..."] }` (also accepts `text` alias) | Classify and create one entry |
+| `PATCH` | `/api/entries?id=<number>` | `{ "category?": "...", "title?": "...", "summary?": "...", "description?": "...", "content?": "...", "remind_at?": <unix|null>, "priority?": 0-10, "is_archived?": boolean, "tags?": ["..."] }` | Update one entry |
+| `DELETE` | `/api/entries` | `?id=<number>` | Delete entry by ID |
+| `GET` | `/api/settings` | — | Fetch current user settings (currently timezone) |
+| `PATCH` | `/api/settings` | `{ "timezone": "Area/City" }` | Update timezone |
+| `GET` | `/api/telegram/link-key` | — | Generate short-lived Telegram link key for `/link` bot command |
+| `POST` | `/api/bot` | Telegram Update JSON | Telegram webhook receiver for text/voice ingestion |
+| `GET` | `/api/ics` | `?id=<number>` | Download `.ics` file for a reminder entry |
 
 ---
 
 ## Migrating to the full plan (auth)
 
-1. Add magic-link request/verify routes (`POST /api/auth/request`, `GET /api/auth/verify`) using Resend
-2. Replace password login UX in `webapp/src/Login.jsx` with magic-link flow
-3. Add `RESEND_API_KEY` and any related email sender env vars in Vercel
-4. Keep Supabase bearer verification for protected API routes and remove local credential fallback when ready
+Current state:
+1. Protected API routes already require bearer tokens and validate Supabase user identity.
+2. The webapp currently uses `POST /api/auth/login` (username/password fallback) for session bootstrap.
+
+Next migration steps:
+1. Add magic-link endpoints (`POST /api/auth/request`, `GET /api/auth/verify`) and issue short-lived login tokens after verification.
+2. Replace `webapp/src/Login.jsx` password form with email-first magic-link UX.
+3. Add email delivery config in Vercel (`RESEND_API_KEY`, sender/from address, optional templates).
+4. Keep current bearer-token checks in protected routes; only swap login issuance flow.
+5. Decommission fallback credentials (`AUTH_USERNAME`, `AUTH_PASSWORD`) after magic-link rollout and validation.
