@@ -49,7 +49,7 @@ export default function OpenBrainProfile() {
   useEffect(() => {
     let isMounted = true;
     const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (isOwnProfileRoute && !token) {
       navigate('/login', { replace: true });
       return undefined;
     }
@@ -58,7 +58,7 @@ export default function OpenBrainProfile() {
       try {
         const query = isOwnProfileRoute ? '' : `?username=${encodeURIComponent(username)}`;
         const res = await fetch(`${API}/open-brain/profile${query}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
 
         if (!isMounted) return;
@@ -80,7 +80,7 @@ export default function OpenBrainProfile() {
 
         if (loadedProfile?.id) {
           const thoughtsRes = await fetch(`${API}/open-brain/public-thoughts?user_id=${encodeURIComponent(loadedProfile.id)}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           });
           const thoughtsData = await thoughtsRes.json().catch(() => ({}));
           if (thoughtsRes.ok) {

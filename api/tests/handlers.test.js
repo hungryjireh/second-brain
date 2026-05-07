@@ -230,3 +230,93 @@ test('thank-you prompt handler: OPTIONS and method guard', async () => {
   assert.equal(wrongMethodRes.statusCode, 405);
   assert.deepEqual(jsonBody(wrongMethodRes), { error: 'Method not allowed' });
 });
+
+test('open-brain profile handler allows anonymous username lookup', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith('/rest/v1/profiles')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: '11111111-1111-4111-8111-111111111111',
+          username: 'alice',
+          avatar_url: null,
+          streak_count: 0,
+          last_posted_at: null,
+          timezone: 'UTC',
+        }]),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: profileHandler } = await importFresh('../open-brain/profile.js', 'open-brain-profile-anon-username');
+  const req = createReq({ method: 'GET', query: { username: 'alice' }, headers: {} });
+  const res = createRes();
+
+  try {
+    await profileHandler(req, res);
+  } finally {
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(jsonBody(res)?.profile?.username, 'alice');
+  assert.equal(jsonBody(res)?.profile?.is_self, false);
+  assert.equal(jsonBody(res)?.profile?.is_following, false);
+});
+
+test('open-brain public-thoughts handler allows anonymous lookup by user_id', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify([{
+      id: 't1',
+      content: { text: 'hello world' },
+      created_at: '2026-01-01T00:00:00.000Z',
+      visibility: 'public',
+    }]),
+  });
+
+  const { default: publicThoughtsHandler } = await importFresh('../open-brain/public-thoughts.js', 'open-brain-public-thoughts-anon');
+  const req = createReq({
+    method: 'GET',
+    query: { user_id: '11111111-1111-4111-8111-111111111111' },
+    headers: {},
+  });
+  const res = createRes();
+
+  try {
+    await publicThoughtsHandler(req, res);
+  } finally {
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(Array.isArray(jsonBody(res)?.thoughts), true);
+  assert.equal(jsonBody(res)?.thoughts?.[0]?.text, 'hello world');
+});

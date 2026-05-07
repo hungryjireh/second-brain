@@ -69,47 +69,53 @@ export default async function handler(req, res) {
   if (!['GET', 'POST', 'PATCH'].includes(req.method)) return json(res, 405, { error: 'Method not allowed' });
 
   const token = getBearerToken(req);
-  if (!token) return json(res, 401, { error: 'missing bearer token' });
-
-  let authUser;
-  try {
-    authUser = await verifyAuthToken(token);
-  } catch (err) {
-    return json(res, 401, { error: err.message || 'unauthorized' });
-  }
-
-  const userId = resolveAuthUserId(authUser);
-  if (!userId) return json(res, 401, { error: 'invalid auth user' });
 
   try {
     if (req.method === 'GET') {
       const requestedUserId = String(req.query?.id || '').trim();
       const requestedUsername = String(req.query?.username || '').trim();
-      const targetId = isUuid(requestedUserId) ? requestedUserId : userId;
       const usingUsernameLookup = !requestedUserId && requestedUsername;
+      let authUserId = null;
+      let authToken = SUPABASE_PUBLISHABLE_KEY;
+
+      if (token) {
+        try {
+          const authUser = await verifyAuthToken(token);
+          authUserId = resolveAuthUserId(authUser);
+          if (!authUserId) return json(res, 401, { error: 'invalid auth user' });
+          authToken = token;
+        } catch (err) {
+          if (!usingUsernameLookup) return json(res, 401, { error: err.message || 'unauthorized' });
+        }
+      } else if (!usingUsernameLookup) {
+        return json(res, 401, { error: 'missing bearer token' });
+      }
+
+      const targetId = isUuid(requestedUserId) ? requestedUserId : authUserId;
+      if (!usingUsernameLookup && !targetId) return json(res, 401, { error: 'invalid auth user' });
       const rows = await supabaseProfilesRequest('/rest/v1/profiles', {
         method: 'GET',
         query: usingUsernameLookup
           ? { select: 'id,username,avatar_url,streak_count,last_posted_at,timezone', username: `eq.${requestedUsername}`, limit: 1 }
           : { select: 'id,username,avatar_url,streak_count,last_posted_at,timezone', id: `eq.${targetId}`, limit: 1 },
-        authToken: token,
+        authToken,
       });
 
       if (!rows?.[0]) return json(res, 404, { profile: null });
       const profile = rows[0];
-      const isSelf = profile.id === userId;
+      const isSelf = Boolean(authUserId) && profile.id === authUserId;
       let isFollowing = false;
 
-      if (!isSelf) {
+      if (authUserId && !isSelf) {
         const followRows = await supabaseProfilesRequest('/rest/v1/follows', {
           method: 'GET',
           query: {
             select: 'following_id',
-            follower_id: `eq.${userId}`,
+            follower_id: `eq.${authUserId}`,
             following_id: `eq.${profile.id}`,
             limit: 1,
           },
-          authToken: token,
+          authToken,
         });
         isFollowing = Boolean(followRows?.length);
       }
@@ -122,6 +128,17 @@ export default async function handler(req, res) {
         },
       });
     }
+
+    if (!token) return json(res, 401, { error: 'missing bearer token' });
+    let authUser;
+    try {
+      authUser = await verifyAuthToken(token);
+    } catch (err) {
+      return json(res, 401, { error: err.message || 'unauthorized' });
+    }
+
+    const userId = resolveAuthUserId(authUser);
+    if (!userId) return json(res, 401, { error: 'invalid auth user' });
 
     if (req.method === 'POST') {
       const username = String(req.body?.username || '').trim();

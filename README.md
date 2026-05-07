@@ -1,8 +1,20 @@
-# Second Brain — Vercel Deploy
+# Outlobe — Vercel Deploy
 
 > Voice/text → Groq classify → Supabase store → calendar reminder export → React dashboard.
 
 Everything runs on Vercel: API routes as serverless functions and the bot as a webhook endpoint. No separate server needed.
+
+---
+
+## What it is
+
+### SecondBrain
+
+A website that acts as an extension of the human brain — searchable and less forgettable, but retaining brain-like behaviours like surfacing random memories. 
+
+### OpenBrain
+
+A social journaling app where users post one thought per day. No edits. No deletes. The constraint is the product — it pushes for honesty over performance, and makes each post feel considered.
 
 ---
 

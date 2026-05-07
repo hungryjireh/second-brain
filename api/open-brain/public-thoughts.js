@@ -53,20 +53,27 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
 
   const token = getBearerToken(req);
-  if (!token) return json(res, 401, { error: 'missing bearer token' });
+  const requestedUserId = String(req.query?.user_id || '').trim();
+  const hasRequestedUserId = isUuid(requestedUserId);
 
-  let authUser;
-  try {
-    authUser = await verifyAuthToken(token);
-  } catch (err) {
-    return json(res, 401, { error: err.message || 'unauthorized' });
+  let authUserId = null;
+  let authToken = SUPABASE_PUBLISHABLE_KEY;
+
+  if (token) {
+    try {
+      const authUser = await verifyAuthToken(token);
+      authUserId = resolveAuthUserId(authUser);
+      if (!authUserId) return json(res, 401, { error: 'invalid auth user' });
+      authToken = token;
+    } catch (err) {
+      if (!hasRequestedUserId) return json(res, 401, { error: err.message || 'unauthorized' });
+    }
+  } else if (!hasRequestedUserId) {
+    return json(res, 401, { error: 'missing bearer token' });
   }
 
-  const authUserId = resolveAuthUserId(authUser);
-  if (!authUserId) return json(res, 401, { error: 'invalid auth user' });
-
-  const requestedUserId = String(req.query?.user_id || '').trim();
-  const targetUserId = isUuid(requestedUserId) ? requestedUserId : authUserId;
+  const targetUserId = hasRequestedUserId ? requestedUserId : authUserId;
+  if (!targetUserId) return json(res, 400, { error: 'user_id is required' });
 
   try {
     const rows = await supabaseRequest('/rest/v1/thoughts', {
@@ -78,7 +85,7 @@ export default async function handler(req, res) {
         order: 'created_at.desc',
         limit: 200,
       },
-      authToken: token,
+      authToken,
     });
 
     const thoughts = (rows || []).map(row => ({
