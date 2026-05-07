@@ -66,7 +66,9 @@ npm run setup        # installs root + webapp deps
 
 ### 3. Run the DB migration
 
-Open the Supabase SQL editor and run the schema/migration scripts from `scripts/sql/` in order needed for your environment (at minimum: `migrate_user_scope.sql`, `enable_rls_entries.sql`, `enable_rls_settings_and_telegram_links.sql`).
+Open the Supabase SQL editor and run the consolidated migration file:
+
+- `scripts/sql/merged_migrations.sql`
 
 Then run:
 
