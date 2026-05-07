@@ -199,3 +199,34 @@ test('bot handler: method guard and no-message noop', async () => {
   await botHandler(noMessageReq, noMessageRes);
   assert.equal(noMessageRes.statusCode, 200);
 });
+
+test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug', async () => {
+  const { default: sharedThoughtHandler } = await importFresh('../open-brain/shared-thought.js', 'shared-thought-guards');
+
+  const optionsRes = createRes();
+  await sharedThoughtHandler(createReq({ method: 'OPTIONS' }), optionsRes);
+  assert.equal(optionsRes.statusCode, 204);
+
+  const wrongMethodRes = createRes();
+  await sharedThoughtHandler(createReq({ method: 'POST' }), wrongMethodRes);
+  assert.equal(wrongMethodRes.statusCode, 405);
+  assert.deepEqual(jsonBody(wrongMethodRes), { error: 'Method not allowed' });
+
+  const missingSlugRes = createRes();
+  await sharedThoughtHandler(createReq({ method: 'GET', query: {} }), missingSlugRes);
+  assert.equal(missingSlugRes.statusCode, 400);
+  assert.deepEqual(jsonBody(missingSlugRes), { error: 'slug is required' });
+});
+
+test('thank-you prompt handler: OPTIONS and method guard', async () => {
+  const { default: thankYouPromptHandler } = await importFresh('../thank-you-for-sharing-prompt.js', 'thank-you-prompt-guards');
+
+  const optionsRes = createRes();
+  await thankYouPromptHandler(createReq({ method: 'OPTIONS' }), optionsRes);
+  assert.equal(optionsRes.statusCode, 204);
+
+  const wrongMethodRes = createRes();
+  await thankYouPromptHandler(createReq({ method: 'POST' }), wrongMethodRes);
+  assert.equal(wrongMethodRes.statusCode, 405);
+  assert.deepEqual(jsonBody(wrongMethodRes), { error: 'Method not allowed' });
+});

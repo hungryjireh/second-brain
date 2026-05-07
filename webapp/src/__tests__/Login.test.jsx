@@ -41,7 +41,7 @@ describe('Login', () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(localStorage.setItem).toHaveBeenCalledWith('authToken', 'token-123');
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/apps', { replace: true });
     });
   });
 
@@ -105,7 +105,7 @@ describe('Login', () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(localStorage.setItem).toHaveBeenCalledWith('authToken', 'token-enter');
-      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/apps', { replace: true });
     });
   });
 });

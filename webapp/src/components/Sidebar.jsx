@@ -3,6 +3,7 @@ import React from 'react';
 export default function Sidebar({
   onOpenSettings,
   onOpenImportConversations,
+  onOpenApps,
   importingConversations = false,
   isMobile = false,
 }) {
@@ -91,6 +92,47 @@ export default function Sidebar({
             </span>
             <span>Settings</span>
           </button>
+
+          <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+            <div
+              aria-hidden="true"
+              style={{
+                height: 1,
+                margin: '0 12px 8px',
+                background: 'var(--border)',
+              }}
+            />
+            <button
+              onClick={onOpenApps}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 16px', margin: '0 8px',
+                borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: 'transparent',
+                color: 'var(--text-muted)',
+                fontFamily: 'inherit', fontSize: 12,
+                transition: 'color .12s',
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 14,
+                  display: 'inline-flex',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ◫
+              </span>
+              <span>Apps</span>
+            </button>
+          </div>
         </>
       )}
     </aside>

@@ -1104,6 +1104,35 @@ export default function App({ authToken, onUnauthorized }) {
             >
               Settings
             </button>
+            <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  height: 1,
+                  margin: '0 6px 6px',
+                  background: 'var(--border)',
+                }}
+              />
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.location.assign('/apps');
+                }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  textAlign: 'left',
+                  borderRadius: 7,
+                  padding: '8px 10px',
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Apps
+              </button>
+            </div>
           </div>
         )}
 
@@ -1235,6 +1264,7 @@ export default function App({ authToken, onUnauthorized }) {
             onOpenImportConversations={handleOpenImportDialog}
             importingConversations={importingConversations}
             onOpenSettings={handleOpenSettings}
+            onOpenApps={() => window.location.assign('/apps')}
             isMobile={false}
           />
         )}

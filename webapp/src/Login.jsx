@@ -23,7 +23,7 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `API error ${res.status}`);
       localStorage.setItem('authToken', data.token);
-      navigate('/', { replace: true });
+      navigate('/apps', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
