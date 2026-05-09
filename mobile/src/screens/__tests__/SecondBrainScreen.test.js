@@ -42,14 +42,14 @@ describe('SecondBrainScreen', () => {
       .mockResolvedValueOnce({ entries: [entry] })
       .mockResolvedValueOnce({});
 
-    const { getByText, queryByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
 
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
-    fireEvent.press(getByText('×'));
-    expect(queryByText('!')).toBeTruthy();
+    fireEvent.press(getByTestId('entry-swipe-delete-42'));
+    expect(queryByText('Confirm')).toBeTruthy();
     expect(apiRequest).not.toHaveBeenCalledWith('/entries?id=42', expect.objectContaining({ method: 'DELETE' }));
 
-    fireEvent.press(getByText('!'));
+    fireEvent.press(getByTestId('entry-swipe-delete-42'));
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/entries?id=42', expect.objectContaining({ method: 'DELETE' }));
@@ -128,5 +128,103 @@ describe('SecondBrainScreen', () => {
     expect(getByText('Please summarize ')).toBeTruthy();
     expect(getByText('this')).toBeTruthy();
     expect(getByText('Here is a summary.')).toBeTruthy();
+  });
+
+  it('creates an entry from composer input and reloads list', async () => {
+    const created = {
+      id: 100,
+      title: 'New note',
+      summary: 'created from composer',
+      is_archived: false,
+      category: 'note',
+      created_at: Math.floor(Date.now() / 1000),
+    };
+
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === '/entries?limit=60') {
+        if (options.method === 'POST') return {};
+        return { entries: created.id ? [created] : [] };
+      }
+      if (url === '/settings') return {};
+      if (url === '/entries') return {};
+      return {};
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SecondBrainScreen token={token} />);
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith('/entries?limit=60', { token });
+    });
+
+    fireEvent.changeText(getByPlaceholderText('Type a note, reminder or thought...'), '  created from composer  ');
+    fireEvent.press(getByText('↗'));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith('/entries', {
+        method: 'POST',
+        token,
+        body: { description: 'created from composer' },
+      });
+      expect(getByText('created from composer')).toBeTruthy();
+    });
+  });
+
+  it('filters entries by selected tag and toggles off on second press', async () => {
+    const entries = [
+      { id: 1, title: 'Work item', summary: 'for work', is_archived: false, category: 'note', tags: ['work'] },
+      { id: 2, title: 'Home item', summary: 'for home', is_archived: false, category: 'note', tags: ['home'] },
+    ];
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === '/entries?limit=60') return { entries };
+      if (url === '/settings') return {};
+      return {};
+    });
+
+    const { getByText, queryByText } = render(<SecondBrainScreen token={token} />);
+
+    await waitFor(() => expect(getByText('Work item')).toBeTruthy());
+    expect(getByText('Home item')).toBeTruthy();
+
+    fireEvent.press(getByText('#work'));
+    expect(getByText('Work item')).toBeTruthy();
+    expect(queryByText('Home item')).toBeNull();
+
+    fireEvent.press(getByText('#work'));
+    expect(getByText('Work item')).toBeTruthy();
+    expect(getByText('Home item')).toBeTruthy();
+  });
+
+  it('shows validation error and skips PATCH when priority is out of range', async () => {
+    const entry = {
+      id: 42,
+      title: 'Ship tests',
+      summary: 'Write behavior checks',
+      raw_text: 'Write behavior checks',
+      is_archived: false,
+      priority: 5,
+      category: 'note',
+    };
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === '/entries?limit=60') return { entries: [entry] };
+      if (url === '/settings') return {};
+      return {};
+    });
+
+    const { getByText, getByDisplayValue, getByPlaceholderText, findByText } = render(<SecondBrainScreen token={token} />);
+
+    await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
+    fireEvent.press(getByText('Edit'));
+    expect(getByDisplayValue('Write behavior checks')).toBeTruthy();
+
+    fireEvent.changeText(getByPlaceholderText('0'), '11');
+    fireEvent.press(getByText('Save changes'));
+
+    expect(await findByText('Priority must be an integer from 0 to 10.')).toBeTruthy();
+    expect(apiRequest).not.toHaveBeenCalledWith(
+      '/entries?id=42',
+      expect.objectContaining({ method: 'PATCH' })
+    );
   });
 });

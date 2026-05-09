@@ -33,7 +33,8 @@ function HeaderBrand() {
 function HeaderLiveStatus() {
   const dateLabel = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
-    month: 'short',
+    month: 'long',
+    year: 'numeric',
   });
 
   return (
@@ -149,8 +150,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'DMSans_400Regular',
-    textTransform: 'lowercase',
+    fontFamily: 'DMSans_300Light',
     paddingRight: 12,
   },
   headerLiveDot: {

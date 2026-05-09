@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, FlatList, ScrollView, StyleSheet } from 'react-native';
+import { Alert, Animated, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, PanResponder, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiRequest } from '../api';
 import { theme } from '../theme';
+import styles, { SWIPE_ACTION_WIDTH } from './SecondBrainScreen.styles';
 
 const PRIORITY_LEVELS = [
   { key: 'high', label: 'High (8-10)' },
@@ -34,6 +35,66 @@ const STATS = [
 const TYPEBAR_MIN_HEIGHT = 38;
 const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
 const MAX_ENTRY_TAGS = 10;
+const SWIPE_OPEN_THRESHOLD = 44;
+
+function SwipeToDeleteRow({ id, onOpen, isOpen, actionLabel, onActionPress, children }) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const currentOffsetRef = useRef(0);
+
+  const animateTo = useCallback((value, immediate = false) => {
+    currentOffsetRef.current = value;
+    if (immediate) {
+      translateX.setValue(value);
+      return;
+    }
+    Animated.spring(translateX, {
+      toValue: value,
+      useNativeDriver: true,
+      bounciness: 0,
+      speed: 20,
+    }).start();
+  }, [translateX]);
+
+  useEffect(() => {
+    animateTo(isOpen ? -SWIPE_ACTION_WIDTH : 0);
+  }, [animateTo, isOpen]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          const horizontalMove = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+          return horizontalMove && (gestureState.dx < -8 || (isOpen && gestureState.dx > 8));
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const next = Math.max(-SWIPE_ACTION_WIDTH, Math.min(0, currentOffsetRef.current + gestureState.dx));
+          translateX.setValue(next);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const shouldOpen = gestureState.dx < -SWIPE_OPEN_THRESHOLD || (isOpen && gestureState.dx < SWIPE_OPEN_THRESHOLD);
+          if (shouldOpen) onOpen(id);
+          else animateTo(0);
+        },
+        onPanResponderTerminate: () => {
+          animateTo(isOpen ? -SWIPE_ACTION_WIDTH : 0);
+        },
+      }),
+    [animateTo, id, isOpen, onOpen, translateX]
+  );
+
+  return (
+    <View style={styles.swipeRow}>
+      <View style={styles.swipeActionWrap}>
+        <Pressable testID={`entry-swipe-delete-${id}`} style={styles.swipeDeleteAction} onPress={onActionPress}>
+          <Text style={styles.swipeDeleteText}>{actionLabel}</Text>
+        </Pressable>
+      </View>
+      <Animated.View style={[styles.swipeCardWrap, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
 
 function getEntryBody(entry) {
   return entry.raw_text || entry.summary || '';
@@ -239,6 +300,48 @@ function formatRemindAt(unixTs, timezone = 'Asia/Singapore') {
   return `${d.toLocaleDateString('en-SG', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' })} · ${time}`;
 }
 
+function unixToDatetimeLocal(unixTs) {
+  if (!unixTs) return '';
+  const date = new Date(unixTs * 1000);
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function datetimeLocalToUnix(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Math.floor(parsed.getTime() / 1000);
+}
+
+function groupByDate(entries) {
+  const groups = {};
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const weekStart = todayStart - 6 * 86400000;
+
+  for (const entry of entries) {
+    const ts = (entry.created_at ?? 0) * 1000;
+    let group;
+    if (ts >= todayStart) group = 'Today';
+    else if (ts >= todayStart - 86400000) group = 'Yesterday';
+    else if (ts >= weekStart) group = 'Earlier this week';
+    else group = 'Older';
+
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(entry);
+  }
+
+  return groups;
+}
+
+function getTimezoneOptions() {
+  if (typeof Intl.supportedValuesOf === 'function') {
+    return Intl.supportedValuesOf('timeZone');
+  }
+  return ['Asia/Singapore', 'UTC'];
+}
+
 export default function SecondBrainScreen({ token }) {
   const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState([]);
@@ -260,7 +363,18 @@ export default function SecondBrainScreen({ token }) {
   const [activeTag, setActiveTag] = useState('');
   const [typebarInputHeight, setTypebarInputHeight] = useState(TYPEBAR_MIN_HEIGHT);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [openSwipeId, setOpenSwipeId] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [importingConversations, setImportingConversations] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
+  const [timezoneDraft, setTimezoneDraft] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
+  const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
+  const [timezoneError, setTimezoneError] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [telegramLinkKey, setTelegramLinkKey] = useState('');
+  const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
+  const [telegramLinkError, setTelegramLinkError] = useState('');
   const confirmDeleteTimeoutRef = useRef(null);
   const selectedImportedConversation = useMemo(
     () => (selectedEntry ? parseImportedConversationFromEntry(selectedEntry) : null),
@@ -285,6 +399,21 @@ export default function SecondBrainScreen({ token }) {
     loadEntries();
   }, [loadEntries]);
 
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await apiRequest('/settings', { token });
+        if (data?.timezone) {
+          setTimezone(data.timezone);
+          setTimezoneDraft(data.timezone);
+        }
+      } catch (err) {
+        setTimezoneError(err.message);
+      }
+    }
+    loadSettings();
+  }, [token]);
+
   useEffect(() => () => {
     if (confirmDeleteTimeoutRef.current) {
       clearTimeout(confirmDeleteTimeoutRef.current);
@@ -302,6 +431,58 @@ export default function SecondBrainScreen({ token }) {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  async function handleImportConversationFile(file) {
+    if (!file || importingConversations) return;
+
+    setImportingConversations(true);
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const conversations = Array.isArray(parsed) ? parsed : [parsed];
+      const response = await apiRequest('/entries', {
+        method: 'POST',
+        token,
+        body: {
+          import_format: 'llm_conversations',
+          conversations,
+        },
+      });
+
+      const created = Array.isArray(response?.created) ? response.created : [];
+      if (created.length === 0) {
+        Alert.alert('Import LLM conversations', 'No valid conversations were found in the uploaded JSON.');
+        return;
+      }
+
+      setEntries(prev => [...created, ...prev]);
+      Alert.alert('Import LLM conversations', `Imported ${created.length} conversation${created.length === 1 ? '' : 's'}.`);
+    } catch (err) {
+      Alert.alert('Import LLM conversations', `Failed to import JSON: ${err.message}`);
+    } finally {
+      setImportingConversations(false);
+    }
+  }
+
+  function handleOpenImportDialog() {
+    if (importingConversations) return;
+
+    if (Platform.OS !== 'web') {
+      Alert.alert('Import LLM conversations', 'Uploading JSON is currently available on web.');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async event => {
+      const file = event?.target?.files?.[0];
+      if (!file) return;
+      await handleImportConversationFile(file);
+      input.value = '';
+    };
+    input.click();
   }
 
   async function toggleArchive(entry) {
@@ -333,6 +514,7 @@ export default function SecondBrainScreen({ token }) {
   }
 
   function requestDelete(entryId) {
+    setOpenSwipeId(entryId);
     if (confirmDeleteId !== entryId) {
       setConfirmDeleteId(entryId);
       if (confirmDeleteTimeoutRef.current) clearTimeout(confirmDeleteTimeoutRef.current);
@@ -365,7 +547,7 @@ export default function SecondBrainScreen({ token }) {
     setEditTitle(entry.title || '');
     setEditSummary(entry.summary || '');
     setEditText(getEntryBody(entry));
-    setEditRemindAt(entry.remind_at ? String(entry.remind_at) : '');
+    setEditRemindAt(entry.remind_at ? unixToDatetimeLocal(entry.remind_at) : '');
     setEditPriority(String(Number.isInteger(entry.priority) ? entry.priority : 0));
     setEditTags(tagsToInput(entry.tags));
     setEditTagDraft('');
@@ -389,6 +571,62 @@ export default function SecondBrainScreen({ token }) {
 
   function closeEntry() {
     setSelectedEntry(null);
+  }
+
+  function openSettings() {
+    setTimezoneDraft(timezone);
+    setTimezoneMenuOpen(false);
+    setTimezoneError('');
+    setTelegramLinkKey('');
+    setTelegramLinkError('');
+    setSettingsOpen(true);
+  }
+
+  function closeSettings() {
+    if (savingSettings) return;
+    setTimezoneMenuOpen(false);
+    setSettingsOpen(false);
+  }
+
+  async function saveSettings() {
+    if (savingSettings) return;
+    const timezoneToSave = String(timezoneDraft || '').trim();
+    if (!timezoneToSave) {
+      setTimezoneError('Timezone is required.');
+      return;
+    }
+    setSavingSettings(true);
+    setTimezoneError('');
+    try {
+      const updated = await apiRequest('/settings', {
+        method: 'PATCH',
+        token,
+        body: { timezone: timezoneToSave },
+      });
+      if (updated?.timezone) {
+        setTimezone(updated.timezone);
+        setTimezoneDraft(updated.timezone);
+      }
+      setSettingsOpen(false);
+    } catch (err) {
+      setTimezoneError(err.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  async function generateTelegramLinkKey() {
+    if (loadingTelegramLinkKey) return;
+    setLoadingTelegramLinkKey(true);
+    setTelegramLinkError('');
+    try {
+      const data = await apiRequest('/telegram/link-key', { token });
+      setTelegramLinkKey(data?.key || '');
+    } catch (err) {
+      setTelegramLinkError(err.message);
+    } finally {
+      setLoadingTelegramLinkKey(false);
+    }
   }
 
   function addEditTag() {
@@ -420,7 +658,7 @@ export default function SecondBrainScreen({ token }) {
           title: editTitle.trim(),
           summary: editSummary.trim(),
           description: editText.trim(),
-          remind_at: editCategory === 'reminder' ? (editRemindAt ? Number(editRemindAt) : null) : null,
+          remind_at: editCategory === 'reminder' ? datetimeLocalToUnix(editRemindAt) : null,
           priority,
           tags: parseTagInput(editTags),
         },
@@ -470,6 +708,26 @@ export default function SecondBrainScreen({ token }) {
     }
     return Array.from(unique).sort((a, b) => a.localeCompare(b));
   }, [entries]);
+
+  const groupedEntries = useMemo(() => groupByDate(visibleEntries), [visibleEntries]);
+  const timezoneOptions = useMemo(() => {
+    const options = getTimezoneOptions();
+    return options.includes(timezoneDraft) ? options : [timezoneDraft, ...options];
+  }, [timezoneDraft]);
+  const groupedRows = useMemo(() => {
+    const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
+    const rows = [];
+    for (const group of groupOrder) {
+      const items = groupedEntries[group];
+      if (!items || items.length === 0) continue;
+      rows.push({ type: 'header', key: `header-${group}`, group, count: items.length });
+      for (const entry of items) {
+        rows.push({ type: 'entry', key: `entry-${entry.id}`, entry });
+      }
+    }
+    return rows;
+  }, [groupedEntries]);
+
   return (
     <View style={styles.container}>
       <View style={styles.statsGrid}>
@@ -494,12 +752,16 @@ export default function SecondBrainScreen({ token }) {
       <View style={styles.filterSection}>
         <View style={styles.filterHeaderRow}>
           <Text style={styles.filterLabel}>FILTER</Text>
-          <Pressable style={styles.archivedToggle} onPress={() => setShowArchived(prev => !prev)}>
-            <View style={[styles.checkbox, showArchived && styles.checkboxChecked]}>
-              {showArchived ? <Text style={styles.checkboxMark}>✓</Text> : null}
-            </View>
+          <View style={styles.archivedToggle}>
             <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
-          </Pressable>
+            <Switch
+              value={showArchived}
+              onValueChange={setShowArchived}
+              trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
+              thumbColor={theme.colors.bg}
+              ios_backgroundColor={theme.colors.border}
+            />
+          </View>
         </View>
 
         <View style={styles.filterRow}>
@@ -537,93 +799,215 @@ export default function SecondBrainScreen({ token }) {
 
       {!!error && <Text style={styles.error}>{error}</Text>}
 
-      {editingEntry ? (
-        <View style={styles.editPanel}>
-          <Text style={styles.editTitle}>Edit entry</Text>
-          <Text style={styles.editLabel}>Category</Text>
-          <View style={styles.categoryRow}>
-            {CATEGORIES.map(category => {
-              const isActive = editCategory === category;
-              return (
-                <Pressable
-                  key={category}
-                  style={[styles.pill, isActive && styles.pillActive]}
-                  onPress={() => setEditCategory(category)}
-                >
-                  <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{category}</Text>
+      <Modal
+        visible={!!editingEntry}
+        transparent
+        animationType="fade"
+        onRequestClose={closeEdit}
+      >
+        <Pressable style={styles.editOverlay} onPress={closeEdit}>
+          <Pressable style={styles.editPanel} onPress={event => event.stopPropagation()}>
+            <ScrollView style={styles.editScroll} contentContainerStyle={styles.editScrollContent}>
+              <Text style={styles.editTitle}>Edit entry</Text>
+              <Text style={styles.editLabel}>Category</Text>
+              <View style={styles.categoryRow}>
+                {CATEGORIES.map(category => {
+                  const isActive = editCategory === category;
+                  return (
+                    <Pressable
+                      key={category}
+                      style={[styles.pill, isActive && styles.pillActive]}
+                      onPress={() => setEditCategory(category)}
+                    >
+                      <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{category}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.editLabel}>Title</Text>
+              <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.editField} placeholder="Title" placeholderTextColor={theme.colors.textSecondary} />
+              <Text style={styles.editLabel}>Summary</Text>
+              <TextInput value={editSummary} onChangeText={setEditSummary} multiline style={styles.editInputCompact} placeholder="Summary" placeholderTextColor={theme.colors.textSecondary} />
+              <Text style={styles.editLabel}>Description</Text>
+              <TextInput value={editText} onChangeText={setEditText} multiline style={styles.editInput} placeholder="Description" placeholderTextColor={theme.colors.textSecondary} />
+              {editCategory === 'reminder' ? (
+                <>
+                  <Text style={styles.editLabel}>Reminder date and time</Text>
+                  <TextInput
+                    value={editRemindAt}
+                    onChangeText={setEditRemindAt}
+                    style={styles.editField}
+                    placeholder="Select reminder date and time"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    {...(Platform.OS === 'web' ? { type: 'datetime-local' } : {})}
+                  />
+                </>
+              ) : null}
+              <Text style={styles.editLabel}>Priority (0-10)</Text>
+              <TextInput value={editPriority} onChangeText={setEditPriority} style={styles.editField} keyboardType="numeric" placeholder="0" placeholderTextColor={theme.colors.textSecondary} />
+              <Text style={styles.editLabel}>Tags</Text>
+              <View style={styles.tagInputRow}>
+                <TextInput
+                  value={editTagDraft}
+                  onChangeText={setEditTagDraft}
+                  style={[styles.editField, styles.tagInput]}
+                  placeholder={parseTagInput(editTags).length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  editable={parseTagInput(editTags).length < MAX_ENTRY_TAGS}
+                />
+                <Pressable style={styles.secondaryButton} onPress={addEditTag}>
+                  <Text style={styles.secondaryButtonText}>Add</Text>
                 </Pressable>
-              );
-            })}
-          </View>
-          <Text style={styles.editLabel}>Title</Text>
-          <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.editField} placeholder="Title" placeholderTextColor={theme.colors.textSecondary} />
-          <Text style={styles.editLabel}>Summary</Text>
-          <TextInput value={editSummary} onChangeText={setEditSummary} multiline style={styles.editInputCompact} placeholder="Summary" placeholderTextColor={theme.colors.textSecondary} />
-          <Text style={styles.editLabel}>Description</Text>
-          <TextInput value={editText} onChangeText={setEditText} multiline style={styles.editInput} placeholder="Description" placeholderTextColor={theme.colors.textSecondary} />
-          {editCategory === 'reminder' ? (
-            <>
-              <Text style={styles.editLabel}>Reminder time (unix seconds)</Text>
-              <TextInput value={editRemindAt} onChangeText={setEditRemindAt} style={styles.editField} keyboardType="numeric" placeholder="e.g. 1760000000" placeholderTextColor={theme.colors.textSecondary} />
-            </>
-          ) : null}
-          <Text style={styles.editLabel}>Priority (0-10)</Text>
-          <TextInput value={editPriority} onChangeText={setEditPriority} style={styles.editField} keyboardType="numeric" placeholder="0" placeholderTextColor={theme.colors.textSecondary} />
-          <Text style={styles.editLabel}>Tags</Text>
-          <View style={styles.tagInputRow}>
-            <TextInput
-              value={editTagDraft}
-              onChangeText={setEditTagDraft}
-              style={[styles.editField, styles.tagInput]}
-              placeholder={parseTagInput(editTags).length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
-              placeholderTextColor={theme.colors.textSecondary}
-              editable={parseTagInput(editTags).length < MAX_ENTRY_TAGS}
-            />
-            <Pressable style={styles.secondaryButton} onPress={addEditTag}>
-              <Text style={styles.secondaryButtonText}>Add</Text>
-            </Pressable>
-          </View>
-          <View style={styles.tagsRow}>
-            {parseTagInput(editTags).map(tag => (
-              <Pressable key={tag} style={styles.itemTagPill} onPress={() => removeEditTag(tag)}>
-                <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
+              </View>
+              <Text style={styles.tagCountText}>{`${parseTagInput(editTags).length}/${MAX_ENTRY_TAGS} tags`}</Text>
+              <View style={styles.tagsRow}>
+                {parseTagInput(editTags).map(tag => (
+                  <Pressable key={tag} style={styles.itemTagPill} onPress={() => removeEditTag(tag)}>
+                    <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.editActionRow}>
+                <Pressable style={styles.secondaryButton} onPress={closeEdit}>
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.editSaveButton} onPress={saveEdit}>
+                  <Text style={styles.buttonText}>Save changes</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={settingsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeSettings}
+      >
+        <Pressable style={styles.editOverlay} onPress={closeSettings}>
+          <Pressable style={styles.settingsPanel} onPress={event => event.stopPropagation()}>
+            <ScrollView style={styles.settingsScroll} contentContainerStyle={styles.settingsScrollContent}>
+              <Text style={styles.settingsTitle}>Settings</Text>
+              <Text style={styles.settingsLabel}>Timezone</Text>
+              <Pressable
+                style={styles.settingsDropdown}
+                onPress={() => setTimezoneMenuOpen(prev => !prev)}
+              >
+                <Text style={styles.settingsDropdownText}>{timezoneDraft || 'Select timezone'}</Text>
+                <Text style={styles.settingsDropdownChevron}>{timezoneMenuOpen ? '▲' : '▼'}</Text>
               </Pressable>
-            ))}
-          </View>
-          <View style={styles.row}>
-            <Pressable style={styles.secondaryButton} onPress={closeEdit}>
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.button} onPress={saveEdit}>
-              <Text style={styles.buttonText}>Save changes</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
+              {timezoneMenuOpen ? (
+                <ScrollView
+                  style={styles.settingsDropdownList}
+                  showsVerticalScrollIndicator
+                  contentContainerStyle={styles.settingsDropdownListContent}
+                >
+                  {timezoneOptions.map(option => {
+                    const isSelected = option === timezoneDraft;
+                    return (
+                      <Pressable
+                        key={option}
+                        style={[styles.settingsDropdownOption, isSelected && styles.settingsDropdownOptionSelected]}
+                        onPress={() => {
+                          setTimezoneDraft(option);
+                          setTimezoneMenuOpen(false);
+                          setTimezoneError('');
+                        }}
+                      >
+                        <Text style={[styles.settingsDropdownOptionText, isSelected && styles.settingsDropdownOptionTextSelected]}>
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+              {!!timezoneError && <Text style={styles.error}>{timezoneError}</Text>}
+              <View style={styles.settingsCard}>
+                <Text style={styles.settingsCardLabel}>Telegram account linking</Text>
+                <Pressable
+                  style={[styles.settingsActionButton, loadingTelegramLinkKey && styles.typebarButtonDisabled]}
+                  onPress={generateTelegramLinkKey}
+                  disabled={loadingTelegramLinkKey}
+                >
+                  <Text style={styles.settingsActionButtonText}>
+                    {loadingTelegramLinkKey ? 'Generating…' : 'Generate Telegram link key'}
+                  </Text>
+                </Pressable>
+                {!!telegramLinkKey && (
+                  <>
+                    <Text style={styles.settingsKeyText}>{telegramLinkKey}</Text>
+                    <Text style={styles.settingsHintText}>Send this in Telegram: /link &lt;your-key&gt;. This key expires in 10 minutes.</Text>
+                  </>
+                )}
+                {!!telegramLinkError && <Text style={styles.error}>{telegramLinkError}</Text>}
+              </View>
+              <View style={styles.settingsCard}>
+                <Text style={styles.settingsCardLabel}>Imports</Text>
+                <Pressable
+                  style={[styles.settingsActionButton, importingConversations && styles.typebarButtonDisabled]}
+                  onPress={handleOpenImportDialog}
+                  disabled={importingConversations}
+                >
+                  <Text style={styles.settingsActionButtonText}>
+                    {importingConversations ? 'Importing…' : 'Import LLM conversations'}
+                  </Text>
+                </Pressable>
+              </View>
+              <View style={styles.settingsActionsRow}>
+                <Pressable style={styles.settingsSecondaryButton} onPress={closeSettings} disabled={savingSettings}>
+                  <Text style={styles.settingsSecondaryButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={[styles.editSaveButton, savingSettings && styles.typebarButtonDisabled]} onPress={saveSettings} disabled={savingSettings}>
+                  <Text style={styles.buttonText}>{savingSettings ? 'Saving…' : 'Save'}</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <FlatList
-        data={visibleEntries}
+        data={groupedRows}
         style={styles.list}
         contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
-        keyExtractor={item => String(item.id)}
+        keyExtractor={item => item.key}
         renderItem={({ item }) => {
-          const isBusy = busyId === item.id;
-          const tag = TAG_STYLES[item.category] ?? TAG_STYLES.note;
-          const icon = CATEGORY_ICONS[item.category] ?? '📝';
-          const priority = Number.isInteger(item.priority) ? item.priority : 0;
-          const archiveLabel = item.category === 'reminder'
-            ? (item.is_archived ? 'Undo Done' : 'Mark Done')
-            : (item.is_archived ? 'Unarchive' : 'Archive');
-          return (
-            <Pressable style={styles.card} onPress={() => openEntry(item)}>
+          if (item.type === 'header') {
+            return <Text style={styles.sectionHeaderText}>{`${item.group} · ${item.count}`}</Text>;
+          }
+
+          const entry = item.entry;
+          if (!entry) return null;
+          const isBusy = busyId === entry.id;
+          const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
+          const icon = CATEGORY_ICONS[entry.category] ?? '📝';
+          const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
+          const archiveLabel = entry.category === 'reminder'
+            ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
+            : (entry.is_archived ? 'Unarchive' : 'Archive');
+          const isWeb = Platform.OS === 'web';
+          const cardContent = (
+            <Pressable
+              style={styles.card}
+              onPress={() => {
+                if (!isWeb && openSwipeId === entry.id) {
+                  setOpenSwipeId(null);
+                  return;
+                }
+                openEntry(entry);
+              }}
+            >
               <View style={styles.cardTopRow}>
                 <View style={styles.cardMainCol}>
                   <View style={styles.cardMetaRow}>
                     <Text style={styles.cardIcon}>{icon}</Text>
                     <Text style={[styles.priorityText, { color: getPriorityColor(priority) }]}>P{priority}</Text>
-                    <Text style={styles.cardTitle}>{item.title || 'Untitled'}</Text>
+                    <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
                   </View>
-                  <Text style={styles.cardBody}>{item.summary || getEntryBody(item)}</Text>
+                  <Text style={styles.cardBody}>{entry.summary || getEntryBody(entry)}</Text>
                 </View>
                 <View style={styles.cardActionCol}>
                   <View style={styles.cardActionRow}>
@@ -631,7 +1015,7 @@ export default function SecondBrainScreen({ token }) {
                       style={styles.secondaryButton}
                       onPress={event => {
                         event.stopPropagation();
-                        startEdit(item);
+                        startEdit(entry);
                       }}
                       disabled={isBusy}
                     >
@@ -641,18 +1025,18 @@ export default function SecondBrainScreen({ token }) {
                       style={styles.secondaryButton}
                       onPress={event => {
                         event.stopPropagation();
-                        toggleArchive(item);
+                        toggleArchive(entry);
                       }}
                       disabled={isBusy}
                     >
                       <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
                     </Pressable>
-                    {item.category === 'reminder' && item.remind_at ? (
+                    {entry.category === 'reminder' && entry.remind_at ? (
                       <Pressable
                         style={styles.secondaryButton}
                         onPress={event => {
                           event.stopPropagation();
-                          downloadIcs(item.id);
+                          downloadIcs(entry.id);
                         }}
                         disabled={isBusy}
                       >
@@ -662,37 +1046,39 @@ export default function SecondBrainScreen({ token }) {
                     <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
                       <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
                     </View>
-                    <Pressable
-                      style={[styles.deleteButton, confirmDeleteId === item.id && styles.deleteButtonConfirm]}
-                      onPress={event => {
-                        event.stopPropagation();
-                        requestDelete(item.id);
-                      }}
-                      disabled={isBusy}
-                    >
-                      <Text style={[styles.deleteText, confirmDeleteId === item.id && styles.deleteTextConfirm]}>
-                        {isBusy ? '...' : (confirmDeleteId === item.id ? '!' : '×')}
-                      </Text>
-                    </Pressable>
+                    {isWeb ? (
+                      <Pressable
+                        style={[styles.deleteButton, confirmDeleteId === entry.id && styles.deleteButtonConfirm]}
+                        onPress={event => {
+                          event.stopPropagation();
+                          requestDelete(entry.id);
+                        }}
+                        disabled={isBusy}
+                      >
+                        <Text style={[styles.deleteText, confirmDeleteId === entry.id && styles.deleteTextConfirm]}>
+                          {isBusy ? '...' : (confirmDeleteId === entry.id ? '!' : '×')}
+                        </Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                 </View>
               </View>
 
               <View style={styles.metaInfoRow}>
-                {item.remind_at ? (
+                {entry.remind_at ? (
                   <>
                     <View style={styles.reminderMetaPill}>
-                      <Text style={styles.reminderMetaText}>⏰ {formatRemindAt(item.remind_at)}</Text>
+                      <Text style={styles.reminderMetaText}>⏰ {formatRemindAt(entry.remind_at, timezone)}</Text>
                     </View>
                     <Text style={styles.metaDot}>•</Text>
                   </>
                 ) : null}
-                <Text style={styles.metaText}>{formatDate(item.created_at) || ''}</Text>
+                <Text style={styles.metaText}>{formatDate(entry.created_at, timezone) || ''}</Text>
               </View>
 
-              {Array.isArray(item.tags) && item.tags.length > 0 ? (
+              {Array.isArray(entry.tags) && entry.tags.length > 0 ? (
                 <View style={styles.tagsRow}>
-                  {item.tags.map(tagName => (
+                  {entry.tags.map(tagName => (
                     <View key={tagName} style={styles.itemTagPill}>
                       <Text style={styles.itemTagText}>#{tagName}</Text>
                     </View>
@@ -700,6 +1086,18 @@ export default function SecondBrainScreen({ token }) {
                 </View>
               ) : null}
             </Pressable>
+          );
+          if (isWeb) return cardContent;
+          return (
+            <SwipeToDeleteRow
+              id={entry.id}
+              isOpen={openSwipeId === entry.id}
+              onOpen={setOpenSwipeId}
+              actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
+              onActionPress={() => requestDelete(entry.id)}
+            >
+              {cardContent}
+            </SwipeToDeleteRow>
           );
         }}
       />
@@ -771,331 +1169,16 @@ export default function SecondBrainScreen({ token }) {
         >
           <Text style={[styles.typebarButtonText, !draft.trim() && styles.typebarButtonTextDisabled]}>↗</Text>
         </Pressable>
+        <Pressable
+          style={[styles.typebarButton, styles.typebarUploadButton]}
+          onPress={openSettings}
+          accessibilityLabel="Open settings"
+        >
+          <Text style={[styles.typebarButtonText, styles.typebarUploadButtonText]}>
+            ⚙
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bgBase,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 0,
-  },
-  row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  filterSection: { gap: 8, marginBottom: 10 },
-  filterHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  filterLabel: { fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.66, textTransform: 'uppercase', fontWeight: '500' },
-  archivedToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  checkbox: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.bgSurface,
-  },
-  checkboxChecked: { borderColor: theme.colors.brand, backgroundColor: theme.colors.brandDim },
-  checkboxMark: { color: theme.colors.brandText, fontSize: 10, lineHeight: 10, fontWeight: '700' },
-  archivedToggleText: { color: theme.colors.textSecondary, fontSize: 11 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  filterRowLabel: { fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.66, textTransform: 'uppercase', fontWeight: '500' },
-  pill: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSurface,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  pillActive: { borderColor: theme.colors.brand, backgroundColor: theme.colors.brandDim },
-  pillText: { fontSize: 11, color: theme.colors.textSecondary },
-  pillTextActive: { color: theme.colors.brandText },
-  statCard: {
-    width: '23.7%',
-    minWidth: 70,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSurface,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    overflow: 'hidden',
-  },
-  statCardActive: { borderColor: theme.colors.brand, backgroundColor: theme.colors.brandDim },
-  statGlow: {
-    position: 'absolute',
-    top: -10,
-    left: -10,
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-  },
-  statCount: { fontSize: 20, lineHeight: 22, fontWeight: '500' },
-  statLabel: {
-    fontSize: 9,
-    lineHeight: 12,
-    color: theme.colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '500',
-  },
-  statLabelActive: { color: theme.colors.brandText },
-  list: { flex: 1 },
-  listContent: { paddingBottom: 84 },
-  typebarRow: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 10,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-  },
-  typebarInput: {
-    flex: 1,
-    backgroundColor: theme.colors.bgRaised,
-    color: theme.colors.textPrimary,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 38,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  typebarButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  typebarButtonDisabled: {
-    backgroundColor: theme.colors.bgRaised,
-  },
-  typebarButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, lineHeight: 16 },
-  typebarButtonTextDisabled: { color: theme.colors.textMuted },
-  button: {
-    backgroundColor: theme.colors.brand,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 8,
-    marginBottom: 10,
-    minHeight: 36,
-    flex: 1,
-  },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  secondaryButton: {
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    minHeight: 24,
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '500' },
-  deleteButton: {
-    borderColor: 'transparent',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    minHeight: 24,
-    justifyContent: 'center',
-  },
-  deleteButtonConfirm: {
-    backgroundColor: 'rgba(220,60,60,0.15)',
-    borderColor: 'rgba(220,60,60,0.3)',
-  },
-  deleteText: { color: theme.colors.textMuted, fontSize: 13, fontWeight: '500' },
-  deleteTextConfirm: { color: theme.colors.danger },
-  card: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  entryOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: 'rgba(6, 10, 12, 0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    zIndex: 50,
-  },
-  entryPanel: {
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '88%',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSurface,
-    padding: 16,
-    gap: 10,
-  },
-  entryPanelTitle: { color: theme.colors.textPrimary, fontWeight: '700', fontSize: 16, flexShrink: 1 },
-  entryPanelSummary: { color: theme.colors.textSecondary, fontSize: 12, flexShrink: 1 },
-  entryPanelTags: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  entryPanelBodyWrap: {
-    flexShrink: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    backgroundColor: theme.colors.bgRaised,
-    maxHeight: '100%',
-    overflow: 'hidden',
-  },
-  entryPanelBodyScroll: {
-    maxHeight: '100%',
-  },
-  entryPanelBodyContent: {
-    padding: 12,
-  },
-  markdownBody: { gap: 8 },
-  markdownParagraph: { color: theme.colors.textPrimary, fontSize: 13, lineHeight: 20, flexShrink: 1 },
-  markdownHeading: { fontWeight: '700' },
-  markdownBold: { color: theme.colors.textPrimary, fontWeight: '700' },
-  markdownItalic: { color: theme.colors.textPrimary, fontStyle: 'italic' },
-  markdownCode: { color: theme.colors.textPrimary, backgroundColor: 'rgba(255,255,255,0.07)' },
-  markdownLink: { color: '#86b7ff', textDecorationLine: 'underline' },
-  markdownCodeBlock: { borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.25)', padding: 10, minWidth: 0 },
-  markdownCodeScrollContent: { minWidth: '100%' },
-  markdownCodeBlockText: { color: theme.colors.textPrimary, fontSize: 12, lineHeight: 18, fontFamily: 'Courier', flexShrink: 1 },
-  markdownList: { gap: 4 },
-  markdownListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  markdownListBullet: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 20, minWidth: 14 },
-  markdownQuote: { borderLeftWidth: 2, borderLeftColor: theme.colors.border, paddingLeft: 10 },
-  markdownQuoteText: { color: theme.colors.textSecondary },
-  conversationWrap: { gap: 10, minWidth: 0 },
-  conversationRow: { width: '100%' },
-  conversationRowHuman: { alignItems: 'flex-end' },
-  conversationRowAssistant: { alignItems: 'flex-start' },
-  conversationBubble: { maxWidth: '92%', minWidth: 0, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, borderWidth: 1 },
-  conversationBubbleHuman: { backgroundColor: 'rgba(29,158,117,0.18)', borderColor: 'rgba(29,158,117,0.38)' },
-  conversationBubbleAssistant: { backgroundColor: 'rgba(255,255,255,0.03)', borderColor: theme.colors.border },
-  conversationSender: { color: theme.colors.textMuted, fontSize: 10, lineHeight: 12, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
-  entryPanelActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-  cardTopRow: { flexDirection: 'row', gap: 10 },
-  cardMainCol: { flex: 1, minWidth: 0 },
-  cardActionCol: { alignItems: 'flex-end', gap: 8, flexShrink: 0 },
-  cardActionRow: { flexDirection: 'row', gap: 6, flexWrap: 'nowrap', justifyContent: 'flex-end' },
-  cardMetaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 2 },
-  cardIcon: { fontSize: 15, lineHeight: 15, marginTop: 1 },
-  priorityText: { fontSize: 12, lineHeight: 12, fontWeight: '700', marginTop: 1 },
-  tagPill: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 8 },
-  tagPillText: { fontSize: 11, lineHeight: 14, fontWeight: '500' },
-  cardTitle: { flexShrink: 1, color: theme.colors.textPrimary, fontWeight: '700', fontSize: 14, lineHeight: 19 },
-  cardBody: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 20 },
-  metaInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-    marginBottom: 6,
-  },
-  reminderMetaPill: {
-    backgroundColor: theme.colors.brandDim,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  reminderMetaText: { color: theme.colors.brandText, fontSize: 11, lineHeight: 14 },
-  metaDot: { color: theme.colors.textMuted, fontSize: 11 },
-  metaText: { color: theme.colors.textMuted, fontSize: 11 },
-  tagsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  itemTagPill: {
-    backgroundColor: theme.colors.brandDim,
-    borderRadius: 999,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  itemTagText: { color: theme.colors.brandText, fontSize: 11, lineHeight: 14 },
-  error: {
-    color: '#f87171',
-    marginVertical: 6,
-    backgroundColor: 'rgba(220,60,60,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(220,60,60,0.25)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-  },
-  editPanel: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-  },
-  editTitle: { color: theme.colors.textPrimary, fontWeight: '600', fontSize: 14, marginBottom: 8 },
-  editLabel: { color: theme.colors.textMuted, fontSize: 11, marginBottom: 4 },
-  categoryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  editField: {
-    backgroundColor: theme.colors.bgRaised,
-    color: theme.colors.textPrimary,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 38,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 8,
-    fontSize: 13,
-  },
-  editInputCompact: {
-    backgroundColor: theme.colors.bgRaised,
-    color: theme.colors.textPrimary,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 60,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 8,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  editInput: {
-    backgroundColor: theme.colors.bgRaised,
-    color: theme.colors.textPrimary,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 90,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 8,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  tagInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  tagInput: { flex: 1, marginBottom: 0 },
-});
