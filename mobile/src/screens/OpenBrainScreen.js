@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, FlatList, TextInput } from 'react-native';
+import { View, Text, Pressable, FlatList } from 'react-native';
 import { apiRequest } from '../api';
-import { theme } from '../theme';
+import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
+import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import styles from './OpenBrainScreen.styles';
 
 export default function OpenBrainScreen({ token, navigation }) {
@@ -63,8 +64,16 @@ export default function OpenBrainScreen({ token, navigation }) {
           <Text style={styles.secondaryButtonText}>Shared thought</Text>
         </Pressable>
       </View>
-      <TextInput value={draft} onChangeText={setDraft} placeholder="One thought for today..." placeholderTextColor={theme.colors.textSecondary} style={styles.input} multiline maxLength={280} />
-      <Pressable style={styles.button} onPress={postThought}><Text style={styles.buttonText}>Post thought</Text></Pressable>
+      <OpenBrainThoughtComposer
+        value={draft}
+        onChangeText={setDraft}
+        placeholder="One thought for today..."
+        buttonLabel="Post thought"
+        onSubmit={postThought}
+        multiline
+        maxLength={280}
+        buttonMarginBottom={8}
+      />
       <View style={styles.tabs}>
         <Pressable onPress={() => setTab('following')} style={[styles.tab, tab === 'following' && styles.tabActive]}><Text style={styles.tabText}>Following</Text></Pressable>
         <Pressable onPress={() => setTab('everyone')} style={[styles.tab, tab === 'everyone' && styles.tabActive]}><Text style={styles.tabText}>Everyone</Text></Pressable>
@@ -74,10 +83,11 @@ export default function OpenBrainScreen({ token, navigation }) {
         data={items}
         keyExtractor={item => String(item.id)}
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => item.profile?.username && navigation.navigate('OpenBrainProfile', { username: item.profile.username })}>
-            <Text style={styles.meta}>@{item.profile?.username || 'unknown'}</Text>
-            <Text style={styles.body}>{item.text || ''}</Text>
-          </Pressable>
+          <OpenBrainThoughtCard
+            text={item.text}
+            topMeta={`@${item.profile?.username || 'unknown'}`}
+            onPress={() => item.profile?.username && navigation.navigate('OpenBrainProfile', { username: item.profile.username })}
+          />
         )}
       />
     </View>

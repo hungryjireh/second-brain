@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
 import { apiRequest } from '../api';
-import { theme } from '../theme';
+import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
+import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import styles from './SharedThoughtScreen.styles';
 
 function formatPublished(dateString) {
@@ -40,17 +41,22 @@ export default function SharedThoughtScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Open shared thought</Text>
-      <TextInput value={slug} onChangeText={setSlug} placeholder="share slug" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
-      <Pressable style={styles.button} onPress={load} disabled={loading || !slug.trim()}>
-        <Text style={styles.buttonText}>{loading ? 'Loading...' : 'Load thought'}</Text>
-      </Pressable>
+      <OpenBrainThoughtComposer
+        value={slug}
+        onChangeText={setSlug}
+        placeholder="share slug"
+        buttonLabel={loading ? 'Loading...' : 'Load thought'}
+        onSubmit={load}
+        disabled={loading || !slug.trim()}
+      />
       {!!error && <Text style={styles.error}>{error}</Text>}
       {payload?.thought ? (
-        <View style={styles.card}>
-          <Text style={styles.body}>{payload.thought.text}</Text>
-          <Text style={styles.meta}>by @{payload.author?.username || 'anonymous'}</Text>
-          <Text style={styles.meta}>{formatPublished(payload.thought.created_at)}</Text>
-        </View>
+        <OpenBrainThoughtCard
+          text={payload.thought.text}
+          bottomMeta={`by @${payload.author?.username || 'anonymous'}`}
+          topMeta={formatPublished(payload.thought.created_at)}
+          largeBody
+        />
       ) : null}
     </View>
   );

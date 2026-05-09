@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { apiRequest } from '../api';
+import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import styles from './OpenBrainProfileScreen.styles';
 
 export default function OpenBrainProfileScreen({ token, route }) {
@@ -72,10 +73,7 @@ export default function OpenBrainProfileScreen({ token, route }) {
             data={thoughts}
             keyExtractor={item => String(item.id)}
             renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
-                <Text style={styles.body}>{item.text}</Text>
-              </View>
+              <OpenBrainThoughtCard text={item.text} date={new Date(item.created_at).toLocaleString()} />
             )}
           />
         </>

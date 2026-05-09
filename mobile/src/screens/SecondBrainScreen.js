@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, PanResponder, Switch } from 'react-native';
+import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiRequest } from '../api';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { apiRequest, getApiBase } from '../api';
 import { theme } from '../theme';
+import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
+import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
+import SwipeToDeleteRow from '../components/SwipeToDeleteRow';
 import styles, { SWIPE_ACTION_WIDTH } from './SecondBrainScreen.styles';
 
 const PRIORITY_LEVELS = [
@@ -10,20 +15,6 @@ const PRIORITY_LEVELS = [
   { key: 'medium', label: 'Medium (4-7)' },
   { key: 'low', label: 'Low (0-3)' },
 ];
-
-const TAG_STYLES = {
-  reminder: { bg: 'rgba(29,158,117,0.15)', color: '#2ecf9a', label: 'Reminder' },
-  todo: { bg: 'rgba(55,138,221,0.15)', color: '#6ab4f5', label: 'TODO' },
-  thought: { bg: 'rgba(127,119,221,0.15)', color: '#a8a3f0', label: 'Thought' },
-  note: { bg: 'rgba(239,159,39,0.15)', color: '#f5bf6a', label: 'Note' },
-};
-
-const CATEGORY_ICONS = {
-  reminder: '⏰',
-  todo: '✅',
-  thought: '💡',
-  note: '📝',
-};
 
 const STATS = [
   { key: 'reminder', label: 'Reminders', color: '#1D9E75', dimColor: 'rgba(29,158,117,0.12)' },
@@ -35,70 +26,6 @@ const STATS = [
 const TYPEBAR_MIN_HEIGHT = 38;
 const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
 const MAX_ENTRY_TAGS = 10;
-const SWIPE_OPEN_THRESHOLD = 44;
-
-function SwipeToDeleteRow({ id, onOpen, isOpen, actionLabel, onActionPress, children }) {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const currentOffsetRef = useRef(0);
-
-  const animateTo = useCallback((value, immediate = false) => {
-    currentOffsetRef.current = value;
-    if (immediate) {
-      translateX.setValue(value);
-      return;
-    }
-    Animated.spring(translateX, {
-      toValue: value,
-      useNativeDriver: true,
-      bounciness: 0,
-      speed: 20,
-    }).start();
-  }, [translateX]);
-
-  useEffect(() => {
-    animateTo(isOpen ? -SWIPE_ACTION_WIDTH : 0);
-  }, [animateTo, isOpen]);
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          const horizontalMove = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-          return horizontalMove && (gestureState.dx < -8 || (isOpen && gestureState.dx > 8));
-        },
-        onPanResponderMove: (_, gestureState) => {
-          const next = Math.max(-SWIPE_ACTION_WIDTH, Math.min(0, currentOffsetRef.current + gestureState.dx));
-          translateX.setValue(next);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          const shouldOpen = gestureState.dx < -SWIPE_OPEN_THRESHOLD || (isOpen && gestureState.dx < SWIPE_OPEN_THRESHOLD);
-          if (shouldOpen) onOpen(id);
-          else animateTo(0);
-        },
-        onPanResponderTerminate: () => {
-          animateTo(isOpen ? -SWIPE_ACTION_WIDTH : 0);
-        },
-      }),
-    [animateTo, id, isOpen, onOpen, translateX]
-  );
-
-  return (
-    <View style={styles.swipeRow}>
-      <View style={styles.swipeActionWrap}>
-        <Pressable testID={`entry-swipe-delete-${id}`} style={styles.swipeDeleteAction} onPress={onActionPress}>
-          <Text style={styles.swipeDeleteText}>{actionLabel}</Text>
-        </Pressable>
-      </View>
-      <Animated.View style={[styles.swipeCardWrap, { transform: [{ translateX }] }]} {...panResponder.panHandlers}>
-        {children}
-      </Animated.View>
-    </View>
-  );
-}
-
-function getEntryBody(entry) {
-  return entry.raw_text || entry.summary || '';
-}
 
 function parseImportedConversationFromEntry(entry) {
   const rawText = String(entry?.raw_text ?? '').trim();
@@ -121,114 +48,6 @@ function parseImportedConversationFromEntry(entry) {
   }
 }
 
-function renderInlineMarkdown(text) {
-  const source = String(text ?? '');
-  const segments = [];
-  const pattern = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
-  let lastIndex = 0;
-  let match;
-  while ((match = pattern.exec(source)) !== null) {
-    if (match.index > lastIndex) segments.push({ key: `text-${match.index}`, type: 'text', text: source.slice(lastIndex, match.index) });
-    if (match[2] && match[3]) segments.push({ key: `link-${match.index}`, type: 'link', text: match[2] });
-    else if (match[4]) segments.push({ key: `bold-${match.index}`, type: 'bold', text: match[4] });
-    else if (match[5]) segments.push({ key: `italic-${match.index}`, type: 'italic', text: match[5] });
-    else if (match[6]) segments.push({ key: `code-${match.index}`, type: 'code', text: match[6] });
-    lastIndex = pattern.lastIndex;
-  }
-  if (lastIndex < source.length) segments.push({ key: `text-end-${lastIndex}`, type: 'text', text: source.slice(lastIndex) });
-  return segments;
-}
-
-function MarkdownText({ text, style }) {
-  const segments = renderInlineMarkdown(text);
-  return (
-    <Text style={style}>
-      {segments.map(segment => {
-        if (segment.type === 'bold') return <Text key={segment.key} style={styles.markdownBold}>{segment.text}</Text>;
-        if (segment.type === 'italic') return <Text key={segment.key} style={styles.markdownItalic}>{segment.text}</Text>;
-        if (segment.type === 'code') return <Text key={segment.key} style={styles.markdownCode}>{segment.text}</Text>;
-        if (segment.type === 'link') return <Text key={segment.key} style={styles.markdownLink}>{segment.text}</Text>;
-        return <Text key={segment.key}>{segment.text}</Text>;
-      })}
-    </Text>
-  );
-}
-
-function MarkdownBody({ text }) {
-  const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
-  const blocks = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (!line.trim()) {
-      i += 1;
-      continue;
-    }
-    if (line.startsWith('```')) {
-      const codeLines = [];
-      i += 1;
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i]);
-        i += 1;
-      }
-      if (i < lines.length) i += 1;
-      blocks.push(
-        <View key={`code-${i}`} style={styles.markdownCodeBlock}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.markdownCodeScrollContent}>
-            <Text style={styles.markdownCodeBlockText}>{codeLines.join('\n')}</Text>
-          </ScrollView>
-        </View>
-      );
-      continue;
-    }
-    const heading = line.match(/^(#{1,6})\s+(.+)$/);
-    if (heading) {
-      blocks.push(<MarkdownText key={`heading-${i}`} text={heading[2]} style={[styles.markdownParagraph, styles.markdownHeading]} />);
-      i += 1;
-      continue;
-    }
-    const bullet = line.match(/^[-*]\s+(.+)$/);
-    if (bullet) {
-      const items = [];
-      while (i < lines.length) {
-        const itemMatch = lines[i].match(/^[-*]\s+(.+)$/);
-        if (!itemMatch) break;
-        items.push(itemMatch[1]);
-        i += 1;
-      }
-      blocks.push(
-        <View key={`ul-${i}`} style={styles.markdownList}>
-          {items.map((item, idx) => (
-            <View key={`li-${i}-${idx}`} style={styles.markdownListItem}>
-              <Text style={styles.markdownListBullet}>•</Text>
-              <MarkdownText text={item} style={styles.markdownParagraph} />
-            </View>
-          ))}
-        </View>
-      );
-      continue;
-    }
-    const quote = line.match(/^>\s?(.+)$/);
-    if (quote) {
-      const quoteLines = [];
-      while (i < lines.length) {
-        const itemMatch = lines[i].match(/^>\s?(.+)$/);
-        if (!itemMatch) break;
-        quoteLines.push(itemMatch[1]);
-        i += 1;
-      }
-      blocks.push(
-        <View key={`quote-${i}`} style={styles.markdownQuote}>
-          <MarkdownText text={quoteLines.join('\n')} style={[styles.markdownParagraph, styles.markdownQuoteText]} />
-        </View>
-      );
-      continue;
-    }
-    blocks.push(<MarkdownText key={`p-${i}`} text={line} style={styles.markdownParagraph} />);
-    i += 1;
-  }
-  return <View style={styles.markdownBody}>{blocks}</View>;
-}
 
 function tagsToInput(tags) {
   if (!Array.isArray(tags)) return '';
@@ -250,12 +69,6 @@ function parseTagInput(input) {
 
 function normalizeTagValue(input) {
   return String(input || '').trim().replace(/^#/, '').toLowerCase();
-}
-
-function getPriorityColor(priority) {
-  if (priority >= 8) return '#ef4444';
-  if (priority >= 4) return '#f59e0b';
-  return theme.colors.textSecondary;
 }
 
 function getPriorityLevel(priority) {
@@ -535,7 +348,56 @@ export default function SecondBrainScreen({ token }) {
 
   async function downloadIcs(entryId) {
     try {
-      await apiRequest(`/ics?id=${entryId}`, { token });
+      const response = await fetch(`api/ics?id=${entryId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed (${response.status})`);
+      }
+
+      const fileName = `second-brain-reminder-${entryId}.ics`;
+      if (Platform.OS === 'web') {
+        const blob = await response.blob();
+        const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const shareFn = navigator.share?.bind(navigator);
+        const canShareFn = navigator.canShare?.bind(navigator);
+
+        if (isMobileBrowser && shareFn && typeof File !== 'undefined') {
+          const file = new File([blob], fileName, { type: 'text/calendar;charset=utf-8' });
+          if (!canShareFn || canShareFn({ files: [file] })) {
+            await shareFn({
+              title: 'Reminder',
+              files: [file],
+            });
+            return;
+          }
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        return;
+      }
+
+      const icsContent = await response.text();
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+      await FileSystem.writeAsStringAsync(fileUri, icsContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        throw new Error('Sharing is not available on this device');
+      }
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/calendar',
+        dialogTitle: 'Share reminder',
+        UTI: 'public.calendar-event',
+      });
     } catch (err) {
       setError(err.message);
     }
@@ -546,7 +408,7 @@ export default function SecondBrainScreen({ token }) {
     setEditCategory(entry.category || 'note');
     setEditTitle(entry.title || '');
     setEditSummary(entry.summary || '');
-    setEditText(getEntryBody(entry));
+    setEditText(entry.raw_text || entry.summary || '');
     setEditRemindAt(entry.remind_at ? unixToDatetimeLocal(entry.remind_at) : '');
     setEditPriority(String(Number.isInteger(entry.priority) ? entry.priority : 0));
     setEditTags(tagsToInput(entry.tags));
@@ -982,110 +844,25 @@ export default function SecondBrainScreen({ token }) {
           const entry = item.entry;
           if (!entry) return null;
           const isBusy = busyId === entry.id;
-          const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
-          const icon = CATEGORY_ICONS[entry.category] ?? '📝';
-          const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
-          const archiveLabel = entry.category === 'reminder'
-            ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
-            : (entry.is_archived ? 'Unarchive' : 'Archive');
           const isWeb = Platform.OS === 'web';
           const cardContent = (
-            <Pressable
-              style={styles.card}
-              onPress={() => {
-                if (!isWeb && openSwipeId === entry.id) {
-                  setOpenSwipeId(null);
-                  return;
-                }
-                openEntry(entry);
-              }}
-            >
-              <View style={styles.cardTopRow}>
-                <View style={styles.cardMainCol}>
-                  <View style={styles.cardMetaRow}>
-                    <Text style={styles.cardIcon}>{icon}</Text>
-                    <Text style={[styles.priorityText, { color: getPriorityColor(priority) }]}>P{priority}</Text>
-                    <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
-                  </View>
-                  <Text style={styles.cardBody}>{entry.summary || getEntryBody(entry)}</Text>
-                </View>
-                <View style={styles.cardActionCol}>
-                  <View style={styles.cardActionRow}>
-                    <Pressable
-                      style={styles.secondaryButton}
-                      onPress={event => {
-                        event.stopPropagation();
-                        startEdit(entry);
-                      }}
-                      disabled={isBusy}
-                    >
-                      <Text style={styles.secondaryButtonText}>Edit</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.secondaryButton}
-                      onPress={event => {
-                        event.stopPropagation();
-                        toggleArchive(entry);
-                      }}
-                      disabled={isBusy}
-                    >
-                      <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
-                    </Pressable>
-                    {entry.category === 'reminder' && entry.remind_at ? (
-                      <Pressable
-                        style={styles.secondaryButton}
-                        onPress={event => {
-                          event.stopPropagation();
-                          downloadIcs(entry.id);
-                        }}
-                        disabled={isBusy}
-                      >
-                        <Text style={styles.secondaryButtonText}>.ics</Text>
-                      </Pressable>
-                    ) : null}
-                    <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-                      <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
-                    </View>
-                    {isWeb ? (
-                      <Pressable
-                        style={[styles.deleteButton, confirmDeleteId === entry.id && styles.deleteButtonConfirm]}
-                        onPress={event => {
-                          event.stopPropagation();
-                          requestDelete(entry.id);
-                        }}
-                        disabled={isBusy}
-                      >
-                        <Text style={[styles.deleteText, confirmDeleteId === entry.id && styles.deleteTextConfirm]}>
-                          {isBusy ? '...' : (confirmDeleteId === entry.id ? '!' : '×')}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.metaInfoRow}>
-                {entry.remind_at ? (
-                  <>
-                    <View style={styles.reminderMetaPill}>
-                      <Text style={styles.reminderMetaText}>⏰ {formatRemindAt(entry.remind_at, timezone)}</Text>
-                    </View>
-                    <Text style={styles.metaDot}>•</Text>
-                  </>
-                ) : null}
-                <Text style={styles.metaText}>{formatDate(entry.created_at, timezone) || ''}</Text>
-              </View>
-
-              {Array.isArray(entry.tags) && entry.tags.length > 0 ? (
-                <View style={styles.tagsRow}>
-                  {entry.tags.map(tagName => (
-                    <View key={tagName} style={styles.itemTagPill}>
-                      <Text style={styles.itemTagText}>#{tagName}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </Pressable>
+            <SecondBrainEntryCard
+              entry={entry}
+              styles={styles}
+              theme={theme}
+              timezone={timezone}
+              isBusy={isBusy}
+              isSwipeOpen={openSwipeId === entry.id}
+              isDeleteConfirm={confirmDeleteId === entry.id}
+              onOpenEntry={openEntry}
+              onCloseSwipe={() => setOpenSwipeId(null)}
+              onStartEdit={startEdit}
+              onToggleArchive={toggleArchive}
+              onDownloadIcs={downloadIcs}
+              onRequestDelete={requestDelete}
+              formatRemindAt={formatRemindAt}
+              formatDate={formatDate}
+            />
           );
           if (isWeb) return cardContent;
           return (
@@ -1095,6 +872,8 @@ export default function SecondBrainScreen({ token }) {
               onOpen={setOpenSwipeId}
               actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
               onActionPress={() => requestDelete(entry.id)}
+              actionWidth={SWIPE_ACTION_WIDTH}
+              styles={styles}
             >
               {cardContent}
             </SwipeToDeleteRow>
@@ -1126,14 +905,14 @@ export default function SecondBrainScreen({ token }) {
                       <View key={`${msg.sender}-${idx}`} style={[styles.conversationRow, fromHuman ? styles.conversationRowHuman : styles.conversationRowAssistant]}>
                         <View style={[styles.conversationBubble, fromHuman ? styles.conversationBubbleHuman : styles.conversationBubbleAssistant]}>
                           <Text style={styles.conversationSender}>{fromHuman ? 'You' : 'Assistant'}</Text>
-                          <MarkdownBody text={msg.text} />
+                          <SecondBrainMarkdownBody text={msg.text} styles={styles} />
                         </View>
                       </View>
                     );
                   })}
                 </View>
               ) : (
-                <MarkdownBody text={selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || ''} />
+                <SecondBrainMarkdownBody text={selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || ''} styles={styles} />
               )}
               </ScrollView>
             </View>

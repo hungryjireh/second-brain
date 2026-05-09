@@ -8,9 +8,6 @@ const styles = StyleSheet.create({
   streak: { color: theme.colors.textSecondary, marginTop: 4, marginBottom: 8 },
   followButton: { alignSelf: 'flex-start', backgroundColor: theme.colors.brand, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   followButtonText: { color: '#fff', fontWeight: '700' },
-  card: { backgroundColor: theme.colors.bgSurface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 8 },
-  date: { color: theme.colors.textSecondary, fontSize: 12, marginBottom: 6 },
-  body: { color: theme.colors.textPrimary },
   muted: { color: theme.colors.textSecondary },
   error: { color: theme.colors.danger },
 });
