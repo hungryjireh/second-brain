@@ -244,11 +244,6 @@ export default async function handler(req, res) {
       authToken: token,
     });
 
-    const everyoneTodayRows = (everyoneRows || []).filter(row => {
-      const day = getEpochDayInTimezone(new Date(row.created_at), timezone);
-      return Number.isInteger(nowDay) && Number.isInteger(day) && day === nowDay;
-    });
-
     const followingRows = followingIds.length
       ? await supabaseRequest('/rest/v1/thoughts', {
           method: 'GET',
@@ -273,7 +268,7 @@ export default async function handler(req, res) {
 
     const allProfileIds = Array.from(new Set([
       ...followingIds,
-      ...everyoneTodayRows.map(row => row.user_id),
+      ...everyoneRows.map(row => row.user_id),
       ...Array.from(followingTodayByUser.keys()),
     ]));
 
@@ -293,7 +288,7 @@ export default async function handler(req, res) {
       is_self: profile.id === userId,
       is_following: followingIds.includes(profile.id),
     }]));
-    const everyoneThoughts = mapThoughtRows(everyoneTodayRows, profileMap);
+    const everyoneThoughts = mapThoughtRows(everyoneRows, profileMap);
 
     const followingItems = followingIds.map(id => {
       const profile = profileMap.get(id) || { id, username: 'unknown', avatar_url: null, streak_count: 0 };

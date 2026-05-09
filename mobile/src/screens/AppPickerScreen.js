@@ -1,0 +1,116 @@
+import { useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { apiRequest } from '../api';
+import { theme } from '../theme';
+
+function AppLogo({ name }) {
+  if (name === 'second-brain') {
+    return (
+      <Text style={styles.logoText}>
+        second<Text style={styles.logoBrand}>brain</Text>
+      </Text>
+    );
+  }
+
+  return (
+    <Text style={styles.logoText}>
+      open<Text style={styles.logoBlue}>brain</Text>
+    </Text>
+  );
+}
+
+export default function AppPickerScreen({ navigation, token }) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function verifySession() {
+      try {
+        await apiRequest('/settings', { token });
+      } catch {
+        // Expired/invalid auth is handled globally by apiRequest via authExpiredHandler.
+        if (cancelled) return;
+      }
+    }
+
+    verifySession();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.panel}>
+        <Text style={styles.kicker}>Choose app</Text>
+        <Text style={styles.title}>Where do you want to go?</Text>
+        <Pressable style={styles.card} onPress={() => navigation.navigate('SecondBrain')}>
+          <AppLogo name="second-brain" />
+        </Pressable>
+        <Pressable style={styles.card} onPress={() => navigation.navigate('OpenBrain')}>
+          <AppLogo name="open-brain" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: theme.colors.bgSurface,
+    position: 'relative',
+  },
+  panel: {
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
+    backgroundColor: theme.colors.bgSurface,
+    borderWidth: 0.5,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    padding: 24,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 6,
+  },
+  kicker: {
+    marginTop: 0,
+    marginBottom: 0,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: theme.colors.brandText,
+    fontFamily: 'DMSans_600SemiBold',
+  },
+  title: {
+    marginTop: 4,
+    marginBottom: 8,
+    color: theme.colors.textPrimary,
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.4,
+    fontFamily: 'DMSerifDisplay_400Regular',
+  },
+  card: {
+    backgroundColor: theme.colors.bgRaised,
+    borderWidth: 0.5,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  logoText: {
+    color: theme.colors.textPrimary,
+    fontSize: 25,
+    letterSpacing: -0.3,
+    lineHeight: 30,
+    fontFamily: 'DMSerifDisplay_400Regular',
+  },
+  logoBrand: { color: theme.colors.brand },
+  logoBlue: { color: '#7ec8ff' },
+});

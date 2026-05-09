@@ -238,9 +238,8 @@ export default function OpenBrainFeed() {
   const [reactingKey, setReactingKey] = useState('');
   const [followBusyUserId, setFollowBusyUserId] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [showInlineHome, setShowInlineHome] = useState(false);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const activeCard = searchParams.get('card');
   const menuItemStyle = {
     display: 'flex',
@@ -258,10 +257,6 @@ export default function OpenBrainFeed() {
     transition: 'color .12s',
     textAlign: 'left',
   };
-
-  useEffect(() => {
-    setShowInlineHome(activeCard === 'write');
-  }, [activeCard]);
 
   useEffect(() => {
     let isMounted = true;
@@ -324,6 +319,7 @@ export default function OpenBrainFeed() {
   }, [navigate]);
 
   const activeList = useMemo(() => (tab === 'following' ? feed.following : feed.everyone), [tab, feed]);
+  const hasMultipleThoughts = activeList.length > 1;
 
   if (activeCard === 'update-profile') {
     return <UpdateProfile />;
@@ -331,6 +327,10 @@ export default function OpenBrainFeed() {
 
   if (activeCard === 'you') {
     return <OpenBrainProfile />;
+  }
+
+  if (activeCard === 'write') {
+    return <OpenBrainWrite />;
   }
 
   const handleReact = async (thoughtId, type, currentlyActive) => {
@@ -640,12 +640,10 @@ export default function OpenBrainFeed() {
               <button
                 type="button"
                 onClick={() => {
-                  const next = !showInlineHome;
-                  setShowInlineHome(next);
-                  setSearchParams(next ? { card: 'write' } : {});
+                  navigate('/open-brain?card=write');
                 }}
-                aria-label={showInlineHome ? 'Hide new draft card' : 'Open new draft card'}
-                title={showInlineHome ? 'Hide new draft' : 'New draft'}
+                aria-label="Open new draft card"
+                title="New draft"
                 style={{
                   border: '0.5px solid var(--border)',
                   borderRadius: 8,
@@ -691,8 +689,15 @@ export default function OpenBrainFeed() {
           </div>
         </header>
 
-        <section style={{ padding: '12px 14px', display: 'grid', gap: 12 }}>
-          {showInlineHome ? <OpenBrainWrite embedded /> : null}
+        <section
+          style={{
+            padding: '12px 14px',
+            display: 'grid',
+            gap: 12,
+            overflowY: hasMultipleThoughts ? 'auto' : 'visible',
+            maxHeight: hasMultipleThoughts ? '62vh' : 'none',
+          }}
+        >
           {isLoading ? <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Loading feed…</p> : null}
           {!isLoading && error ? <p style={{ margin: 0, color: '#f87171', fontSize: 13 }}>{error}</p> : null}
           {!isLoading && !error && activeList.length === 0 ? (

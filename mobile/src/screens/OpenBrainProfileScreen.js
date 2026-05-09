@@ -1,0 +1,99 @@
+import { useCallback, useEffect, useState } from 'react';
+import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { apiRequest } from '../api';
+import { theme } from '../theme';
+
+export default function OpenBrainProfileScreen({ token, route }) {
+  const username = route.params?.username;
+  const [profile, setProfile] = useState(null);
+  const [thoughts, setThoughts] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [followBusy, setFollowBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const query = username ? `?username=${encodeURIComponent(username)}` : '';
+      const profileRes = await apiRequest(`/open-brain/profile${query}`, { token });
+      const loadedProfile = profileRes.profile;
+      setProfile(loadedProfile);
+
+      const thoughtRes = await apiRequest(`/open-brain/public-thoughts?user_id=${encodeURIComponent(loadedProfile.id)}`, { token });
+      setThoughts(Array.isArray(thoughtRes.thoughts) ? thoughtRes.thoughts : []);
+    } catch (err) {
+      setError(err.message);
+      setProfile(null);
+      setThoughts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, username]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function toggleFollow() {
+    if (!profile || profile.is_self || followBusy) return;
+    const currentlyFollowing = Boolean(profile.is_following);
+    setFollowBusy(true);
+    setProfile(prev => (prev ? { ...prev, is_following: !currentlyFollowing } : prev));
+    try {
+      if (currentlyFollowing) {
+        await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(profile.id)}`, { method: 'DELETE', token });
+      } else {
+        await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: profile.id } });
+      }
+    } catch {
+      setProfile(prev => (prev ? { ...prev, is_following: currentlyFollowing } : prev));
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
+      {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
+      {!loading && !error && profile ? (
+        <>
+          <View style={styles.headerCard}>
+            <Text style={styles.username}>@{profile.username}</Text>
+            <Text style={styles.streak}>Streak: {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
+            {!profile.is_self ? (
+              <Pressable style={styles.followButton} onPress={toggleFollow} disabled={followBusy}>
+                <Text style={styles.followButtonText}>{profile.is_following ? 'Unfollow' : 'Follow'}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <FlatList
+            data={thoughts}
+            keyExtractor={item => String(item.id)}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <Text style={styles.date}>{new Date(item.created_at).toLocaleString()}</Text>
+                <Text style={styles.body}>{item.text}</Text>
+              </View>
+            )}
+          />
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.bgBase, padding: 16 },
+  headerCard: { backgroundColor: theme.colors.bgSurface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 10 },
+  username: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: '700' },
+  streak: { color: theme.colors.textSecondary, marginTop: 4, marginBottom: 8 },
+  followButton: { alignSelf: 'flex-start', backgroundColor: theme.colors.brand, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  followButtonText: { color: '#fff', fontWeight: '700' },
+  card: { backgroundColor: theme.colors.bgSurface, borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 8 },
+  date: { color: theme.colors.textSecondary, fontSize: 12, marginBottom: 6 },
+  body: { color: theme.colors.textPrimary },
+  muted: { color: theme.colors.textSecondary },
+  error: { color: theme.colors.danger },
+});

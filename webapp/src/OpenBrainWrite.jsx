@@ -73,18 +73,23 @@ async function loadThankYouPrompts() {
 
 export default function OpenBrainWrite({ embedded = false }) {
   const thoughtTextareaRef = useRef(null);
+  const promptTransitionTimeoutRef = useRef(null);
+  const titleTransitionTimeoutRef = useRef(null);
   const [thought, setThought] = useState('');
   const [isPosted, setIsPosted] = useState(false);
   const [visibility, setVisibility] = useState('public');
   const [promptPool, setPromptPool] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
+  const [isPromptFadingOut, setIsPromptFadingOut] = useState(false);
   const [thankYouPromptPool, setThankYouPromptPool] = useState([]);
   const [postedTitle, setPostedTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [streakCount, setStreakCount] = useState(0);
   const [showStreakLabel, setShowStreakLabel] = useState(false);
+  const [headingText, setHeadingText] = useState("What's on your mind?");
+  const [isHeadingFadingOut, setIsHeadingFadingOut] = useState(false);
   const navigate = useNavigate();
   const todayLabel = useMemo(() => formatTodayLabel(new Date()), []);
   const timeLabel = useMemo(() => formatTimeLabel(new Date()), []);
@@ -208,13 +213,46 @@ export default function OpenBrainWrite({ embedded = false }) {
   }, [navigate]);
 
   const refreshPrompt = useCallback(() => {
-    setPrompt(current => getRandomPrompt(promptPool, current));
-  }, [promptPool]);
+    if (promptPool.length < 2 || isPromptFadingOut) return;
+
+    setIsPromptFadingOut(true);
+    promptTransitionTimeoutRef.current = setTimeout(() => {
+      setPrompt(current => getRandomPrompt(promptPool, current));
+      setIsPromptFadingOut(false);
+      promptTransitionTimeoutRef.current = null;
+    }, 320);
+  }, [isPromptFadingOut, promptPool]);
+
+  useEffect(() => () => {
+    if (promptTransitionTimeoutRef.current) {
+      clearTimeout(promptTransitionTimeoutRef.current);
+    }
+    if (titleTransitionTimeoutRef.current) {
+      clearTimeout(titleTransitionTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isPosted) return;
     setPostedTitle(current => getRandomPrompt(thankYouPromptPool, current));
   }, [isPosted, thankYouPromptPool]);
+
+  useEffect(() => {
+    const nextHeading = isPosted ? (postedTitle || "What's on your mind?") : "What's on your mind?";
+    if (headingText === nextHeading) return;
+
+    if (titleTransitionTimeoutRef.current) {
+      clearTimeout(titleTransitionTimeoutRef.current);
+      titleTransitionTimeoutRef.current = null;
+    }
+
+    setIsHeadingFadingOut(true);
+    titleTransitionTimeoutRef.current = setTimeout(() => {
+      setHeadingText(nextHeading);
+      setIsHeadingFadingOut(false);
+      titleTransitionTimeoutRef.current = null;
+    }, 520);
+  }, [isPosted, postedTitle, headingText]);
 
   const handleChange = event => {
     const next = event.target.value.slice(0, MAX_CHARS);
@@ -274,10 +312,10 @@ export default function OpenBrainWrite({ embedded = false }) {
         width: '100%',
         maxWidth: embedded ? '100%' : 760,
         minHeight: embedded ? undefined : 'calc(100vh - 120px)',
-        border: '0.5px solid var(--border)',
+        border: embedded ? 'none' : '0.5px solid var(--border)',
         borderRadius: 16,
-        background: 'var(--bg-surface)',
-        boxShadow: '0 18px 40px rgba(0,0,0,0.35)',
+        background: embedded ? 'transparent' : 'var(--bg-surface)',
+        boxShadow: embedded ? 'none' : '0 18px 40px rgba(0,0,0,0.35)',
         display: 'grid',
         gridTemplateRows: '1fr auto',
       }}
@@ -329,9 +367,11 @@ export default function OpenBrainWrite({ embedded = false }) {
               lineHeight: 1.12,
               letterSpacing: '-0.01em',
               whiteSpace: 'nowrap',
+              opacity: isHeadingFadingOut ? 0 : 1,
+              transition: 'opacity 520ms ease',
             }}
           >
-            {isPosted ? (postedTitle || "What's on your mind?") : "What's on your mind?"}
+            {headingText}
           </h1>
 
           {!isPosted && (
@@ -343,6 +383,8 @@ export default function OpenBrainWrite({ embedded = false }) {
                   fontSize: 13,
                   fontStyle: 'italic',
                   minHeight: 20,
+                  opacity: isPromptFadingOut ? 0 : 1,
+                  transition: 'opacity 320ms ease',
                 }}
               >
                 {prompt || 'Loading prompt...'}
@@ -350,7 +392,7 @@ export default function OpenBrainWrite({ embedded = false }) {
               <button
                 type="button"
                 onClick={refreshPrompt}
-                disabled={promptPool.length < 2}
+                disabled={promptPool.length < 2 || isPromptFadingOut}
                 aria-label="Load a new thought prompt"
                 title="Load a new prompt"
                 style={{
@@ -364,7 +406,7 @@ export default function OpenBrainWrite({ embedded = false }) {
                   placeItems: 'center',
                   fontSize: 13,
                   lineHeight: 1,
-                  cursor: promptPool.length < 2 ? 'not-allowed' : 'pointer',
+                  cursor: promptPool.length < 2 || isPromptFadingOut ? 'not-allowed' : 'pointer',
                   padding: 0,
                 }}
               >
@@ -408,7 +450,7 @@ export default function OpenBrainWrite({ embedded = false }) {
                         cursor: 'pointer',
                       }}
                     >
-                      Visit home
+                      See what others are thinking
                     </button>
                   ) : <span />}
                   <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 12 }}>

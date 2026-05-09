@@ -5,17 +5,24 @@
   "type": "module",
   "scripts": {
     "start": "vercel dev",
+    "mobile:start": "npm --prefix mobile run start",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:web": "npm --prefix mobile run web",
     "setup": "npm install && cd webapp && npm install",
     "migrate": "node lib/db.js",
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
     "start:api": "node --watch --watch-path=api --watch-path=lib scripts/local-api.js",
-    "test": "node --test api/tests/**/*.test.js && npm --prefix webapp run test"
+    "test": "node --test api/tests/*.test.js && npm --prefix webapp run test && npm --prefix mobile run test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
+    "expo": "^55.0.23",
     "express": "^4.18.2",
-    "groq-sdk": "^0.9.1"
+    "groq-sdk": "^0.9.1",
+    "react-dom": "19.2.0",
+    "react-native-web": "^0.21.0"
   },
   "engines": {
     "node": "20.x"
