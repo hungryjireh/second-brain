@@ -29,6 +29,6 @@ describe('AppPickerScreen', () => {
     fireEvent.press(getByText('openbrain'));
 
     expect(navigate).toHaveBeenNthCalledWith(1, 'SecondBrain');
-    expect(navigate).toHaveBeenNthCalledWith(2, 'OpenBrain');
+    expect(navigate).toHaveBeenNthCalledWith(2, 'OpenBrainFeed');
   });
 });

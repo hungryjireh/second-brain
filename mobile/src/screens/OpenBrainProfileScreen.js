@@ -1,10 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable } from 'react-native';
+import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
+import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import styles from './OpenBrainProfileScreen.styles';
 
-export default function OpenBrainProfileScreen({ token, route }) {
+function initialsFromName(name) {
+  const cleaned = String(name || '').trim();
+  if (!cleaned) return '?';
+  return cleaned.slice(0, 1).toUpperCase();
+}
+
+function mutedTint(seed = '') {
+  const palette = ['#514876', '#495072', '#5a465f', '#425467', '#5c4f46', '#4f4f70'];
+  const total = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[total % palette.length];
+}
+
+function formatThoughtDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const username = route.params?.username;
   const [profile, setProfile] = useState(null);
   const [thoughts, setThoughts] = useState([]);
@@ -56,28 +81,50 @@ export default function OpenBrainProfileScreen({ token, route }) {
 
   return (
     <View style={styles.container}>
-      {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
-      {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
-      {!loading && !error && profile ? (
-        <>
-          <View style={styles.headerCard}>
-            <Text style={styles.username}>@{profile.username}</Text>
-            <Text style={styles.streak}>Streak: {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
-            {!profile.is_self ? (
-              <Pressable style={styles.followButton} onPress={toggleFollow} disabled={followBusy}>
-                <Text style={styles.followButtonText}>{profile.is_following ? 'Unfollow' : 'Follow'}</Text>
-              </Pressable>
+      <FlatList
+        data={!loading && !error && profile ? thoughts : []}
+        keyExtractor={item => String(item.id)}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={(
+          <>
+            {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
+            {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
+            {!loading && !error && profile ? (
+              <View style={styles.headerCard}>
+                <View style={styles.profileRow}>
+                  {profile.avatar_url ? (
+                    <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatarFallback, { backgroundColor: mutedTint(profile.username) }]}>
+                      <Text style={styles.avatarFallbackText}>{initialsFromName(profile.username)}</Text>
+                    </View>
+                  )}
+                  <View style={styles.profileText}>
+                    <Text style={styles.username}>@{profile.username}</Text>
+                    <Text style={styles.streak}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
+                  </View>
+                  {!profile.is_self ? (
+                    <Pressable
+                      style={[styles.followButton, profile.is_following ? styles.followingButton : styles.followActiveButton, followBusy && { opacity: 0.55 }]}
+                      onPress={toggleFollow}
+                      disabled={followBusy}
+                    >
+                      <Text style={styles.followButtonText}>{profile.is_following ? 'unfollow' : 'follow'}</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
             ) : null}
-          </View>
-          <FlatList
-            data={thoughts}
-            keyExtractor={item => String(item.id)}
-            renderItem={({ item }) => (
-              <OpenBrainThoughtCard text={item.text} date={new Date(item.created_at).toLocaleString()} />
-            )}
-          />
-        </>
-      ) : null}
+            {!loading && !error && profile && thoughts.length === 0 ? (
+              <Text style={styles.empty}>No public thoughts yet.</Text>
+            ) : null}
+          </>
+        )}
+        renderItem={({ item }) => (
+          <OpenBrainThoughtCard text={item.text} date={formatThoughtDate(item.created_at)} largeBody />
+        )}
+      />
+      <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrainProfile" />
     </View>
   );
 }

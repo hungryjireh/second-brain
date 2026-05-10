@@ -25,7 +25,7 @@ export default function CreateProfileScreen({ token, navigation }) {
           timezone: timezone.trim(),
         },
       });
-      navigation.replace('OpenBrain');
+      navigation.replace('OpenBrainFeed');
     } catch (err) {
       setError(err.message);
     } finally {

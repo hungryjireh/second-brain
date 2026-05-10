@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text } from 'react-native';
 import { apiRequest } from '../api';
+import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import styles from './SharedThoughtScreen.styles';
@@ -17,7 +18,7 @@ function formatPublished(dateString) {
   });
 }
 
-export default function SharedThoughtScreen() {
+export default function SharedThoughtScreen({ navigation }) {
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,24 +41,27 @@ export default function SharedThoughtScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Open shared thought</Text>
-      <OpenBrainThoughtComposer
-        value={slug}
-        onChangeText={setSlug}
-        placeholder="share slug"
-        buttonLabel={loading ? 'Loading...' : 'Load thought'}
-        onSubmit={load}
-        disabled={loading || !slug.trim()}
-      />
-      {!!error && <Text style={styles.error}>{error}</Text>}
-      {payload?.thought ? (
-        <OpenBrainThoughtCard
-          text={payload.thought.text}
-          bottomMeta={`by @${payload.author?.username || 'anonymous'}`}
-          topMeta={formatPublished(payload.thought.created_at)}
-          largeBody
+      <View style={styles.content}>
+        <Text style={styles.title}>Open shared thought</Text>
+        <OpenBrainThoughtComposer
+          value={slug}
+          onChangeText={setSlug}
+          placeholder="share slug"
+          buttonLabel={loading ? 'Loading...' : 'Load thought'}
+          onSubmit={load}
+          disabled={loading || !slug.trim()}
         />
-      ) : null}
+        {!!error && <Text style={styles.error}>{error}</Text>}
+        {payload?.thought ? (
+          <OpenBrainThoughtCard
+            text={payload.thought.text}
+            bottomMeta={`by @${payload.author?.username || 'anonymous'}`}
+            topMeta={formatPublished(payload.thought.created_at)}
+            largeBody
+          />
+        ) : null}
+      </View>
+      <OpenBrainBottomNav navigation={navigation} currentRoute="SharedThought" />
     </View>
   );
 }

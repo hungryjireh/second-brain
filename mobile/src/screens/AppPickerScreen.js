@@ -46,7 +46,7 @@ export default function AppPickerScreen({ navigation, token }) {
         <Pressable style={styles.card} onPress={() => navigation.navigate('SecondBrain')}>
           <AppLogo name="second-brain" />
         </Pressable>
-        <Pressable style={styles.card} onPress={() => navigation.navigate('OpenBrain')}>
+        <Pressable style={styles.card} onPress={() => navigation.navigate('OpenBrainFeed')}>
           <AppLogo name="open-brain" />
         </Pressable>
       </View>

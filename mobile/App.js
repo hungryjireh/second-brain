@@ -14,8 +14,10 @@ import LoginScreen from './src/screens/LoginScreen';
 import AppPickerScreen from './src/screens/AppPickerScreen';
 import SecondBrainScreen from './src/screens/SecondBrainScreen';
 import OpenBrainScreen from './src/screens/OpenBrainScreen';
+import OpenBrainFeedScreen from './src/screens/OpenBrainFeedScreen';
 import CreateProfileScreen from './src/screens/CreateProfileScreen';
 import OpenBrainProfileScreen from './src/screens/OpenBrainProfileScreen';
+import UpdateProfileScreen from './src/screens/UpdateProfileScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
@@ -26,6 +28,14 @@ function HeaderBrand() {
   return (
     <Text style={styles.headerBrandText}>
       second<Text style={styles.headerBrandAccent}>brain</Text>
+    </Text>
+  );
+}
+
+function HeaderOpenBrain() {
+  return (
+    <Text style={styles.headerOpenBrainText}>
+      open<Text style={styles.headerOpenBrainAccent}>brain</Text>
     </Text>
   );
 }
@@ -100,6 +110,16 @@ export default function App() {
           ) : (
             <>
               <Stack.Screen
+                name="OpenBrainFeed"
+                options={{
+                  headerTitle: () => <HeaderOpenBrain />,
+                  headerTitleAlign: 'left',
+                }}
+              >
+                {props => <OpenBrainFeedScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="OpenBrain">{props => <OpenBrainScreen {...props} token={token} />}</Stack.Screen>
+              <Stack.Screen
                 name="Apps"
                 options={{
                   headerShown: false,
@@ -119,12 +139,14 @@ export default function App() {
               >
                 {() => <SecondBrainScreen token={token} />}
               </Stack.Screen>
-              <Stack.Screen name="OpenBrain">{props => <OpenBrainScreen {...props} token={token} />}</Stack.Screen>
               <Stack.Screen name="CreateOpenBrainProfile" options={{ title: 'Create Profile' }}>
                 {props => <CreateProfileScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="OpenBrainProfile" options={{ title: 'Profile' }}>
                 {props => <OpenBrainProfileScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="UpdateOpenBrainProfile" options={{ title: 'Update Profile' }}>
+                {props => <UpdateProfileScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="SharedThought" component={SharedThoughtScreen} options={{ title: 'Shared Thought' }} />
             </>
@@ -145,6 +167,16 @@ const styles = StyleSheet.create({
   },
   headerBrandAccent: {
     color: theme.colors.brand,
+  },
+  headerOpenBrainText: {
+    color: theme.colors.textPrimary,
+    fontSize: 25,
+    letterSpacing: -0.3,
+    lineHeight: 30,
+    fontFamily: 'DMSerifDisplay_400Regular',
+  },
+  headerOpenBrainAccent: {
+    color: '#7ec8ff',
   },
   headerLiveText: {
     color: theme.colors.textSecondary,

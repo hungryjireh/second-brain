@@ -1,19 +1,62 @@
-import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, FlatList } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Text, View } from 'react-native';
 import { apiRequest } from '../api';
-import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
+import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import styles from './OpenBrainScreen.styles';
 
+const MAX_CHARS = 280;
+const THOUGHT_FALLBACK_PROMPTS = [
+  'What stayed with you today?',
+  'What are you noticing about yourself?',
+  'What felt true for a second?',
+  'Write your thought for today...',
+];
+const THANK_YOU_PROMPTS = [
+  "What's on your mind?",
+  'thank you for sharing',
+  'that belongs to today now',
+];
+
+function formatTodayLabel(date) {
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  const day = date.getDate();
+  const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${dayName} ${day} ${month}`;
+}
+
+function formatTimeLabel(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function randomFrom(list, current = '') {
+  if (!Array.isArray(list) || list.length === 0) return '';
+  if (list.length === 1) return list[0];
+  let next = current;
+  while (next === current) {
+    next = list[Math.floor(Math.random() * list.length)];
+  }
+  return next;
+}
+
 export default function OpenBrainScreen({ token, navigation }) {
-  const [tab, setTab] = useState('following');
-  const [feed, setFeed] = useState({ following: [], everyone: [] });
   const [draft, setDraft] = useState('');
+  const [visibility, setVisibility] = useState('public');
+  const [hasPostedToday, setHasPostedToday] = useState(false);
+  const [postedHeading, setPostedHeading] = useState('');
+  const [streakCount, setStreakCount] = useState(0);
+  const [prompt, setPrompt] = useState(() => randomFrom(THOUGHT_FALLBACK_PROMPTS));
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const todayLabel = useMemo(() => formatTodayLabel(new Date()), []);
+  const timeLabel = useMemo(() => formatTimeLabel(), []);
 
   const ensureProfile = useCallback(async () => {
     try {
-      await apiRequest('/open-brain/profile', { token });
+      const data = await apiRequest('/open-brain/profile', { token });
+      setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : 0);
       return true;
     } catch (err) {
       if (String(err.message).toLowerCase().includes('404') || String(err.message).toLowerCase().includes('not found')) {
@@ -24,72 +67,79 @@ export default function OpenBrainScreen({ token, navigation }) {
     }
   }, [navigation, token]);
 
-  const loadFeed = useCallback(async () => {
-    try {
-      setError('');
-      const hasProfile = await ensureProfile();
-      if (!hasProfile) return;
-      const data = await apiRequest('/open-brain/feed', { token });
-      setFeed({ following: data.following || [], everyone: data.everyone || [] });
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [ensureProfile, token]);
+  useEffect(() => {
+    ensureProfile().catch(err => setError(err.message));
+  }, [ensureProfile]);
 
   useEffect(() => {
-    loadFeed();
-  }, [loadFeed]);
+    let cancelled = false;
+    async function loadTodaysThought() {
+      try {
+        const data = await apiRequest('/open-brain/thoughts', { token });
+        if (cancelled || !data?.has_posted_today || !data?.thought) return;
+        const postedText = typeof data.thought?.content?.text === 'string' ? data.thought.content.text : '';
+        setDraft(postedText);
+        setVisibility(data.thought?.visibility === 'private' ? 'private' : 'public');
+        setHasPostedToday(true);
+        setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
+      } catch {
+        // The feed remains usable even if today's thought fails to hydrate.
+      }
+    }
+
+    loadTodaysThought();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   async function postThought() {
-    if (!draft.trim()) return;
+    if (!draft.trim() || saving || hasPostedToday) return;
     try {
-      await apiRequest('/open-brain/thoughts', { method: 'POST', token, body: { thought: draft.trim(), visibility: 'public' } });
-      setDraft('');
-      await loadFeed();
+      setSaving(true);
+      setError('');
+      const data = await apiRequest('/open-brain/thoughts', { method: 'POST', token, body: { thought: draft.trim(), visibility } });
+      setHasPostedToday(true);
+      setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
+      setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : streakCount);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSaving(false);
     }
   }
 
-  const items = tab === 'following' ? feed.following : feed.everyone;
-
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>OpenBrain</Text>
-      <View style={styles.topActions}>
-        <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainProfile')}>
-          <Text style={styles.secondaryButtonText}>My profile</Text>
-        </Pressable>
-        <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('SharedThought')}>
-          <Text style={styles.secondaryButtonText}>Shared thought</Text>
-        </Pressable>
+      <View style={styles.composerWrap}>
+        <OpenBrainThoughtComposer
+          value={draft}
+          onChangeText={text => setDraft(text.slice(0, MAX_CHARS))}
+          placeholder="Write your thought for today..."
+          buttonLabel={saving ? 'Saving...' : hasPostedToday ? '✓' : 'Done'}
+          onSubmit={postThought}
+          disabled={saving || !draft.trim()}
+          multiline
+          maxLength={MAX_CHARS}
+          dateLabel={todayLabel}
+          timeLabel={timeLabel}
+          streakCount={streakCount}
+          heading={hasPostedToday ? (postedHeading || "What's on your mind?") : "What's on your mind?"}
+          prompt={prompt}
+          onRefreshPrompt={() => setPrompt(current => randomFrom(THOUGHT_FALLBACK_PROMPTS, current))}
+          canRefreshPrompt={THOUGHT_FALLBACK_PROMPTS.length > 1}
+          visibility={visibility}
+          onToggleVisibility={() => setVisibility(current => (current === 'public' ? 'private' : 'public'))}
+          isPosted={hasPostedToday}
+          error={error}
+        />
       </View>
-      <OpenBrainThoughtComposer
-        value={draft}
-        onChangeText={setDraft}
-        placeholder="One thought for today..."
-        buttonLabel="Post thought"
-        onSubmit={postThought}
-        multiline
-        maxLength={280}
-        buttonMarginBottom={8}
-      />
-      <View style={styles.tabs}>
-        <Pressable onPress={() => setTab('following')} style={[styles.tab, tab === 'following' && styles.tabActive]}><Text style={styles.tabText}>Following</Text></Pressable>
-        <Pressable onPress={() => setTab('everyone')} style={[styles.tab, tab === 'everyone' && styles.tabActive]}><Text style={styles.tabText}>Everyone</Text></Pressable>
-      </View>
-      {!!error && <Text style={styles.error}>{error}</Text>}
-      <FlatList
-        data={items}
-        keyExtractor={item => String(item.id)}
-        renderItem={({ item }) => (
-          <OpenBrainThoughtCard
-            text={item.text}
-            topMeta={`@${item.profile?.username || 'unknown'}`}
-            onPress={() => item.profile?.username && navigation.navigate('OpenBrainProfile', { username: item.profile.username })}
-          />
-        )}
-      />
+      {error ? (
+        <View style={styles.inlineErrorWrap}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : null}
+      <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrain" />
     </View>
   );
 }
