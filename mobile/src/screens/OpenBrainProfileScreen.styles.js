@@ -10,6 +10,12 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  statusState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
   headerCard: {
     backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.border,

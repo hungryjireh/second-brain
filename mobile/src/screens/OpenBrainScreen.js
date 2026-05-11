@@ -3,9 +3,10 @@ import { Text, View } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
+import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import styles from './OpenBrainScreen.styles';
 
-const MAX_CHARS = 280;
+const MAX_CHARS = 5000;
 const THOUGHT_FALLBACK_PROMPTS = [
   'What stayed with you today?',
   'What are you noticing about yourself?',
@@ -111,6 +112,7 @@ export default function OpenBrainScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
+      <OpenBrainTopMenu navigation={navigation} />
       <View style={styles.composerWrap}>
         <OpenBrainThoughtComposer
           value={draft}
@@ -121,6 +123,7 @@ export default function OpenBrainScreen({ token, navigation }) {
           disabled={saving || !draft.trim()}
           multiline
           maxLength={MAX_CHARS}
+          showRemaining={false}
           dateLabel={todayLabel}
           timeLabel={timeLabel}
           streakCount={streakCount}

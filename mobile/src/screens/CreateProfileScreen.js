@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import { apiRequest } from '../api';
+import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { theme } from '../theme';
+import styles from './CreateProfileScreenStyles';
 
 export default function CreateProfileScreen({ token, navigation }) {
   const defaultTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', []);
@@ -35,23 +37,17 @@ export default function CreateProfileScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create your OpenBrain profile</Text>
-      <TextInput value={username} onChangeText={setUsername} placeholder="Username" placeholderTextColor={theme.colors.textSecondary} style={styles.input} maxLength={24} autoCapitalize="none" />
-      <TextInput value={avatarUrl} onChangeText={setAvatarUrl} placeholder="Avatar URL (optional)" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
-      <TextInput value={timezone} onChangeText={setTimezone} placeholder="Timezone" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
-      <Pressable style={styles.button} onPress={handleCreate} disabled={loading || !username.trim() || !timezone.trim()}>
-        <Text style={styles.buttonText}>{loading ? 'Saving profile...' : 'Create profile'}</Text>
-      </Pressable>
-      {!!error && <Text style={styles.error}>{error}</Text>}
+      <OpenBrainTopMenu navigation={navigation} />
+      <View style={styles.content}>
+        <Text style={styles.title}>Create your OpenBrain profile</Text>
+        <TextInput value={username} onChangeText={setUsername} placeholder="Username" placeholderTextColor={theme.colors.textSecondary} style={styles.input} maxLength={24} autoCapitalize="none" />
+        <TextInput value={avatarUrl} onChangeText={setAvatarUrl} placeholder="Avatar URL (optional)" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
+        <TextInput value={timezone} onChangeText={setTimezone} placeholder="Timezone" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
+        <Pressable style={styles.button} onPress={handleCreate} disabled={loading || !username.trim() || !timezone.trim()}>
+          <Text style={styles.buttonText}>{loading ? 'Saving profile...' : 'Create profile'}</Text>
+        </Pressable>
+        {!!error && <Text style={styles.error}>{error}</Text>}
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bgBase, padding: 16, justifyContent: 'center', gap: 10 },
-  title: { color: theme.colors.textPrimary, fontSize: 24, fontWeight: '700', marginBottom: 6 },
-  input: { backgroundColor: theme.colors.bgSurface, color: theme.colors.textPrimary, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.border, padding: 12 },
-  button: { backgroundColor: theme.colors.brand, borderRadius: 10, alignItems: 'center', padding: 12, marginTop: 6 },
-  buttonText: { color: theme.colors.textPrimary, fontWeight: '700' },
-  error: { color: theme.colors.danger },
-});

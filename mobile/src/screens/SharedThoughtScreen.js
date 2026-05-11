@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
+import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import styles from './SharedThoughtScreen.styles';
@@ -41,6 +42,7 @@ export default function SharedThoughtScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <OpenBrainTopMenu navigation={navigation} />
       <View style={styles.content}>
         <Text style={styles.title}>Open shared thought</Text>
         <OpenBrainThoughtComposer

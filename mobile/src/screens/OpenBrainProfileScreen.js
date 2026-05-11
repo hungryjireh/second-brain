@@ -3,6 +3,7 @@ import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
+import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import styles from './OpenBrainProfileScreen.styles';
 
 function initialsFromName(name) {
@@ -81,15 +82,20 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <OpenBrainTopMenu navigation={navigation} />
+      {loading ? (
+        <View style={styles.statusState}>
+          <Text style={styles.muted}>Loading profile...</Text>
+        </View>
+      ) : null}
       <FlatList
-        data={!loading && !error && profile ? thoughts : []}
+        data={!error && profile ? thoughts : []}
         keyExtractor={item => String(item.id)}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={(
           <>
-            {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
-            {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
-            {!loading && !error && profile ? (
+            {!!error ? <Text style={styles.error}>{error}</Text> : null}
+            {!error && profile ? (
               <View style={styles.headerCard}>
                 <View style={styles.profileRow}>
                   {profile.avatar_url ? (
@@ -115,7 +121,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                 </View>
               </View>
             ) : null}
-            {!loading && !error && profile && thoughts.length === 0 ? (
+            {!error && profile && thoughts.length === 0 ? (
               <Text style={styles.empty}>No public thoughts yet.</Text>
             ) : null}
           </>

@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -210,10 +211,17 @@ export default function OpenBrainThoughtComposer({
   onToggleVisibility,
   isPosted = false,
   error = '',
+  showRemaining = true,
 }) {
+  const { height: viewportHeight } = useWindowDimensions();
+  const minInputHeight = 120;
+  const maxInputHeight = useMemo(() => Math.max(minInputHeight, Math.floor(viewportHeight * 0.52)), [viewportHeight]);
+  const [contentHeight, setContentHeight] = useState(minInputHeight);
   const remaining = typeof maxLength === 'number' ? maxLength - String(value || '').length : null;
   const submitDisabled = disabled || isPosted;
   const trackActive = visibility === 'public';
+  const clampedInputHeight = Math.min(Math.max(contentHeight, minInputHeight), maxInputHeight);
+  const shouldScrollInput = clampedInputHeight >= maxInputHeight;
 
   return (
     <View style={[styles.card, { marginBottom: buttonMarginBottom }]}>
@@ -244,9 +252,11 @@ export default function OpenBrainThoughtComposer({
               onChangeText={onChangeText}
               placeholder={placeholder}
               placeholderTextColor={theme.colors.textSecondary}
-              style={[styles.input, multiline && styles.inputMultiline]}
+              style={[styles.input, multiline && styles.inputMultiline, multiline && { height: clampedInputHeight }]}
               multiline={multiline}
               maxLength={maxLength}
+              onContentSizeChange={multiline ? event => setContentHeight(event.nativeEvent.contentSize.height) : undefined}
+              scrollEnabled={multiline ? shouldScrollInput : undefined}
               autoCapitalize="none"
             />
           )}
@@ -256,7 +266,7 @@ export default function OpenBrainThoughtComposer({
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
-          {remaining !== null && <Text style={styles.remaining}>{remaining} left</Text>}
+          {showRemaining && remaining !== null && <Text style={styles.remaining}>{remaining} left</Text>}
           <Pressable
             style={[styles.visibilityButton, isPosted && { opacity: 0.55 }]}
             onPress={onToggleVisibility}

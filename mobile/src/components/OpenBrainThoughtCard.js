@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from '../theme';
 
@@ -27,6 +28,22 @@ function normalizeThoughtText(text) {
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n(?:[ \t]*\n)+/g, '\n')
     .trim();
+}
+
+const PREVIEW_CHAR_LIMIT = 220;
+
+function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
+  const normalized = normalizeThoughtText(text);
+  if (!normalized) return { preview: '', full: '', isTruncated: false };
+  if (normalized.length <= limit) return { preview: normalized, full: normalized, isTruncated: false };
+  const cut = normalized.slice(0, limit);
+  const breakAt = Math.max(cut.lastIndexOf(' '), cut.lastIndexOf('\n'));
+  const cleanCut = (breakAt > 0 ? cut.slice(0, breakAt) : cut).trimEnd();
+  return {
+    preview: `${cleanCut}...`,
+    full: normalized,
+    isTruncated: true,
+  };
 }
 
 const styles = StyleSheet.create({
@@ -102,6 +119,10 @@ const styles = StyleSheet.create({
     fontSize: 21,
     lineHeight: 38,
   },
+  bodyFeed: {
+    fontSize: 18,
+    lineHeight: 31,
+  },
   bodyLarge: {
     fontSize: 24,
     lineHeight: 42,
@@ -174,6 +195,14 @@ export default function OpenBrainThoughtCard({
   followBusyUserId = '',
   largeBody = false,
 }) {
+  const sourceText = item ? item.text : text;
+  const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [thoughtContent.full]);
+
   if (item?.missing_today) {
     const name = item.profile?.username || 'unknown';
     const streak = Number.isInteger(item.profile?.streak_count) ? item.profile.streak_count : 0;
@@ -193,7 +222,7 @@ export default function OpenBrainThoughtCard({
     const isFollowing = Boolean(item.profile?.is_following);
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
-    const thoughtText = normalizeThoughtText(item.text);
+    const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
 
     return (
       <View style={styles.card}>
@@ -232,7 +261,13 @@ export default function OpenBrainThoughtCard({
           ) : null}
         </View>
 
-        <Text style={styles.body}>{thoughtText}</Text>
+        <Pressable
+          onPress={thoughtContent.isTruncated ? () => setExpanded(current => !current) : undefined}
+          disabled={!thoughtContent.isTruncated}
+          accessibilityRole={thoughtContent.isTruncated ? 'button' : undefined}
+        >
+          <Text style={[styles.body, styles.bodyFeed]}>{displayedText}</Text>
+        </Pressable>
 
         <View style={styles.reactions}>
           {REACTIONS.map(reaction => {
@@ -262,7 +297,15 @@ export default function OpenBrainThoughtCard({
     <Container style={styles.card} onPress={onPress}>
       {!!topMeta && <Text style={styles.meta}>{topMeta}</Text>}
       {!!date && <Text style={styles.date}>{date}</Text>}
-      <Text style={[styles.body, largeBody && styles.bodyLarge]}>{text || ''}</Text>
+      <Pressable
+        onPress={thoughtContent.isTruncated ? () => setExpanded(current => !current) : undefined}
+        disabled={!thoughtContent.isTruncated}
+        accessibilityRole={thoughtContent.isTruncated ? 'button' : undefined}
+      >
+        <Text style={[styles.body, largeBody && styles.bodyLarge]}>
+          {thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full}
+        </Text>
+      </Pressable>
       {!!bottomMeta && <Text style={styles.meta}>{bottomMeta}</Text>}
     </Container>
   );

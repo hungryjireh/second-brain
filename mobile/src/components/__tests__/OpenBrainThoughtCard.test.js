@@ -21,4 +21,19 @@ describe('OpenBrainThoughtCard', () => {
     fireEvent.press(getByText('Body text'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('truncates long thoughts and expands on press', () => {
+    const longText = `${'Long thought '.repeat(30)}ending`;
+    const { getByText, queryByText } = render(
+      <OpenBrainThoughtCard
+        text={longText}
+        topMeta="Top"
+      />
+    );
+
+    expect(queryByText(longText)).toBeNull();
+    const preview = getByText(/\.{3}$/);
+    fireEvent.press(preview);
+    expect(getByText(longText)).toBeTruthy();
+  });
 });

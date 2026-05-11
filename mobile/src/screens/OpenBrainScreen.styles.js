@@ -9,7 +9,7 @@ const styles = StyleSheet.create({
   composerWrap: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 70,
+    paddingTop: 16,
     paddingBottom: 108,
   },
   inlineErrorWrap: {

@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { apiRequest } from '../api';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
+import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
-import { theme } from '../theme';
+import styles from './OpenBrainFeedScreenStyles';
 
-const MAX_CHARS = 280;
+const MAX_CHARS = 5000;
 const THOUGHT_FALLBACK_PROMPTS = [
   'What stayed with you today?',
   'What are you noticing about yourself?',
@@ -71,6 +73,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const timeLabel = useMemo(() => formatTimeLabel(), []);
 
   const activeList = useMemo(() => (tab === 'following' ? feed.following : feed.everyone), [tab, feed]);
+  const isEmptyState = !loading && !error && activeList.length === 0;
 
   const loadComposerData = useCallback(async () => {
     const [profileData, thoughtData] = await Promise.all([
@@ -110,21 +113,6 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          style={[styles.draftButton, isDraftOpen && styles.draftButtonActive]}
-          onPress={() => setIsDraftOpen(current => !current)}
-          accessibilityRole="button"
-          accessibilityLabel={isDraftOpen ? 'Close draft card' : 'Open draft card'}
-        >
-          <Text style={styles.draftIcon}>✎</Text>
-        </Pressable>
-      ),
-    });
-  }, [isDraftOpen, navigation]);
 
   useEffect(() => {
     if (!isDraftOpen) return;
@@ -192,9 +180,57 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
+      <OpenBrainTopMenu navigation={navigation} />
       <View style={styles.content}>
-        {isDraftOpen ? (
-          <View style={styles.draftCardWrap}>
+        <View style={styles.tabs}>
+          <Pressable style={[styles.tab, tab === 'following' && styles.tabActive]} onPress={() => setTab('following')}>
+            <Text style={[styles.tabLabel, tab === 'following' && styles.tabLabelActive]}>following</Text>
+          </Pressable>
+          <Pressable style={[styles.tab, tab === 'everyone' && styles.tabActive]} onPress={() => setTab('everyone')}>
+            <Text style={[styles.tabLabel, tab === 'everyone' && styles.tabLabelActive]}>everyone</Text>
+          </Pressable>
+        </View>
+        {loading ? (
+          <View style={styles.statusState}>
+            <Text style={styles.meta}>Loading feed...</Text>
+          </View>
+        ) : null}
+        {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
+        <FlatList
+          data={loading ? [] : activeList}
+          keyExtractor={item => String(item.id)}
+          contentContainerStyle={[styles.list, isEmptyState && styles.listEmpty]}
+          renderItem={({ item }) => (
+            <OpenBrainThoughtCard
+              item={item}
+              date={formatDateTimeLabel(item.created_at)}
+              onReact={handleReact}
+              reactingKey={reactingKey}
+              onToggleFollow={handleToggleFollow}
+              followBusyUserId={followBusyUserId}
+              onOpenProfile={safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername })}
+            />
+          )}
+          ListEmptyComponent={isEmptyState ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.meta}>No human is thinking right now</Text>
+            </View>
+          ) : null}
+        />
+      </View>
+      <Pressable
+        style={[styles.floatingDraftButton, isDraftOpen && styles.floatingDraftButtonActive]}
+        onPress={() => setIsDraftOpen(current => !current)}
+        accessibilityRole="button"
+        accessibilityLabel={isDraftOpen ? 'Close draft popup' : 'Open draft popup'}
+      >
+        <Text style={styles.draftIcon}>✎</Text>
+      </Pressable>
+      <Modal visible={isDraftOpen} animationType="fade" transparent onRequestClose={() => setIsDraftOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={30} tint="dark" style={styles.modalBlur} />
+          <Pressable style={styles.modalBackdrop} onPress={() => setIsDraftOpen(false)} />
+          <View style={styles.modalCardWrap}>
             <OpenBrainThoughtComposer
               value={draft}
               onChangeText={text => setDraft(text.slice(0, MAX_CHARS))}
@@ -204,6 +240,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
               disabled={saving || !draft.trim()}
               multiline
               maxLength={MAX_CHARS}
+              showRemaining={false}
               dateLabel={todayLabel}
               timeLabel={timeLabel}
               streakCount={streakCount}
@@ -217,111 +254,9 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
               error={composerError}
             />
           </View>
-        ) : null}
-        <View style={styles.tabs}>
-          <Pressable style={[styles.tab, tab === 'following' && styles.tabActive]} onPress={() => setTab('following')}>
-            <Text style={[styles.tabLabel, tab === 'following' && styles.tabLabelActive]}>following</Text>
-          </Pressable>
-          <Pressable style={[styles.tab, tab === 'everyone' && styles.tabActive]} onPress={() => setTab('everyone')}>
-            <Text style={[styles.tabLabel, tab === 'everyone' && styles.tabLabelActive]}>everyone</Text>
-          </Pressable>
         </View>
-        {loading ? <Text style={styles.meta}>Loading feed...</Text> : null}
-        {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
-        <FlatList
-          data={loading ? [] : activeList}
-          keyExtractor={item => String(item.id)}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <OpenBrainThoughtCard
-              item={item}
-              date={formatDateTimeLabel(item.created_at)}
-              onReact={handleReact}
-              reactingKey={reactingKey}
-              onToggleFollow={handleToggleFollow}
-              followBusyUserId={followBusyUserId}
-              onOpenProfile={safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername })}
-            />
-          )}
-          ListEmptyComponent={!loading && !error ? <Text style={styles.meta}>No posts yet today.</Text> : null}
-        />
-      </View>
+      </Modal>
       <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrainFeed" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bgSurface,
-  },
-  content: {
-    flex: 1,
-    paddingTop: 16,
-    paddingHorizontal: 12,
-  },
-  draftButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    backgroundColor: theme.colors.bgBase,
-    marginRight: 16,
-  },
-  draftButtonActive: {
-    borderColor: theme.colors.brand,
-    backgroundColor: theme.colors.brandDim,
-  },
-  draftIcon: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 18,
-    lineHeight: 18,
-  },
-  draftCardWrap: {
-    marginBottom: 12,
-  },
-  tabs: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  tab: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    alignItems: 'center',
-    paddingVertical: 9,
-    backgroundColor: theme.colors.bgBase,
-  },
-  tabActive: {
-    borderColor: theme.colors.brand,
-    backgroundColor: theme.colors.bgRaised,
-  },
-  tabLabel: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 13,
-  },
-  tabLabelActive: {
-    color: theme.colors.textPrimary,
-  },
-  list: {
-    paddingBottom: 130,
-  },
-  meta: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    marginBottom: 12,
-  },
-  error: {
-    color: theme.colors.danger,
-    fontFamily: 'DMSans_400Regular',
-    marginBottom: 12,
-  },
-});

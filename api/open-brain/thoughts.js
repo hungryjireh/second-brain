@@ -3,7 +3,7 @@ import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../../lib/au
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
-const MAX_CONTENT_LENGTH = 280;
+const MAX_CONTENT_LENGTH = 5000;
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');

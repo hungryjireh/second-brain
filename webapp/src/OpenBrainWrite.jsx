@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const MAX_CHARS = 280;
+const MAX_CHARS = 5000;
 const API = import.meta.env.VITE_API_URL || '/api';
 const PROMPT_ENDPOINTS = ['/api/thought-prompts', '/api/static/thought-prompts.json', '/thought-prompts.json'];
 const THANK_YOU_PROMPT_ENDPOINTS = [
