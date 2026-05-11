@@ -1,6 +1,42 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { theme } from '../theme';
+
+function normalizeThoughtText(text) {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/\r\n?/g, '\n')
+    .replace(/\u2028|\u2029/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
+}
+
+function parsePostedThought(text) {
+  const normalized = normalizeThoughtText(text);
+  if (!normalized) return { title: '', blocks: [], hasTitle: false };
+  const lines = normalized.split('\n');
+  let firstLineIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].trim()) {
+      firstLineIndex = i;
+      break;
+    }
+  }
+  if (firstLineIndex < 0) return { title: '', blocks: [], hasTitle: false };
+  const title = lines[firstLineIndex].trim();
+  const body = lines.slice(firstLineIndex + 1).join('\n').trim();
+  if (!body) return { title: '', blocks: [{ text: title, isQuote: false }], hasTitle: false };
+  const blocks = body
+    .split(/\n\s*\n/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const unwrapped = part.replace(/^>\s?/gm, '').trim();
+      const isQuote = /^>\s?/.test(part) || /^".+"$/.test(part) || /^“.+”$/.test(part) || /^'.+'$/.test(part);
+      return { text: isQuote ? unwrapped : part, isQuote };
+    });
+  return { title, blocks, hasTitle: true };
+}
 
 const styles = StyleSheet.create({
   card: {
@@ -16,6 +52,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
   },
   content: {
+    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 14,
@@ -25,6 +62,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    minWidth: 0,
   },
   eyebrow: {
     color: theme.colors.textSecondary,
@@ -32,6 +70,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
+    flex: 1,
+    flexShrink: 1,
   },
   streak: {
     color: theme.colors.textSecondary,
@@ -44,12 +84,14 @@ const styles = StyleSheet.create({
     fontSize: 29,
     lineHeight: 34,
     marginTop: 12,
+    flexShrink: 1,
   },
   promptRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginTop: 10,
+    minWidth: 0,
   },
   prompt: {
     color: theme.colors.textSecondary,
@@ -57,6 +99,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontStyle: 'italic',
     flex: 1,
+    flexShrink: 1,
   },
   refreshButton: {
     width: 24,
@@ -74,10 +117,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   divider: {
+    flex: 1,
     borderTopColor: theme.colors.border,
     borderTopWidth: 1,
     marginTop: 16,
     paddingTop: 12,
+  },
+  postedScroll: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+    minHeight: 120,
+  },
+  postedScrollContent: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   input: {
     backgroundColor: theme.colors.bgSurface,
@@ -96,17 +152,30 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   postedText: {
-    backgroundColor: theme.colors.bgSurface,
+    color: theme.colors.textPrimary,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 16,
+    lineHeight: 23,
+  },
+  postedBlocks: {
+    gap: 10,
+  },
+  postedTitle: {
     color: theme.colors.textPrimary,
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 18,
-    lineHeight: 27,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    minHeight: 120,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    fontSize: 34,
+    lineHeight: 40,
+    marginBottom: 12,
+  },
+  postedQuoteBlock: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#1d9e75',
+    paddingLeft: 10,
+  },
+  postedQuoteText: {
+    color: theme.colors.textPrimary,
+    fontStyle: 'italic',
+    opacity: 0.82,
   },
   footer: {
     borderTopColor: theme.colors.border,
@@ -117,11 +186,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    flexWrap: 'wrap',
   },
   footerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    minWidth: 0,
+    flexWrap: 'wrap',
   },
   remaining: {
     color: theme.colors.textSecondary,
@@ -139,6 +212,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingLeft: 6,
     paddingRight: 10,
+    maxWidth: '100%',
   },
   toggleTrack: {
     width: 34,
@@ -155,6 +229,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontFamily: 'DMSans_600SemiBold',
     fontSize: 12,
+    flexShrink: 1,
   },
   button: {
     borderColor: theme.colors.border,
@@ -222,9 +297,10 @@ export default function OpenBrainThoughtComposer({
   const trackActive = visibility === 'public';
   const clampedInputHeight = Math.min(Math.max(contentHeight, minInputHeight), maxInputHeight);
   const shouldScrollInput = clampedInputHeight >= maxInputHeight;
+  const postedThought = useMemo(() => parsePostedThought(value), [value]);
 
   return (
-    <View style={[styles.card, { marginBottom: buttonMarginBottom }]}>
+    <View style={[styles.card, { marginBottom: buttonMarginBottom, flex: 1 }]}>
       <View style={styles.content}>
         {!!dateLabel && (
           <View style={styles.eyebrowRow}>
@@ -245,7 +321,16 @@ export default function OpenBrainThoughtComposer({
         )}
         <View style={styles.divider}>
           {isPosted ? (
-            <Text style={styles.postedText}>{value}</Text>
+            <ScrollView style={styles.postedScroll} contentContainerStyle={styles.postedScrollContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.postedBlocks}>
+                {postedThought.hasTitle ? <Text style={styles.postedTitle}>{postedThought.title}</Text> : null}
+                {postedThought.blocks.map((block, index) => (
+                  <View key={`posted-thought-block-${index}`} style={block.isQuote ? styles.postedQuoteBlock : null}>
+                    <Text style={[styles.postedText, block.isQuote ? styles.postedQuoteText : null]}>{block.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
           ) : (
             <TextInput
               value={value}

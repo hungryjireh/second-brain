@@ -26,7 +26,6 @@ function normalizeThoughtText(text) {
     .replace(/\r\n?/g, '\n')
     .replace(/\u2028|\u2029/g, '\n')
     .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n(?:[ \t]*\n)+/g, '\n')
     .trim();
 }
 
@@ -44,6 +43,35 @@ function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
     full: normalized,
     isTruncated: true,
   };
+}
+
+function parseThoughtForCard(text) {
+  const normalized = normalizeThoughtText(text);
+  if (!normalized) return { title: '', blocks: [] };
+  const lines = normalized.split('\n');
+  let firstLineIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].trim()) {
+      firstLineIndex = i;
+      break;
+    }
+  }
+  if (firstLineIndex < 0) return { title: '', blocks: [], hasTitle: false };
+  const title = lines[firstLineIndex].trim();
+  const body = lines.slice(firstLineIndex + 1).join('\n').trim();
+  if (!body) return { title: '', blocks: [{ text: title, isQuote: false }], hasTitle: false };
+
+  const blocks = body
+    .split(/\n\s*\n/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const unwrapped = part.replace(/^>\s?/gm, '').trim();
+      const isQuote = /^>\s?/.test(part) || /^".+"$/.test(part) || /^“.+”$/.test(part) || /^'.+'$/.test(part);
+      return { text: isQuote ? unwrapped : part, isQuote };
+    });
+
+  return { title, blocks, hasTitle: true };
 }
 
 const styles = StyleSheet.create({
@@ -116,16 +144,40 @@ const styles = StyleSheet.create({
   body: {
     color: '#ede9e3',
     fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 21,
-    lineHeight: 38,
+    fontSize: 18,
+    lineHeight: 30,
   },
   bodyFeed: {
-    fontSize: 18,
-    lineHeight: 31,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 16,
+    lineHeight: 23,
   },
   bodyLarge: {
     fontSize: 24,
+    lineHeight: 40,
+  },
+  thoughtBlocks: {
+    gap: 10,
+  },
+  thoughtTitle: {
+    color: '#ede9e3',
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontSize: 34,
+    lineHeight: 40,
+    marginBottom: 12,
+  },
+  thoughtTitleFeed: {
+    fontSize: 36,
     lineHeight: 42,
+  },
+  quoteBlock: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#1d9e75',
+    paddingLeft: 10,
+  },
+  quoteText: {
+    fontStyle: 'italic',
+    color: 'rgba(237,233,227,0.82)',
   },
   meta: {
     color: theme.colors.textSecondary,
@@ -194,6 +246,7 @@ export default function OpenBrainThoughtCard({
   reactingKey = '',
   followBusyUserId = '',
   largeBody = false,
+  feedBody = false,
 }) {
   const sourceText = item ? item.text : text;
   const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
@@ -223,6 +276,7 @@ export default function OpenBrainThoughtCard({
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
     const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
+    const parsedThought = parseThoughtForCard(displayedText);
 
     return (
       <View style={styles.card}>
@@ -266,7 +320,14 @@ export default function OpenBrainThoughtCard({
           disabled={!thoughtContent.isTruncated}
           accessibilityRole={thoughtContent.isTruncated ? 'button' : undefined}
         >
-          <Text style={[styles.body, styles.bodyFeed]}>{displayedText}</Text>
+          <View style={styles.thoughtBlocks}>
+            {!!parsedThought.hasTitle && <Text style={[styles.thoughtTitle, styles.thoughtTitleFeed]}>{parsedThought.title}</Text>}
+            {parsedThought.blocks.map((block, index) => (
+              <View key={`thought-${item.id}-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
+                <Text style={[styles.body, styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>{block.text}</Text>
+              </View>
+            ))}
+          </View>
         </Pressable>
 
         <View style={styles.reactions}>
@@ -302,9 +363,26 @@ export default function OpenBrainThoughtCard({
         disabled={!thoughtContent.isTruncated}
         accessibilityRole={thoughtContent.isTruncated ? 'button' : undefined}
       >
-        <Text style={[styles.body, largeBody && styles.bodyLarge]}>
-          {thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full}
-        </Text>
+        {(() => {
+          const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
+          const parsedThought = parseThoughtForCard(displayedText);
+          return (
+            <View style={styles.thoughtBlocks}>
+              {!!parsedThought.hasTitle && (
+                <Text style={[styles.thoughtTitle, feedBody && styles.thoughtTitleFeed, largeBody && styles.bodyLarge]}>
+                  {parsedThought.title}
+                </Text>
+              )}
+              {parsedThought.blocks.map((block, index) => (
+                <View key={`standalone-thought-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
+                  <Text style={[styles.body, feedBody && styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>
+                    {block.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          );
+        })()}
       </Pressable>
       {!!bottomMeta && <Text style={styles.meta}>{bottomMeta}</Text>}
     </Container>

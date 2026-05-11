@@ -59,6 +59,19 @@ function isMarkdownTableSeparator(line, expectedCols) {
 }
 
 function renderMarkdownContent(markdown) {
+  const textStyles = {
+    paragraph: { margin: '0 0 14px', whiteSpace: 'pre-wrap', lineHeight: 1.85 },
+    headingBase: { margin: '16px 0 8px', lineHeight: 1.3, letterSpacing: '-0.01em' },
+    list: { margin: '0 0 14px', paddingLeft: 24, lineHeight: 1.8 },
+    listItem: { margin: '0 0 6px' },
+    quote: {
+      margin: '0 0 14px',
+      padding: '4px 0 4px 12px',
+      borderLeft: '2px solid var(--border)',
+      color: 'var(--text-secondary)',
+      lineHeight: 1.8,
+    },
+  };
   const lines = String(markdown ?? '').replace(/\r\n/g, '\n').split('\n');
   const blocks = [];
   let i = 0;
@@ -90,7 +103,7 @@ function renderMarkdownContent(markdown) {
       const text = heading[2];
       const HeadingTag = `h${level}`;
       blocks.push(
-        <HeadingTag key={`heading-${i}`} style={{ margin: '8px 0 6px', fontSize: `${Math.max(20 - level * 2, 13)}px`, lineHeight: 1.35 }}>
+        <HeadingTag key={`heading-${i}`} style={{ ...textStyles.headingBase, fontSize: `${Math.max(20 - level * 2, 13)}px` }}>
           {renderInlineMarkdown(text, `h-${i}`)}
         </HeadingTag>
       );
@@ -166,9 +179,9 @@ function renderMarkdownContent(markdown) {
         i += 1;
       }
       blocks.push(
-        <ul key={`ul-${i}`} style={{ margin: '8px 0', paddingLeft: 22 }}>
+        <ul key={`ul-${i}`} style={textStyles.list}>
           {items.map((item, idx) => (
-            <li key={`li-${i}-${idx}`} style={{ margin: '2px 0' }}>
+            <li key={`li-${i}-${idx}`} style={textStyles.listItem}>
               {renderInlineMarkdown(item, `li-${i}-${idx}`)}
             </li>
           ))}
@@ -186,9 +199,9 @@ function renderMarkdownContent(markdown) {
         i += 1;
       }
       blocks.push(
-        <ol key={`ol-${i}`} style={{ margin: '8px 0', paddingLeft: 22 }}>
+        <ol key={`ol-${i}`} style={textStyles.list}>
           {items.map((item, idx) => (
-            <li key={`oli-${i}-${idx}`} style={{ margin: '2px 0' }}>
+            <li key={`oli-${i}-${idx}`} style={textStyles.listItem}>
               {renderInlineMarkdown(item, `oli-${i}-${idx}`)}
             </li>
           ))}
@@ -208,12 +221,7 @@ function renderMarkdownContent(markdown) {
       blocks.push(
         <blockquote
           key={`quote-${i}`}
-          style={{
-            margin: '8px 0',
-            padding: '2px 0 2px 10px',
-            borderLeft: '2px solid var(--border)',
-            color: 'var(--text-secondary)',
-          }}
+          style={textStyles.quote}
         >
           {renderInlineMarkdown(quoteLines.join('\n'), `q-${i}`)}
         </blockquote>
@@ -232,7 +240,7 @@ function renderMarkdownContent(markdown) {
     }
     if (para.length) {
       blocks.push(
-        <p key={`p-${i}`} style={{ margin: '8px 0', whiteSpace: 'pre-wrap' }}>
+        <p key={`p-${i}`} style={textStyles.paragraph}>
           {renderInlineMarkdown(para.join('\n'), `p-${i}`)}
         </p>
       );
@@ -2003,11 +2011,11 @@ export default function App({ authToken, onUnauthorized }) {
                 background: 'var(--bg-raised)',
                 border: '0.5px solid var(--border)',
                 borderRadius: 10,
-                padding: 12,
+                padding: '14px 16px',
                 maxHeight: '50vh',
                 overflowY: 'auto',
-                fontSize: 13,
-                lineHeight: 1.6,
+                fontSize: 15,
+                lineHeight: 1.85,
                 color: 'var(--text-primary)',
                 position: 'relative',
               }}
@@ -2053,14 +2061,18 @@ export default function App({ authToken, onUnauthorized }) {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
                               {fromHuman ? 'You' : 'Assistant'}
                             </div>
-                            <div>{renderMarkdownContent(msg.text)}</div>
+                            <div style={{ maxWidth: '70ch' }}>{renderMarkdownContent(msg.text)}</div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 )
-                : renderMarkdownContent(selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || '')}
+                : (
+                  <div style={{ maxWidth: '72ch', margin: '0 auto' }}>
+                    {renderMarkdownContent(selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || '')}
+                  </div>
+                )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button

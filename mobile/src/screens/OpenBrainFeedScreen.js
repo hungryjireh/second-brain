@@ -52,6 +52,12 @@ function randomFrom(list, current = '') {
   return next;
 }
 
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
 export default function OpenBrainFeedScreen({ token, navigation }) {
   const [tab, setTab] = useState('following');
   const [feed, setFeed] = useState({ following: [], everyone: [] });
@@ -73,7 +79,33 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const timeLabel = useMemo(() => formatTimeLabel(), []);
 
   const activeList = useMemo(() => (tab === 'following' ? feed.following : feed.everyone), [tab, feed]);
-  const isEmptyState = !loading && !error && activeList.length === 0;
+  const displayItems = useMemo(() => {
+    const today = new Date();
+    const todaysThoughts = [];
+    const pastThoughts = [];
+
+    activeList.forEach(item => {
+      const created = new Date(item.created_at);
+      if (!Number.isNaN(created.getTime()) && isSameLocalDay(created, today)) {
+        todaysThoughts.push(item);
+      } else {
+        pastThoughts.push(item);
+      }
+    });
+
+    const items = [];
+    if (todaysThoughts.length > 0) {
+      items.push({ type: 'section', id: 'section-today', title: "Today's Thoughts" });
+      todaysThoughts.forEach(item => items.push({ type: 'thought', item }));
+    }
+    if (pastThoughts.length > 0) {
+      items.push({ type: 'section', id: 'section-past', title: 'Past Thoughts' });
+      pastThoughts.forEach(item => items.push({ type: 'thought', item }));
+    }
+
+    return items;
+  }, [activeList]);
+  const isEmptyState = !loading && !error && displayItems.length === 0;
 
   const loadComposerData = useCallback(async () => {
     const [profileData, thoughtData] = await Promise.all([
@@ -197,20 +229,30 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
         ) : null}
         {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
         <FlatList
-          data={loading ? [] : activeList}
-          keyExtractor={item => String(item.id)}
+          data={loading ? [] : displayItems}
+          keyExtractor={item => (item.type === 'section' ? item.id : String(item.item.id))}
           contentContainerStyle={[styles.list, isEmptyState && styles.listEmpty]}
-          renderItem={({ item }) => (
-            <OpenBrainThoughtCard
-              item={item}
-              date={formatDateTimeLabel(item.created_at)}
-              onReact={handleReact}
-              reactingKey={reactingKey}
-              onToggleFollow={handleToggleFollow}
-              followBusyUserId={followBusyUserId}
-              onOpenProfile={safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername })}
-            />
-          )}
+          renderItem={({ item }) => {
+            if (item.type === 'section') {
+              return (
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={styles.sectionHeader}>{item.title}</Text>
+                  <View style={styles.sectionHeaderLine} />
+                </View>
+              );
+            }
+            return (
+              <OpenBrainThoughtCard
+                item={item.item}
+                date={formatDateTimeLabel(item.item.created_at)}
+                onReact={handleReact}
+                reactingKey={reactingKey}
+                onToggleFollow={handleToggleFollow}
+                followBusyUserId={followBusyUserId}
+                onOpenProfile={safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername })}
+              />
+            );
+          }}
           ListEmptyComponent={isEmptyState ? (
             <View style={styles.emptyState}>
               <Text style={styles.meta}>No human is thinking right now</Text>

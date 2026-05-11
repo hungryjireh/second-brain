@@ -36,4 +36,18 @@ describe('OpenBrainThoughtCard', () => {
     fireEvent.press(preview);
     expect(getByText(longText)).toBeTruthy();
   });
+
+  it('treats first line as title and renders quoted paragraph text', () => {
+    const text = 'Softer Hearts > Better Seeds\n\nPastor Tyler prayed this.\n\n"Lord, we do not want better seeds, we want softer hearts."';
+    const { getByText } = render(
+      <OpenBrainThoughtCard
+        text={text}
+        topMeta="Top"
+      />
+    );
+
+    expect(getByText('Softer Hearts > Better Seeds')).toBeTruthy();
+    expect(getByText('Pastor Tyler prayed this.')).toBeTruthy();
+    expect(getByText('"Lord, we do not want better seeds, we want softer hearts."')).toBeTruthy();
+  });
 });

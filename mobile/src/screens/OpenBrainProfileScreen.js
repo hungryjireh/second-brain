@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
@@ -13,7 +13,7 @@ function initialsFromName(name) {
 }
 
 function mutedTint(seed = '') {
-  const palette = ['#514876', '#495072', '#5a465f', '#425467', '#5c4f46', '#4f4f70'];
+  const palette = ['#1ea37d', '#1f9f7a', '#20a784', '#239a76'];
   const total = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return palette[total % palette.length];
 }
@@ -30,6 +30,12 @@ function formatThoughtDate(value) {
   });
 }
 
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
 export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const username = route.params?.username;
   const [profile, setProfile] = useState(null);
@@ -37,6 +43,33 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [followBusy, setFollowBusy] = useState(false);
+  const thoughtDisplayItems = useMemo(() => {
+    if (error || !profile) return [];
+
+    const today = new Date();
+    const todaysThoughts = [];
+    const otherThoughts = [];
+
+    thoughts.forEach(thought => {
+      const created = new Date(thought.created_at);
+      if (!Number.isNaN(created.getTime()) && isSameLocalDay(created, today)) {
+        todaysThoughts.push(thought);
+        return;
+      }
+      otherThoughts.push(thought);
+    });
+
+    const items = [];
+    if (todaysThoughts.length > 0) {
+      items.push({ type: 'section', id: 'section-today', title: "Today's Thoughts" });
+      todaysThoughts.forEach(thought => items.push({ type: 'thought', thought }));
+    }
+    if (otherThoughts.length > 0) {
+      items.push({ type: 'section', id: 'section-other', title: 'Past Thoughts' });
+      otherThoughts.forEach(thought => items.push({ type: 'thought', thought }));
+    }
+    return items;
+  }, [error, profile, thoughts]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,8 +122,8 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         </View>
       ) : null}
       <FlatList
-        data={!error && profile ? thoughts : []}
-        keyExtractor={item => String(item.id)}
+        data={thoughtDisplayItems}
+        keyExtractor={item => (item.type === 'section' ? item.id : String(item.thought.id))}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={(
           <>
@@ -107,7 +140,14 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                   )}
                   <View style={styles.profileText}>
                     <Text style={styles.username}>@{profile.username}</Text>
-                    <Text style={styles.streak}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
+                    <View style={styles.metaRow}>
+                      <View style={styles.streakPill}>
+                        <Text style={styles.streakPillText}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
+                      </View>
+                      <Text style={styles.thoughtCount}>
+                        {thoughts.length} {thoughts.length === 1 ? 'thought' : 'thoughts'}
+                      </Text>
+                    </View>
                   </View>
                   {!profile.is_self ? (
                     <Pressable
@@ -126,9 +166,19 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
             ) : null}
           </>
         )}
-        renderItem={({ item }) => (
-          <OpenBrainThoughtCard text={item.text} date={formatThoughtDate(item.created_at)} largeBody />
-        )}
+        renderItem={({ item }) => {
+          if (item.type === 'section') {
+            return (
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeader}>{item.title}</Text>
+                <View style={styles.sectionHeaderLine} />
+              </View>
+            );
+          }
+          return (
+            <OpenBrainThoughtCard text={item.thought.text} date={formatThoughtDate(item.thought.created_at)} feedBody />
+          );
+        }}
       />
       <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrainProfile" />
     </View>

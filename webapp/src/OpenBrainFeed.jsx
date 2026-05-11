@@ -70,7 +70,6 @@ function ThoughtCard({ item, onReact, reactingKey, onToggleFollow, followBusyUse
       .replace(/\r\n?/g, '\n')
       .replace(/\u2028|\u2029/g, '\n')
       .replace(/[ \t]+\n/g, '\n')
-      .replace(/\n(?:[ \t]*\n)+/g, '\n')
       .trim()
     : '';
 
