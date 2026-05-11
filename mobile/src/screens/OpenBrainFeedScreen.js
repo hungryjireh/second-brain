@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, Share, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { apiRequest } from '../api';
+import { buildSharedThoughtUrl } from '../share';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
@@ -50,6 +51,20 @@ function randomFrom(list, current = '') {
     next = list[Math.floor(Math.random() * list.length)];
   }
   return next;
+}
+
+async function shareThought(thought) {
+  const text = String(thought?.text || '').trim();
+  if (!text) return;
+  const username = thought?.profile?.username ? `@${thought.profile.username}` : 'Someone';
+  const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
+  const message = sharedUrl
+    ? `${username} shared a thought:\n\n${text}\n\n${sharedUrl}`
+    : `${username} shared a thought:\n\n${text}`;
+  await Share.share({
+    message,
+    ...(sharedUrl ? { url: sharedUrl } : {}),
+  });
 }
 
 function isSameLocalDay(a, b) {
@@ -212,7 +227,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} />
+      <OpenBrainTopMenu navigation={navigation} token={token} />
       <View style={styles.content}>
         <View style={styles.tabs}>
           <Pressable style={[styles.tab, tab === 'following' && styles.tabActive]} onPress={() => setTab('following')}>
@@ -246,6 +261,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
                 item={item.item}
                 date={formatDateTimeLabel(item.item.created_at)}
                 onReact={handleReact}
+                onShare={shareThought}
                 reactingKey={reactingKey}
                 onToggleFollow={handleToggleFollow}
                 followBusyUserId={followBusyUserId}

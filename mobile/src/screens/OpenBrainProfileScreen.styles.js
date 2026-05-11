@@ -6,9 +6,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bgBase,
   },
+  list: {
+    flex: 1,
+    backgroundColor: theme.colors.bgBase,
+  },
   listContent: {
     padding: 16,
     paddingBottom: 32,
+    backgroundColor: theme.colors.bgBase,
   },
   statusState: {
     flex: 1,

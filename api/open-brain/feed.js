@@ -74,6 +74,7 @@ function mapThoughtRows(rows, profileMap) {
     text: typeof row.content?.text === 'string' ? row.content.text : '',
     created_at: row.created_at,
     visibility: row.visibility,
+    share_slug: row.share_slug || null,
     profile: profileMap.get(row.user_id) || null,
   }));
 }
@@ -236,7 +237,7 @@ export default async function handler(req, res) {
     const everyoneRows = await supabaseRequest('/rest/v1/thoughts', {
       method: 'GET',
       query: {
-        select: 'id,user_id,content,created_at,visibility',
+        select: 'id,user_id,content,created_at,visibility,share_slug',
         visibility: 'eq.public',
         order: 'created_at.desc',
         limit: EVERYONE_LIMIT,
@@ -248,7 +249,7 @@ export default async function handler(req, res) {
       ? await supabaseRequest('/rest/v1/thoughts', {
           method: 'GET',
           query: {
-            select: 'id,user_id,content,created_at,visibility',
+            select: 'id,user_id,content,created_at,visibility,share_slug',
             user_id: `in.(${followingIds.join(',')})`,
             visibility: 'eq.public',
             order: 'created_at.desc',
@@ -258,18 +259,10 @@ export default async function handler(req, res) {
         })
       : [];
 
-    const followingTodayByUser = new Map();
-    for (const row of followingRows || []) {
-      const day = getEpochDayInTimezone(new Date(row.created_at), timezone);
-      const isToday = Number.isInteger(nowDay) && Number.isInteger(day) && day === nowDay;
-      if (!isToday || followingTodayByUser.has(row.user_id)) continue;
-      followingTodayByUser.set(row.user_id, row);
-    }
-
     const allProfileIds = Array.from(new Set([
       ...followingIds,
+      ...followingRows.map(row => row.user_id),
       ...everyoneRows.map(row => row.user_id),
-      ...Array.from(followingTodayByUser.keys()),
     ]));
 
     const profiles = allProfileIds.length
@@ -290,46 +283,16 @@ export default async function handler(req, res) {
     }]));
     const everyoneThoughts = mapThoughtRows(everyoneRows, profileMap);
 
-    const followingItems = followingIds.map(id => {
-      const profile = profileMap.get(id) || { id, username: 'unknown', avatar_url: null, streak_count: 0 };
-      const thought = followingTodayByUser.get(id);
-      if (!thought) {
-        return {
-          id: `missing-${id}`,
-          user_id: id,
-          text: '',
-          created_at: null,
-          visibility: 'public',
-          profile,
-          missing_today: true,
-          reactions: {
-            felt_this: 0,
-            me_too: 0,
-            made_me_think: 0,
-            mine: { felt_this: false, me_too: false, made_me_think: false },
-          },
-        };
-      }
-      return {
-        ...mapThoughtRows([thought], profileMap)[0],
-        missing_today: false,
-      };
-    });
+    const followingThoughts = mapThoughtRows(followingRows, profileMap);
 
     const reactionTargets = collectThoughtIds([
       ...everyoneThoughts,
-      ...followingItems.filter(item => !item.missing_today),
+      ...followingThoughts,
     ]);
     const reactionSummary = await loadReactionSummary({ token, thoughtIds: reactionTargets, viewerId: userId });
 
     const everyoneWithReactions = appendReactionData(everyoneThoughts, reactionSummary);
-    const followingWithReactions = followingItems.map(item => {
-      if (item.missing_today) return item;
-      return {
-        ...item,
-        reactions: reactionSummary.get(item.id) || item.reactions,
-      };
-    });
+    const followingWithReactions = appendReactionData(followingThoughts, reactionSummary);
 
     return json(res, 200, {
       following: followingWithReactions,

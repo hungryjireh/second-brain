@@ -3,15 +3,16 @@ import { ScrollView, Text, View } from 'react-native';
 function renderInlineMarkdown(text) {
   const source = String(text ?? '');
   const segments = [];
-  const pattern = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+  const pattern = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|`([^`]+)`)/g;
   let lastIndex = 0;
   let match;
   while ((match = pattern.exec(source)) !== null) {
     if (match.index > lastIndex) segments.push({ key: `text-${match.index}`, type: 'text', text: source.slice(lastIndex, match.index) });
     if (match[2] && match[3]) segments.push({ key: `link-${match.index}`, type: 'link', text: match[2] });
     else if (match[4]) segments.push({ key: `bold-${match.index}`, type: 'bold', text: match[4] });
-    else if (match[5]) segments.push({ key: `italic-${match.index}`, type: 'italic', text: match[5] });
-    else if (match[6]) segments.push({ key: `code-${match.index}`, type: 'code', text: match[6] });
+    else if (match[5]) segments.push({ key: `underline-${match.index}`, type: 'underline', text: match[5] });
+    else if (match[6]) segments.push({ key: `italic-${match.index}`, type: 'italic', text: match[6] });
+    else if (match[7]) segments.push({ key: `code-${match.index}`, type: 'code', text: match[7] });
     lastIndex = pattern.lastIndex;
   }
   if (lastIndex < source.length) segments.push({ key: `text-end-${lastIndex}`, type: 'text', text: source.slice(lastIndex) });
@@ -24,6 +25,7 @@ function MarkdownText({ text, style, styles }) {
     <Text style={style}>
       {segments.map(segment => {
         if (segment.type === 'bold') return <Text key={segment.key} style={styles.markdownBold}>{segment.text}</Text>;
+        if (segment.type === 'underline') return <Text key={segment.key} style={styles.markdownUnderline}>{segment.text}</Text>;
         if (segment.type === 'italic') return <Text key={segment.key} style={styles.markdownItalic}>{segment.text}</Text>;
         if (segment.type === 'code') return <Text key={segment.key} style={styles.markdownCode}>{segment.text}</Text>;
         if (segment.type === 'link') return <Text key={segment.key} style={styles.markdownLink}>{segment.text}</Text>;
@@ -80,6 +82,27 @@ export default function SecondBrainMarkdownBody({ text, styles }) {
           {items.map((item, idx) => (
             <View key={`li-${i}-${idx}`} style={styles.markdownListItem}>
               <Text style={styles.markdownListBullet}>•</Text>
+              <MarkdownText text={item} style={styles.markdownParagraph} styles={styles} />
+            </View>
+          ))}
+        </View>
+      );
+      continue;
+    }
+    const ordered = line.match(/^\d+\.\s+(.+)$/);
+    if (ordered) {
+      const items = [];
+      while (i < lines.length) {
+        const itemMatch = lines[i].match(/^\d+\.\s+(.+)$/);
+        if (!itemMatch) break;
+        items.push(itemMatch[1]);
+        i += 1;
+      }
+      blocks.push(
+        <View key={`ol-${i}`} style={styles.markdownList}>
+          {items.map((item, idx) => (
+            <View key={`oli-${i}-${idx}`} style={styles.markdownListItem}>
+              <Text style={styles.markdownListBullet}>{idx + 1}.</Text>
               <MarkdownText text={item} style={styles.markdownParagraph} styles={styles} />
             </View>
           ))}

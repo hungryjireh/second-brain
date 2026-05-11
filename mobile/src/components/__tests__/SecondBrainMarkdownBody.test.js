@@ -6,6 +6,7 @@ const styles = {
   markdownParagraph: {},
   markdownHeading: {},
   markdownBold: {},
+  markdownUnderline: {},
   markdownItalic: {},
   markdownCode: {},
   markdownLink: {},
@@ -23,9 +24,11 @@ describe('SecondBrainMarkdownBody', () => {
   it('renders heading, inline markdown, lists, quotes, and code blocks', () => {
     const text = [
       '# Heading',
-      'Plain **bold** *italic* `code` [link](https://example.com)',
+      'Plain **bold** __underlined__ *italic* `code` [link](https://example.com)',
       '- One',
       '- Two',
+      '1. First',
+      '2. Second',
       '> Quoted line',
       '```',
       'const x = 1;',
@@ -36,11 +39,14 @@ describe('SecondBrainMarkdownBody', () => {
 
     expect(getByText('Heading')).toBeTruthy();
     expect(getByText('bold')).toBeTruthy();
+    expect(getByText('underlined')).toBeTruthy();
     expect(getByText('italic')).toBeTruthy();
     expect(getByText('code')).toBeTruthy();
     expect(getByText('link')).toBeTruthy();
     expect(getByText('One')).toBeTruthy();
     expect(getByText('Two')).toBeTruthy();
+    expect(getByText('First')).toBeTruthy();
+    expect(getByText('Second')).toBeTruthy();
     expect(getByText('Quoted line')).toBeTruthy();
     expect(getByText('const x = 1;')).toBeTruthy();
   });

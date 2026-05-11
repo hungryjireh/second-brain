@@ -329,6 +329,7 @@ const styles = StyleSheet.create({
   markdownParagraph: { color: theme.colors.textPrimary, fontSize: 13, lineHeight: 20, flexShrink: 1 },
   markdownHeading: { fontWeight: '700' },
   markdownBold: { color: theme.colors.textPrimary, fontWeight: '700' },
+  markdownUnderline: { color: theme.colors.textPrimary, textDecorationLine: 'underline' },
   markdownItalic: { color: theme.colors.textPrimary, fontStyle: 'italic' },
   markdownCode: { color: theme.colors.textPrimary, backgroundColor: 'rgba(255,255,255,0.07)' },
   markdownLink: { color: '#86b7ff', textDecorationLine: 'underline' },

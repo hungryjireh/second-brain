@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import styles from './OpenBrainThoughtComposer.styles';
 import { theme } from '../theme';
 
 function normalizeThoughtText(text) {
@@ -38,232 +39,47 @@ function parsePostedThought(text) {
   return { title, blocks, hasTitle: true };
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 14 },
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    minWidth: 0,
-  },
-  eyebrow: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 11,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    flex: 1,
-    flexShrink: 1,
-  },
-  streak: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 11,
-  },
-  heading: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 29,
-    lineHeight: 34,
-    marginTop: 12,
-    flexShrink: 1,
-  },
-  promptRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
-    minWidth: 0,
-  },
-  prompt: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-    fontStyle: 'italic',
-    flex: 1,
-    flexShrink: 1,
-  },
-  refreshButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    backgroundColor: theme.colors.bgRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  refreshText: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-  },
-  divider: {
-    flex: 1,
-    borderTopColor: theme.colors.border,
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 12,
-  },
-  postedScroll: {
-    flex: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSurface,
-    minHeight: 120,
-  },
-  postedScrollContent: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  input: {
-    backgroundColor: theme.colors.bgSurface,
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 18,
-    lineHeight: 27,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  inputMultiline: {
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  postedText: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 16,
-    lineHeight: 23,
-  },
-  postedBlocks: {
-    gap: 10,
-  },
-  postedTitle: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSerifDisplay_400Regular',
-    fontSize: 34,
-    lineHeight: 40,
-    marginBottom: 12,
-  },
-  postedQuoteBlock: {
-    borderLeftWidth: 3,
-    borderLeftColor: '#1d9e75',
-    paddingLeft: 10,
-  },
-  postedQuoteText: {
-    color: theme.colors.textPrimary,
-    fontStyle: 'italic',
-    opacity: 0.82,
-  },
-  footer: {
-    borderTopColor: theme.colors.border,
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    minWidth: 0,
-    flexWrap: 'wrap',
-  },
-  remaining: {
-    color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 13,
-  },
-  visibilityButton: {
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 999,
-    backgroundColor: theme.colors.bgRaised,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 5,
-    paddingLeft: 6,
-    paddingRight: 10,
-    maxWidth: '100%',
-  },
-  toggleTrack: {
-    width: 34,
-    height: 18,
-    borderRadius: 999,
-    justifyContent: 'center',
-  },
-  toggleThumb: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  visibilityText: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 12,
-    flexShrink: 1,
-  },
-  button: {
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    backgroundColor: 'transparent',
-    borderRadius: 10,
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  buttonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  buttonText: {
-    color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: 14,
-    lineHeight: 16,
-  },
-  helperText: {
-    color: theme.colors.textMuted,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    textAlign: 'right',
-    marginTop: 10,
-  },
-  error: {
-    color: theme.colors.danger,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-});
+function applyInlineMarkdown(text, selection, marker, placeholder) {
+  const current = String(text || '');
+  const start = Math.max(0, selection?.start ?? current.length);
+  const end = Math.max(start, selection?.end ?? start);
+  const before = current.slice(0, start);
+  const selected = current.slice(start, end);
+  const after = current.slice(end);
+  const token = String(marker || '');
+  const seed = String(placeholder || 'text');
+
+  if (start === end) {
+    return {
+      text: `${before}${token}${seed}${token}${after}`,
+      selection: { start: start + token.length, end: start + token.length + seed.length },
+    };
+  }
+
+  return {
+    text: `${before}${token}${selected}${token}${after}`,
+    selection: { start: start + token.length, end: end + token.length },
+  };
+}
+
+function applyLinePrefix(text, selection, prefixBuilder) {
+  const current = String(text || '');
+  const rawStart = Math.max(0, selection?.start ?? current.length);
+  const rawEnd = Math.max(rawStart, selection?.end ?? rawStart);
+  const lineStart = current.lastIndexOf('\n', Math.max(0, rawStart - 1)) + 1;
+  const lineEndIndex = current.indexOf('\n', rawEnd);
+  const lineEnd = lineEndIndex === -1 ? current.length : lineEndIndex;
+  const block = current.slice(lineStart, lineEnd);
+  const lines = block.split('\n');
+  const formatted = lines.map((line, idx) => `${prefixBuilder(idx)}${line}`);
+  const nextBlock = formatted.join('\n');
+  const before = current.slice(0, lineStart);
+  const after = current.slice(lineEnd);
+  return {
+    text: `${before}${nextBlock}${after}`,
+    selection: { start: lineStart, end: lineStart + nextBlock.length },
+  };
+}
 
 export default function OpenBrainThoughtComposer({
   value,
@@ -292,12 +108,31 @@ export default function OpenBrainThoughtComposer({
   const minInputHeight = 120;
   const maxInputHeight = useMemo(() => Math.max(minInputHeight, Math.floor(viewportHeight * 0.52)), [viewportHeight]);
   const [contentHeight, setContentHeight] = useState(minInputHeight);
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
   const remaining = typeof maxLength === 'number' ? maxLength - String(value || '').length : null;
   const submitDisabled = disabled || isPosted;
   const trackActive = visibility === 'public';
   const clampedInputHeight = Math.min(Math.max(contentHeight, minInputHeight), maxInputHeight);
   const shouldScrollInput = clampedInputHeight >= maxInputHeight;
   const postedThought = useMemo(() => parsePostedThought(value), [value]);
+  const handleFormatPress = (marker, placeholder) => {
+    if (disabled || isPosted) return;
+    const next = applyInlineMarkdown(value, selection, marker, placeholder);
+    onChangeText(next.text);
+    setSelection(next.selection);
+  };
+  const handleBulletListPress = () => {
+    if (disabled || isPosted) return;
+    const next = applyLinePrefix(value, selection, () => '- ');
+    onChangeText(next.text);
+    setSelection(next.selection);
+  };
+  const handleNumberedListPress = () => {
+    if (disabled || isPosted) return;
+    const next = applyLinePrefix(value, selection, index => `${index + 1}. `);
+    onChangeText(next.text);
+    setSelection(next.selection);
+  };
 
   return (
     <View style={[styles.card, { marginBottom: buttonMarginBottom, flex: 1 }]}>
@@ -320,6 +155,60 @@ export default function OpenBrainThoughtComposer({
           </View>
         )}
         <View style={styles.divider}>
+          {!isPosted && (
+            <View style={styles.formatToolbar}>
+              <Pressable
+                style={styles.formatButton}
+                onPress={() => handleFormatPress('**', 'bold')}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel="Bold"
+                accessibilityHint="Formats selected text as bold"
+              >
+                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>B</Text>
+              </Pressable>
+              <Pressable
+                style={styles.formatButton}
+                onPress={() => handleFormatPress('*', 'italic')}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel="Italic"
+                accessibilityHint="Formats selected text as italic"
+              >
+                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>I</Text>
+              </Pressable>
+              <Pressable
+                style={styles.formatButton}
+                onPress={() => handleFormatPress('__', 'underline')}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel="Underline"
+                accessibilityHint="Formats selected text as underlined"
+              >
+                <Text style={[styles.formatButtonText, styles.formatButtonTextUnderline, disabled && { color: theme.colors.textSecondary }]}>U</Text>
+              </Pressable>
+              <Pressable
+                style={styles.formatButton}
+                onPress={handleBulletListPress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel="Bulleted list"
+                accessibilityHint="Formats selected lines as a bulleted list"
+              >
+                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>•</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.formatButton, styles.formatButtonWide]}
+                onPress={handleNumberedListPress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel="Numbered list"
+                accessibilityHint="Formats selected lines as a numbered list"
+              >
+                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>1.</Text>
+              </Pressable>
+            </View>
+          )}
           {isPosted ? (
             <ScrollView style={styles.postedScroll} contentContainerStyle={styles.postedScrollContent} showsVerticalScrollIndicator={false}>
               <View style={styles.postedBlocks}>
@@ -335,6 +224,8 @@ export default function OpenBrainThoughtComposer({
             <TextInput
               value={value}
               onChangeText={onChangeText}
+              selection={selection}
+              onSelectionChange={event => setSelection(event.nativeEvent.selection)}
               placeholder={placeholder}
               placeholderTextColor={theme.colors.textSecondary}
               style={[styles.input, multiline && styles.inputMultiline, multiline && { height: clampedInputHeight }]}

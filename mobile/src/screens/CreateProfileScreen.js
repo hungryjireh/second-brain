@@ -37,7 +37,7 @@ export default function CreateProfileScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} />
+      <OpenBrainTopMenu navigation={navigation} token={token} />
       <View style={styles.content}>
         <Text style={styles.title}>Create your OpenBrain profile</Text>
         <TextInput value={username} onChangeText={setUsername} placeholder="Username" placeholderTextColor={theme.colors.textSecondary} style={styles.input} maxLength={24} autoCapitalize="none" />

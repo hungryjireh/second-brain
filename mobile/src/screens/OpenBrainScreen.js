@@ -112,7 +112,7 @@ export default function OpenBrainScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} />
+      <OpenBrainTopMenu navigation={navigation} token={token} />
       <View style={styles.composerWrap}>
         <OpenBrainThoughtComposer
           value={draft}

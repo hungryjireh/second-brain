@@ -57,4 +57,99 @@ describe('OpenBrainThoughtComposer', () => {
     expect(getByText('Only one line')).toBeTruthy();
     expect(getAllByText('Only one line').length).toBe(1);
   });
+
+  it('applies bold markdown from the toolbar to selected text', () => {
+    const onChangeText = jest.fn();
+    const { getByPlaceholderText, getAllByText } = render(
+      <OpenBrainThoughtComposer
+        value="hello world"
+        onChangeText={onChangeText}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={() => {}}
+      />
+    );
+
+    const input = getByPlaceholderText('Type here');
+    fireEvent(input, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 5 } } });
+    fireEvent.press(getAllByText('B')[0]);
+
+    expect(onChangeText).toHaveBeenCalledWith('**hello** world');
+  });
+
+  it('applies italic markdown from the toolbar to selected text', () => {
+    const onChangeText = jest.fn();
+    const { getByPlaceholderText, getAllByText } = render(
+      <OpenBrainThoughtComposer
+        value="hello world"
+        onChangeText={onChangeText}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={() => {}}
+      />
+    );
+
+    const input = getByPlaceholderText('Type here');
+    fireEvent(input, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 5 } } });
+    fireEvent.press(getAllByText('I')[0]);
+
+    expect(onChangeText).toHaveBeenCalledWith('*hello* world');
+  });
+
+  it('applies underline markdown from the toolbar to selected text', () => {
+    const onChangeText = jest.fn();
+    const { getByPlaceholderText, getAllByText } = render(
+      <OpenBrainThoughtComposer
+        value="hello world"
+        onChangeText={onChangeText}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={() => {}}
+      />
+    );
+
+    const input = getByPlaceholderText('Type here');
+    fireEvent(input, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 5 } } });
+    fireEvent.press(getAllByText('U')[0]);
+
+    expect(onChangeText).toHaveBeenCalledWith('__hello__ world');
+  });
+
+  it('applies bullet list markdown from the toolbar to selected lines', () => {
+    const onChangeText = jest.fn();
+    const { getByPlaceholderText, getAllByText } = render(
+      <OpenBrainThoughtComposer
+        value={'first line\nsecond line'}
+        onChangeText={onChangeText}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={() => {}}
+      />
+    );
+
+    const input = getByPlaceholderText('Type here');
+    fireEvent(input, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 22 } } });
+    fireEvent.press(getAllByText('•')[0]);
+
+    expect(onChangeText).toHaveBeenCalledWith('- first line\n- second line');
+  });
+
+  it('applies numbered list markdown from the toolbar to selected lines', () => {
+    const onChangeText = jest.fn();
+    const { getByPlaceholderText, getAllByText } = render(
+      <OpenBrainThoughtComposer
+        value={'first line\nsecond line'}
+        onChangeText={onChangeText}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={() => {}}
+      />
+    );
+
+    const input = getByPlaceholderText('Type here');
+    fireEvent(input, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 22 } } });
+    fireEvent.press(getAllByText('1.')[0]);
+
+    expect(onChangeText).toHaveBeenCalledWith('1. first line\n2. second line');
+  });
 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, Share, Text, View } from 'react-native';
 import { apiRequest } from '../api';
+import { buildSharedThoughtUrl } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
@@ -34,6 +35,20 @@ function isSameLocalDay(a, b) {
   return a.getFullYear() === b.getFullYear()
     && a.getMonth() === b.getMonth()
     && a.getDate() === b.getDate();
+}
+
+async function shareThought(thought, username) {
+  const text = String(thought?.text || '').trim();
+  if (!text) return;
+  const author = username ? `@${username}` : 'Someone';
+  const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
+  const message = sharedUrl
+    ? `${author} shared a thought:\n\n${text}\n\n${sharedUrl}`
+    : `${author} shared a thought:\n\n${text}`;
+  await Share.share({
+    message,
+    ...(sharedUrl ? { url: sharedUrl } : {}),
+  });
 }
 
 export default function OpenBrainProfileScreen({ token, route, navigation }) {
@@ -115,7 +130,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} />
+      <OpenBrainTopMenu navigation={navigation} token={token} />
       {loading ? (
         <View style={styles.statusState}>
           <Text style={styles.muted}>Loading profile...</Text>
@@ -123,6 +138,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       ) : null}
       <FlatList
         data={thoughtDisplayItems}
+        style={styles.list}
         keyExtractor={item => (item.type === 'section' ? item.id : String(item.thought.id))}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={(
@@ -176,7 +192,13 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
             );
           }
           return (
-            <OpenBrainThoughtCard text={item.thought.text} date={formatThoughtDate(item.thought.created_at)} feedBody />
+            <OpenBrainThoughtCard
+              text={item.thought.text}
+              date={formatThoughtDate(item.thought.created_at)}
+              feedBody
+              transparentCard
+              onShare={() => shareThought(item.thought, profile?.username)}
+            />
           );
         }}
       />

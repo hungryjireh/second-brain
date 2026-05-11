@@ -18,6 +18,8 @@ import OpenBrainFeedScreen from './src/screens/OpenBrainFeedScreen';
 import CreateProfileScreen from './src/screens/CreateProfileScreen';
 import OpenBrainProfileScreen from './src/screens/OpenBrainProfileScreen';
 import UpdateProfileScreen from './src/screens/UpdateProfileScreen';
+import OpenBrainUserSearchScreen from './src/screens/OpenBrainUserSearchScreen';
+import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
@@ -140,6 +142,12 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen name="UpdateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <UpdateProfileScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="OpenBrainUserSearch" options={{ headerShown: false }}>
+                {props => <OpenBrainUserSearchScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="OpenBrainSearch" options={{ headerShown: false }}>
+                {props => <OpenBrainSearchScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="SharedThought" component={SharedThoughtScreen} options={{ headerShown: false }} />
             </>

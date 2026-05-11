@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     const rows = await supabaseRequest('/rest/v1/thoughts', {
       method: 'GET',
       query: {
-        select: 'id,content,created_at,visibility',
+        select: 'id,content,created_at,visibility,share_slug',
         user_id: `eq.${targetUserId}`,
         visibility: 'eq.public',
         order: 'created_at.desc',
@@ -93,6 +93,7 @@ export default async function handler(req, res) {
       text: typeof row.content?.text === 'string' ? row.content.text : '',
       created_at: row.created_at,
       visibility: row.visibility,
+      share_slug: row.share_slug || null,
     }));
 
     return json(res, 200, { thoughts });

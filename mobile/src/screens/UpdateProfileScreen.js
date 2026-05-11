@@ -87,7 +87,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} />
+      <OpenBrainTopMenu navigation={navigation} token={token} />
       <View style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.eyebrow}>Open-brain profile</Text>
