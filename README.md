@@ -225,7 +225,7 @@ All protected routes require `Authorization: Bearer <token>`.
 |---|---|---|---|
 | `POST` | `/api/auth/login` | `{ "username": "...", "password": "..." }` | Returns auth token for webapp session |
 | `GET` | `/api/entries` | `?category=<string>&cursor=<opaque>&limit=<1-100>` | List entries (optional category filter + cursor pagination) |
-| `POST` | `/api/entries` | `{ "description": "...", "priority?": 0-10, "tags?": ["..."] }` (also accepts `text` alias) | Classify and create one entry |
+| `POST` | `/api/entries` | `{ "description": "...", "category?": "reminder\|todo\|thought\|note", "priority?": 0-10, "tags?": ["..."] }` (also accepts `text` alias) | Classify and create one entry (`tags` in request override LLM-suggested tags) |
 | `PATCH` | `/api/entries?id=<number>` | `{ "category?": "...", "title?": "...", "summary?": "...", "description?": "...", "content?": "...", "remind_at?": <unix|null>, "priority?": 0-10, "is_archived?": boolean, "tags?": ["..."] }` | Update one entry |
 | `DELETE` | `/api/entries` | `?id=<number>` | Delete entry by ID |
 | `GET` | `/api/settings` | — | Fetch current user settings (currently timezone) |

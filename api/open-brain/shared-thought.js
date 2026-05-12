@@ -1,47 +1,4 @@
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
-function requireSupabaseEnv() {
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error('Missing Supabase env configuration');
-  }
-}
-
-async function supabasePublicRequest(path, { query } = {}) {
-  requireSupabaseEnv();
-
-  const url = new URL(path, SUPABASE_URL);
-  for (const [key, value] of Object.entries(query || {})) {
-    if (value === undefined || value === null) continue;
-    url.searchParams.set(key, String(value));
-  }
-
-  const res = await fetch(url, {
-    method: 'GET',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-    },
-  });
-
-  const raw = await res.text();
-  const data = raw ? JSON.parse(raw) : null;
-
-  if (!res.ok) {
-    const err = new Error(data?.message || `Supabase request failed (${res.status})`);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
-}
-
+import { json, supabaseRequest } from './helpers.js';
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return json(res, 405, { error: 'Method not allowed' });
@@ -50,7 +7,8 @@ export default async function handler(req, res) {
   if (!slug) return json(res, 400, { error: 'slug is required' });
 
   try {
-    const thoughtRows = await supabasePublicRequest('/rest/v1/thoughts', {
+    const thoughtRows = await supabaseRequest('/rest/v1/thoughts', {
+      method: 'GET',
       query: {
         select: 'id,user_id,content,visibility,created_at,share_slug',
         share_slug: `eq.${slug}`,
@@ -63,7 +21,8 @@ export default async function handler(req, res) {
       return json(res, 404, { error: 'not found' });
     }
 
-    const profileRows = await supabasePublicRequest('/rest/v1/profiles', {
+    const profileRows = await supabaseRequest('/rest/v1/profiles', {
+      method: 'GET',
       query: {
         select: 'username',
         id: `eq.${thought.user_id}`,

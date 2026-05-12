@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import OpenBrainThoughtCard from '../OpenBrainThoughtCard';
 
 describe('OpenBrainThoughtCard', () => {
@@ -49,5 +49,28 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText('Softer Hearts > Better Seeds')).toBeTruthy();
     expect(getByText('Pastor Tyler prayed this.')).toBeTruthy();
     expect(getByText('"Lord, we do not want better seeds, we want softer hearts."')).toBeTruthy();
+  });
+
+  it('calls add to second brain handler from action button and disables after add', async () => {
+    const onAddToSecondBrain = jest.fn();
+    const item = {
+      id: 1,
+      text: 'A thought to save',
+      profile: { username: 'jireh', streak_count: 1, is_self: true },
+    };
+    const { getByLabelText } = render(
+      <OpenBrainThoughtCard
+        item={item}
+        onShare={jest.fn()}
+        onAddToSecondBrain={onAddToSecondBrain}
+      />
+    );
+
+    fireEvent.press(getByLabelText('Add to SecondBrain'));
+    expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
+
+    await waitFor(() => expect(getByLabelText('Added to SecondBrain')).toBeTruthy());
+    fireEvent.press(getByLabelText('Added to SecondBrain'));
+    expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, Share, Text, View } from 'react-native';
-import { apiRequest } from '../api';
+import { Alert, FlatList, Image, Pressable, Share, Text, View } from 'react-native';
+import { apiRequest, sendFollowNotification } from '../api';
 import { buildSharedThoughtUrl } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
@@ -120,11 +120,29 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(profile.id)}`, { method: 'DELETE', token });
       } else {
         await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: profile.id } });
+        await sendFollowNotification(token, profile.id);
       }
     } catch {
       setProfile(prev => (prev ? { ...prev, is_following: currentlyFollowing } : prev));
     } finally {
       setFollowBusy(false);
+    }
+  }
+
+  async function addToSecondBrain(thought) {
+    const thoughtText = String(thought?.text || '').trim();
+    if (!thoughtText) return;
+    const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
+    const description = `Thought taken from @${username}:\n\n${thoughtText}`;
+    try {
+      await apiRequest('/entries', {
+        method: 'POST',
+        token,
+        body: { description, category: 'thought', tags: ['openbrain'] },
+      });
+      Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
+    } catch (err) {
+      Alert.alert('Add to SecondBrain', err.message || 'Unable to save thought.');
     }
   }
 
@@ -198,6 +216,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
               feedBody
               transparentCard
               onShare={() => shareThought(item.thought, profile?.username)}
+              onAddToSecondBrain={addToSecondBrain}
             />
           );
         }}

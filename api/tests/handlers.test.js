@@ -320,3 +320,33 @@ test('open-brain public-thoughts handler allows anonymous lookup by user_id', as
   assert.equal(Array.isArray(jsonBody(res)?.thoughts), true);
   assert.equal(jsonBody(res)?.thoughts?.[0]?.text, 'hello world');
 });
+
+test('open-brain notifications handler: OPTIONS, method, auth, and payload guards', async () => {
+  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'open-brain-notifications-guards');
+
+  const optionsRes = createRes();
+  await notificationsHandler(createReq({ method: 'OPTIONS' }), optionsRes);
+  assert.equal(optionsRes.statusCode, 204);
+
+  const wrongMethodRes = createRes();
+  await notificationsHandler(createReq({ method: 'DELETE' }), wrongMethodRes);
+  assert.equal(wrongMethodRes.statusCode, 405);
+  assert.deepEqual(jsonBody(wrongMethodRes), { error: 'Method not allowed' });
+
+  const noTokenRes = createRes();
+  await notificationsHandler(createReq({ method: 'POST', body: { user_id: '11111111-1111-4111-8111-111111111111', type: 'follow' } }), noTokenRes);
+  assert.equal(noTokenRes.statusCode, 401);
+  assert.deepEqual(jsonBody(noTokenRes), { error: 'missing bearer token' });
+
+  const invalidPayloadRes = createRes();
+  await notificationsHandler(
+    createReq({
+      method: 'POST',
+      headers: { authorization: 'Bearer obviously-invalid-token' },
+      body: { user_id: 'not-a-uuid', type: 'bad' },
+    }),
+    invalidPayloadRes
+  );
+  assert.equal(invalidPayloadRes.statusCode, 401);
+  assert.equal(typeof jsonBody(invalidPayloadRes)?.error, 'string');
+});

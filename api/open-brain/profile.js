@@ -1,67 +1,8 @@
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../../lib/auth.js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
-function requireSupabaseEnv() {
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error('Missing Supabase env configuration');
-  }
-}
-
-async function supabaseProfilesRequest(path, { method = 'GET', query, body, authToken, prefer } = {}) {
-  requireSupabaseEnv();
-  const url = new URL(path, SUPABASE_URL);
-
-  for (const [key, value] of Object.entries(query || {})) {
-    if (value === undefined || value === null) continue;
-    url.searchParams.set(key, String(value));
-  }
-
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${authToken}`,
-  };
-
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  if (prefer) {
-    headers.Prefer = prefer;
-  }
-
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  const raw = await res.text();
-  const data = raw ? JSON.parse(raw) : null;
-
-  if (!res.ok) {
-    const err = new Error(data?.message || `Supabase request failed (${res.status})`);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
-}
+import { json, supabaseRequest, isUuid } from './helpers.js';
 
 function isValidUsername(value) {
   return /^[a-z0-9_]{3,24}$/i.test(value);
-}
-
-function isUuid(value) {
-  return UUID_REGEX.test(String(value || ''));
 }
 
 export default async function handler(req, res) {
@@ -76,7 +17,7 @@ export default async function handler(req, res) {
       const requestedUsername = String(req.query?.username || '').trim();
       const usingUsernameLookup = !requestedUserId && requestedUsername;
       let authUserId = null;
-      let authToken = SUPABASE_PUBLISHABLE_KEY;
+      let authToken = undefined;
 
       if (token) {
         try {
@@ -93,7 +34,7 @@ export default async function handler(req, res) {
 
       const targetId = isUuid(requestedUserId) ? requestedUserId : authUserId;
       if (!usingUsernameLookup && !targetId) return json(res, 401, { error: 'invalid auth user' });
-      const rows = await supabaseProfilesRequest('/rest/v1/profiles', {
+      const rows = await supabaseRequest('/rest/v1/profiles', {
         method: 'GET',
         query: usingUsernameLookup
           ? { select: 'id,username,avatar_url,streak_count,last_posted_at,timezone', username: `eq.${requestedUsername}`, limit: 1 }
@@ -107,7 +48,7 @@ export default async function handler(req, res) {
       let isFollowing = false;
 
       if (authUserId && !isSelf) {
-        const followRows = await supabaseProfilesRequest('/rest/v1/follows', {
+        const followRows = await supabaseRequest('/rest/v1/follows', {
           method: 'GET',
           query: {
             select: 'following_id',
@@ -153,7 +94,7 @@ export default async function handler(req, res) {
         return json(res, 400, { error: 'avatar_url must be a valid http(s) URL' });
       }
 
-      const rows = await supabaseProfilesRequest('/rest/v1/profiles', {
+      const rows = await supabaseRequest('/rest/v1/profiles', {
         method: 'POST',
         query: { on_conflict: 'id' },
         body: [{
@@ -176,7 +117,7 @@ export default async function handler(req, res) {
       return json(res, 400, { error: 'avatar_url must be a valid http(s) URL' });
     }
 
-    const rows = await supabaseProfilesRequest('/rest/v1/profiles', {
+    const rows = await supabaseRequest('/rest/v1/profiles', {
       method: 'PATCH',
       query: { id: `eq.${userId}` },
       body: {

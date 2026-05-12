@@ -29,8 +29,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pillActive: { borderColor: theme.colors.brand, backgroundColor: theme.colors.brandDim },
+  pillDisabled: { opacity: 0.55 },
   pillText: { fontSize: 11, color: theme.colors.textSecondary },
   pillTextActive: { color: theme.colors.brandText },
+  pillTextDisabled: { color: theme.colors.textMuted },
   statCard: {
     width: '23.7%',
     minWidth: 70,

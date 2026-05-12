@@ -8,6 +8,12 @@ import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
 import SwipeToDeleteRow from '../components/SwipeToDeleteRow';
+import {
+  CATEGORIES,
+  GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
+  MAX_ENTRY_TAGS,
+  MAX_USER_TAGS,
+} from '../constants/tags';
 import styles, { SWIPE_ACTION_WIDTH } from './SecondBrainScreen.styles';
 
 const PRIORITY_LEVELS = [
@@ -24,8 +30,6 @@ const STATS = [
 ];
 
 const TYPEBAR_MIN_HEIGHT = 38;
-const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
-const MAX_ENTRY_TAGS = 10;
 
 function parseImportedConversationFromEntry(entry) {
   const rawText = String(entry?.raw_text ?? '').trim();
@@ -58,7 +62,7 @@ function parseTagInput(input) {
   const seen = new Set();
   return String(input || '')
     .split(',')
-    .map(part => part.trim().replace(/^#/, '').toLowerCase())
+    .map(part => normalizeTagValue(part))
     .filter(tag => {
       if (!tag || seen.has(tag)) return false;
       seen.add(tag);
@@ -68,7 +72,30 @@ function parseTagInput(input) {
 }
 
 function normalizeTagValue(input) {
-  return String(input || '').trim().replace(/^#/, '').toLowerCase();
+  return String(input || '')
+    .trim()
+    .replace(/^#+/, '')
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 32);
+}
+
+function sortTagsByUsage(tags, usageCounts) {
+  return [...tags].sort((a, b) => {
+    const aHasEntries = usageCounts.has(a);
+    const bHasEntries = usageCounts.has(b);
+    if (aHasEntries !== bHasEntries) return aHasEntries ? -1 : 1;
+    return a.localeCompare(b, 'en', { sensitivity: 'base' });
+  });
+}
+
+function countBillableGlobalTags(tags) {
+  return new Set(
+    tags
+      .map(tag => normalizeTagValue(tag))
+      .filter(tag => tag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag))
+  ).size;
 }
 
 function getPriorityLevel(priority) {
@@ -158,6 +185,8 @@ function getTimezoneOptions() {
 export default function SecondBrainScreen({ token }) {
   const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState([]);
+  const [userTags, setUserTags] = useState([]);
+  const [userTagsLoaded, setUserTagsLoaded] = useState(false);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
@@ -170,6 +199,7 @@ export default function SecondBrainScreen({ token }) {
   const [editPriority, setEditPriority] = useState('0');
   const [editTags, setEditTags] = useState('');
   const [editTagDraft, setEditTagDraft] = useState('');
+  const [editTagError, setEditTagError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [activeCategory, setActiveCategory] = useState('');
   const [activePriorityLevel, setActivePriorityLevel] = useState('');
@@ -203,6 +233,13 @@ export default function SecondBrainScreen({ token }) {
       const data = await apiRequest('/entries?limit=60', { token });
       const list = Array.isArray(data.entries) ? data.entries : Array.isArray(data) ? data : [];
       setEntries(list);
+
+      const tagsData = await apiRequest('/tags', { token });
+      const normalizedUserTags = (Array.isArray(tagsData?.tags) ? tagsData.tags : [])
+        .map(tag => normalizeTagValue(tag))
+        .filter(Boolean);
+      setUserTags(Array.from(new Set(normalizedUserTags)).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
+      setUserTagsLoaded(true);
     } catch (err) {
       setError(err.message);
     }
@@ -413,6 +450,7 @@ export default function SecondBrainScreen({ token }) {
     setEditPriority(String(Number.isInteger(entry.priority) ? entry.priority : 0));
     setEditTags(tagsToInput(entry.tags));
     setEditTagDraft('');
+    setEditTagError('');
   }
 
   function closeEdit() {
@@ -425,6 +463,7 @@ export default function SecondBrainScreen({ token }) {
     setEditPriority('0');
     setEditTags('');
     setEditTagDraft('');
+    setEditTagError('');
   }
 
   function openEntry(entry) {
@@ -494,6 +533,14 @@ export default function SecondBrainScreen({ token }) {
   function addEditTag() {
     const nextTag = normalizeTagValue(editTagDraft);
     if (!nextTag) return;
+    setEditTagError('');
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
+    const isNewBillableTag = isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
+    if (isNewBillableTag && countBillableGlobalTags(globalTags) >= MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return;
+    }
     const merged = parseTagInput([...parseTagInput(editTags), nextTag].join(','));
     setEditTags(merged.join(','));
     setEditTagDraft('');
@@ -501,15 +548,31 @@ export default function SecondBrainScreen({ token }) {
 
   function removeEditTag(tagToRemove) {
     setEditTags(parseTagInput(editTags).filter(tag => tag !== tagToRemove).join(','));
+    setEditTagError('');
+  }
+
+  function validateGlobalTagLimit(nextTags) {
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const newBillableGlobalTags = nextTags.filter(tag => (
+      !existingGlobalTags.has(tag) && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag)
+    ));
+    if (newBillableGlobalTags.length === 0) return true;
+    if (countBillableGlobalTags(globalTags) + newBillableGlobalTags.length > MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return false;
+    }
+    return true;
   }
 
   async function saveEdit() {
     if (!editingEntry || !editText.trim()) return;
     const priority = Number(editPriority);
+    const tags = parseTagInput(editTags);
     if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
       setError('Priority must be an integer from 0 to 10.');
       return;
     }
+    if (!validateGlobalTagLimit(tags)) return;
     setBusyId(editingEntry.id);
     try {
       const updated = await apiRequest(`/entries?id=${editingEntry.id}`, {
@@ -522,7 +585,7 @@ export default function SecondBrainScreen({ token }) {
           description: editText.trim(),
           remind_at: editCategory === 'reminder' ? datetimeLocalToUnix(editRemindAt) : null,
           priority,
-          tags: parseTagInput(editTags),
+          tags,
         },
       });
       setEntries(prev => prev.map(item => (item.id === editingEntry.id ? updated : item)));
@@ -559,17 +622,26 @@ export default function SecondBrainScreen({ token }) {
     return list;
   }, [entries, showArchived, activeCategory, activePriorityLevel, activeTag]);
 
-  const availableTags = useMemo(() => {
-    const unique = new Set();
+  const tagUsageCounts = useMemo(() => {
+    const counts = new Map();
     for (const entry of entries) {
       if (!Array.isArray(entry.tags)) continue;
       for (const tag of entry.tags) {
         const value = String(tag).trim();
-        if (value) unique.add(value);
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
-    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+    return counts;
   }, [entries]);
+
+  const availableTags = useMemo(() => {
+    return Array.from(tagUsageCounts.keys()).sort((a, b) => a.localeCompare(b));
+  }, [tagUsageCounts]);
+  const globalTags = useMemo(() => {
+    if (!userTagsLoaded) return availableTags;
+    const sortedUserTags = sortTagsByUsage(userTags, tagUsageCounts);
+    return sortedUserTags.length > 0 ? sortedUserTags : availableTags;
+  }, [userTagsLoaded, userTags, availableTags, tagUsageCounts]);
 
   const groupedEntries = useMemo(() => groupByDate(visibleEntries), [visibleEntries]);
   const timezoneOptions = useMemo(() => {
@@ -643,16 +715,19 @@ export default function SecondBrainScreen({ token }) {
         </View>
 
         <View style={styles.filterRow}>
-          <Text style={styles.filterRowLabel}>{`TAGS (${availableTags.length}/10)`}</Text>
-          {availableTags.map(tag => {
+          <Text style={styles.filterRowLabel}>{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
+          {globalTags.map(tag => {
             const isActive = activeTag.toLowerCase() === tag.toLowerCase();
+            const isDisabled = !tagUsageCounts.has(tag);
             return (
               <Pressable
                 key={tag}
-                style={[styles.pill, isActive && styles.pillActive]}
+                testID={`tag-filter-${tag.toLowerCase()}`}
+                style={[styles.pill, isActive && styles.pillActive, isDisabled && styles.pillDisabled]}
+                disabled={isDisabled}
                 onPress={() => setActiveTag(prev => (prev.toLowerCase() === tag.toLowerCase() ? '' : tag))}
               >
-                <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{`#${tag}`}</Text>
+                <Text style={[styles.pillText, isActive && styles.pillTextActive, isDisabled && styles.pillTextDisabled]}>{`#${tag}`}</Text>
               </Pressable>
             );
           })}
@@ -711,7 +786,10 @@ export default function SecondBrainScreen({ token }) {
               <View style={styles.tagInputRow}>
                 <TextInput
                   value={editTagDraft}
-                  onChangeText={setEditTagDraft}
+                  onChangeText={value => {
+                    setEditTagDraft(value);
+                    setEditTagError('');
+                  }}
                   style={[styles.editField, styles.tagInput]}
                   placeholder={parseTagInput(editTags).length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
                   placeholderTextColor={theme.colors.textSecondary}
@@ -721,6 +799,7 @@ export default function SecondBrainScreen({ token }) {
                   <Text style={styles.secondaryButtonText}>Add</Text>
                 </Pressable>
               </View>
+              {editTagError ? <Text style={[styles.tagCountText, { color: theme.colors.danger }]}>{editTagError}</Text> : null}
               <Text style={styles.tagCountText}>{`${parseTagInput(editTags).length}/${MAX_ENTRY_TAGS} tags`}</Text>
               <View style={styles.tagsRow}>
                 {parseTagInput(editTags).map(tag => (

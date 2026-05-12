@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest } from '../api';
 import { theme } from '../theme';
@@ -38,6 +39,10 @@ function fuzzySortUsers(users, query) {
 
 export default function OpenBrainTopMenu({ navigation, token }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +77,42 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     setResults({ users: [], thoughts: [] });
   }
 
+  function closeNotifications() {
+    setIsNotificationsOpen(false);
+  }
+
+  async function openNotifications() {
+    setIsNotificationsOpen(true);
+    if (!token || notificationsLoading) return;
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const data = await apiRequest('/open-brain/notifications', { token });
+      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+    } catch (err) {
+      setNotificationsError(err.message || 'Failed to load notifications.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }
+
+  async function markNotificationAsRead(id) {
+    if (!token || !id) return;
+    try {
+      const data = await apiRequest('/open-brain/notifications', {
+        method: 'PATCH',
+        token,
+        body: { id },
+      });
+      const nextReadAt = data?.notification?.read_at || new Date().toISOString();
+      setNotifications(current =>
+        current.map(item => (item.id === id ? { ...item, read_at: nextReadAt } : item))
+      );
+    } catch {
+      // Notifications remain visible even if mark-as-read fails.
+    }
+  }
+
   function openProfile(username) {
     if (!username) return;
     closeSearch();
@@ -87,6 +128,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
 
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
+  const unreadCount = notifications.filter(item => !item?.read_at).length;
 
   return (
     <View style={styles.outer}>
@@ -97,7 +139,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
           accessibilityRole="button"
           accessibilityLabel="Back to Apps"
         >
-          <Text style={styles.backLabel}>←</Text>
+          <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
         </Pressable>
         <Pressable
           style={styles.logoButton}
@@ -109,18 +151,85 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             open<Text style={styles.logoAccent}>brain</Text>
           </Text>
         </Pressable>
-        <Pressable
-          style={styles.searchButton}
-          onPress={() => {
-            setIsSearchOpen(true);
-            setError('');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Search users"
-        >
-          <Text style={styles.searchLabel}>⌕</Text>
-        </Pressable>
+        <View style={styles.rightActions}>
+          <Pressable
+            style={styles.notificationButton}
+            onPress={openNotifications}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Feather name="bell" size={19} color="#7ec8ff" />
+            {unreadCount > 0 ? (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : String(unreadCount)}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            style={styles.searchButton}
+            onPress={() => {
+              setIsSearchOpen(true);
+              setError('');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Search users"
+          >
+            <Feather name="search" size={19} color="#7ec8ff" />
+          </Pressable>
+        </View>
       </View>
+      <Modal
+        visible={isNotificationsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeNotifications}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeNotifications}>
+          <Pressable style={styles.dropdownModal} onPress={() => {}}>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Notifications</Text>
+              {notificationsLoading ? <Text style={styles.emptyText}>Loading...</Text> : null}
+              {!!notificationsError ? <Text style={styles.errorText}>{notificationsError}</Text> : null}
+              {!notificationsLoading && !notificationsError && notifications.length === 0 ? (
+                <Text style={styles.emptyText}>No notifications yet.</Text>
+              ) : null}
+              {!notificationsLoading && !notificationsError && notifications.length > 0 ? (
+                <View style={styles.notificationsTable}>
+                  <View style={styles.notificationsHeaderRow}>
+                    <Text style={styles.notificationsHeaderCellActor}>Actor</Text>
+                    <Text style={styles.notificationsHeaderCellType}>Type</Text>
+                    <Text style={styles.notificationsHeaderCellStatus}>Status</Text>
+                  </View>
+                  {notifications.map(item => {
+                    const unread = !item?.read_at;
+                    return (
+                      <Pressable
+                        key={item.id}
+                        style={styles.notificationsRow}
+                        onPress={() => {
+                          if (unread) markNotificationAsRead(item.id);
+                        }}
+                      >
+                        <Text style={styles.notificationsActor} numberOfLines={1}>
+                          {item?.actor_id || 'Unknown'}
+                        </Text>
+                        <Text style={styles.notificationsType} numberOfLines={1}>
+                          {item?.type || 'notification'}
+                        </Text>
+                        <Text style={[styles.notificationsStatus, unread && styles.notificationsStatusUnread]}>
+                          {unread ? 'Unread' : 'Read'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
       <Modal
         visible={isSearchOpen}
         transparent
@@ -198,4 +307,3 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     </View>
   );
 }
-

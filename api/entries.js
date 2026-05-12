@@ -11,6 +11,7 @@ import {
 } from '../lib/db.js';
 import { classify } from '../lib/classify.js';
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
+import { GLOBALLY_PERMISSIVE_TAGS_NORMALIZED } from '../lib/constants/tags.js';
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');
@@ -39,16 +40,22 @@ function parseTags(input) {
   if (input === undefined) return undefined;
   if (!Array.isArray(input)) return null;
 
+  function normalizeTagKey(value) {
+    return String(value ?? '')
+      .trim()
+      .replace(/^#+/, '')
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 32);
+  }
+
   const deduped = new Map();
   for (const raw of input) {
     if (typeof raw !== 'string') return null;
     const label = compactWhitespace(raw.replace(/^#+/, ''));
     if (!label) continue;
-    const normalized = label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 32);
+    const normalized = normalizeTagKey(label);
     if (!normalized) continue;
     if (!deduped.has(normalized)) {
       deduped.set(normalized, {
@@ -59,6 +66,55 @@ function parseTags(input) {
   }
   return [...deduped.values()].slice(0, 12);
 }
+
+function isOpenBrainImportedThought(description, finalCategory) {
+  const text = String(description ?? '').trim();
+  return finalCategory === 'thought' && /^thought taken from @/i.test(text);
+}
+
+function enforceOpenBrainTags(tags) {
+  const requiredTag = 'openbrain';
+  const normalized = new Set([requiredTag]);
+  const finalTags = [requiredTag];
+  const source = Array.isArray(tags) ? tags : [];
+
+  for (const tag of source) {
+    const normalizedName = String(tag?.normalized_name ?? '')
+      .trim()
+      .toLowerCase();
+    if (!normalizedName || normalized.has(normalizedName)) continue;
+    finalTags.push(normalizedName);
+    normalized.add(normalizedName);
+    if (finalTags.length >= 3) break;
+  }
+
+  return finalTags;
+}
+
+function isGloballyPermissiveTag(normalizedName) {
+  return GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(String(normalizedName || '').trim().toLowerCase());
+}
+
+function filterClassifierTagsByPermittedUserTags(classifiedTags, existingTags) {
+  const source = Array.isArray(classifiedTags) ? classifiedTags : [];
+  if (source.length === 0) return [];
+
+  const permittedUserTags = new Set(
+    (Array.isArray(existingTags) ? existingTags : [])
+      .map(tag => compactWhitespace(tag).toLowerCase())
+      .filter(Boolean)
+      .filter(tag => !isGloballyPermissiveTag(tag))
+  );
+
+  return source.filter(tag => {
+    const normalized = String(tag?.normalized_name || '').trim().toLowerCase();
+    if (!normalized) return false;
+    if (isGloballyPermissiveTag(normalized)) return true;
+    return permittedUserTags.has(normalized);
+  });
+}
+
+export { filterClassifierTagsByPermittedUserTags };
 
 function truncateWords(value, maxWords) {
   const words = compactWhitespace(value).split(' ').filter(Boolean);
@@ -297,7 +353,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST /api/entries  { description, tags? } ─────────────────────────────
+  // ── POST /api/entries  { description, category?, tags?, priority? } ───────
   if (req.method === 'POST') {
     if (req.body?.import_format === 'claude_conversations' || req.body?.import_format === 'llm_conversations') {
       try {
@@ -331,9 +387,13 @@ export default async function handler(req, res) {
       }
     }
 
-    const { description, text, priority, tags } = req.body ?? {};
+    const { description, text, priority, tags, category: requestedCategory } = req.body ?? {};
     const sourceDescription = description ?? text;
     if (!sourceDescription?.trim()) return json(res, 400, { error: 'description is required' });
+    const validCategories = new Set(['reminder', 'todo', 'thought', 'note']);
+    if (requestedCategory !== undefined && !validCategories.has(requestedCategory)) {
+      return json(res, 400, { error: 'invalid category' });
+    }
     const parsedPriority = parsePriority(priority, { defaultValue: 0 });
     if (parsedPriority === null) {
       return json(res, 400, { error: 'priority must be an integer from 0 to 10' });
@@ -351,17 +411,28 @@ export default async function handler(req, res) {
         timezone,
         existingTags,
       });
+      const finalCategory = requestedCategory ?? category;
       const derived = deriveEntryFields(normalizedDescription, content);
       const normalizedClassifiedTags = parseTags(classifiedTags);
+      const validatedClassifiedTags = filterClassifierTagsByPermittedUserTags(
+        normalizedClassifiedTags ?? [],
+        existingTags
+      );
+      const candidateTags = parsedTags !== undefined
+        ? parsedTags
+        : validatedClassifiedTags;
+      const finalTags = isOpenBrainImportedThought(normalizedDescription, finalCategory)
+        ? enforceOpenBrainTags(candidateTags)
+        : candidateTags;
       const entry = await insertEntry({
         userId,
         raw_text: derived.raw_text,
-        category,
+        category: finalCategory,
         title: compactWhitespace(title) || derived.title,
         summary: compactWhitespace(summary) || derived.summary,
         remind_at,
         priority: parsedPriority,
-        tags: parsedTags ?? normalizedClassifiedTags ?? [],
+        tags: finalTags,
         authToken: token,
       });
       return json(res, 201, normalizeEntry(entry));

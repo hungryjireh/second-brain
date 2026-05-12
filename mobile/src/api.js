@@ -53,3 +53,21 @@ export async function apiRequest(path, { method = 'GET', body, token } = {}) {
 export async function login(email, password) {
   return apiRequest('/auth/login', { method: 'POST', body: { email, password } });
 }
+
+export async function sendFollowNotification(token, followedUserId) {
+  const targetUserId = String(followedUserId || '').trim();
+  if (!token || !targetUserId) return;
+
+  try {
+    await apiRequest('/open-brain/notifications', {
+      method: 'POST',
+      token,
+      body: {
+        user_id: targetUserId,
+        type: 'follow',
+      },
+    });
+  } catch {
+    // Follow should still succeed even if notification delivery fails.
+  }
+}

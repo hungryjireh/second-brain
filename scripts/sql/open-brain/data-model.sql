@@ -65,6 +65,17 @@ create table if not exists public.reactions (
   primary key (thought_id, user_id, type)
 );
 
+-- 5) Notifications
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  actor_id uuid not null references auth.users(id) on delete cascade,
+  type text not null check (type in ('follow')),
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  check (user_id <> actor_id)
+);
+
 -- Helpful indexes
 create index if not exists idx_thoughts_created_at on public.thoughts (created_at desc);
 create index if not exists idx_thoughts_user_id_created_at on public.thoughts (user_id, created_at desc);
@@ -72,6 +83,8 @@ create index if not exists idx_thoughts_share_slug on public.thoughts (share_slu
 create index if not exists idx_follows_following_id on public.follows (following_id);
 create index if not exists idx_reactions_thought_id on public.reactions (thought_id);
 create index if not exists idx_reactions_user_id on public.reactions (user_id);
+create index if not exists idx_notifications_user_id_created_at on public.notifications (user_id, created_at desc);
+create index if not exists idx_notifications_actor_id on public.notifications (actor_id);
 
 -- Auto-create profile when auth user is created
 create or replace function public.handle_new_user()
@@ -118,6 +131,7 @@ alter table public.profiles enable row level security;
 alter table public.thoughts enable row level security;
 alter table public.follows enable row level security;
 alter table public.reactions enable row level security;
+alter table public.notifications enable row level security;
 
 -- profiles: anyone can read, user can update only own profile
 drop policy if exists "profiles_select_all" on public.profiles;
@@ -174,5 +188,22 @@ drop policy if exists "reactions_delete_own" on public.reactions;
 create policy "reactions_delete_own"
 on public.reactions for delete
 using (auth.uid() = user_id);
+
+-- notifications: anyone can read their own notifications, users can create events caused by themselves
+drop policy if exists "notifications_select_own" on public.notifications;
+create policy "notifications_select_own"
+on public.notifications for select
+using (auth.uid() = user_id);
+
+drop policy if exists "notifications_insert_actor" on public.notifications;
+create policy "notifications_insert_actor"
+on public.notifications for insert
+with check (auth.uid() = actor_id);
+
+drop policy if exists "notifications_update_own" on public.notifications;
+create policy "notifications_update_own"
+on public.notifications for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
 
 commit;

@@ -3,10 +3,14 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import Sidebar from './components/Sidebar.jsx';
 import StatsBar from './components/StatsBar.jsx';
 import EntryCard from './components/EntryCard.jsx';
+import {
+  CATEGORIES,
+  GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
+  MAX_ENTRY_TAGS,
+  MAX_USER_TAGS,
+} from './constants/tags.js';
 
 const API = import.meta.env.VITE_API_URL || '/api';
-const CATEGORIES = ['reminder', 'todo', 'thought', 'note'];
-const MAX_ENTRY_TAGS = 3;
 const PRIORITY_LEVELS = [
   { key: 'high', label: 'High (8-10)' },
   { key: 'medium', label: 'Medium (4-7)' },
@@ -297,8 +301,8 @@ function normalizeTagValue(tag) {
     .trim()
     .replace(/^#+/, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[\s_-]+/g, '')
+    .replace(/[^a-z0-9]/g, '')
     .slice(0, 32);
 }
 
@@ -313,6 +317,23 @@ function normalizeTagList(tags) {
     out.push(normalized);
   }
   return out;
+}
+
+function countBillableGlobalTags(tags) {
+  return new Set(
+    tags
+      .map(tag => normalizeTagValue(tag))
+      .filter(tag => tag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag))
+  ).size;
+}
+
+function sortTagsByUsage(tags, usageCounts) {
+  return [...tags].sort((a, b) => {
+    const aHasEntries = usageCounts.has(a);
+    const bHasEntries = usageCounts.has(b);
+    if (aHasEntries !== bHasEntries) return aHasEntries ? -1 : 1;
+    return a.localeCompare(b, 'en', { sensitivity: 'base' });
+  });
 }
 
 function normalizeEntryTags(entry) {
@@ -385,6 +406,8 @@ export default function App({ authToken, onUnauthorized }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 900);
   const [isCompactMobile, setIsCompactMobile] = useState(() => window.innerWidth <= 480);
   const [entries, setEntries] = useState([]);
+  const [userTags, setUserTags] = useState([]);
+  const [userTagsLoaded, setUserTagsLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('');
@@ -403,6 +426,7 @@ export default function App({ authToken, onUnauthorized }) {
   const [editPriority, setEditPriority] = useState(0);
   const [editTags, setEditTags] = useState('');
   const [editTagDraft, setEditTagDraft] = useState('');
+  const [editTagError, setEditTagError] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [timezone, setTimezone] = useState('Asia/Singapore');
   const [timezoneDraft, setTimezoneDraft] = useState('Asia/Singapore');
@@ -464,6 +488,13 @@ export default function App({ authToken, onUnauthorized }) {
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
       setEntries(sortEntriesByPriorityDesc(data.map(normalizeEntryTags)));
+
+      const tagsRes = await authedFetch(`${API}/tags`);
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json();
+        setUserTags(normalizeTagList(tagsData?.tags));
+        setUserTagsLoaded(true);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -503,9 +534,8 @@ export default function App({ authToken, onUnauthorized }) {
     return c;
   }, [entries]);
 
-  const availableTags = useMemo(() => {
-    const seen = new Set();
-    const tags = [];
+  const tagUsageCounts = useMemo(() => {
+    const counts = new Map();
     for (const entry of entries) {
       if (entry.is_deleted) continue;
       if (entry.is_archived) continue;
@@ -513,13 +543,21 @@ export default function App({ authToken, onUnauthorized }) {
       for (const tag of entry.tags) {
         const value = normalizeTagValue(tag);
         if (!value) continue;
-        if (seen.has(value)) continue;
-        seen.add(value);
-        tags.push(value);
+        counts.set(value, (counts.get(value) ?? 0) + 1);
       }
     }
-    return tags.sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+    return counts;
   }, [entries]);
+
+  const availableTags = useMemo(() => {
+    return Array.from(tagUsageCounts.keys())
+      .sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+  }, [tagUsageCounts]);
+  const globalTags = useMemo(() => {
+    if (!userTagsLoaded) return availableTags;
+    const sortedUserTags = sortTagsByUsage(userTags, tagUsageCounts);
+    return sortedUserTags.length > 0 ? sortedUserTags : availableTags;
+  }, [userTagsLoaded, userTags, availableTags, tagUsageCounts]);
 
   useEffect(() => {
     if (!activeTag) return;
@@ -618,21 +656,32 @@ export default function App({ authToken, onUnauthorized }) {
     setEditPriority(Number.isInteger(entry.priority) ? entry.priority : 0);
     setEditTags(tagsToInput(entry.tags));
     setEditTagDraft('');
+    setEditTagError('');
   }
 
   function handleCloseEdit() {
     if (savingEdit) return;
     setEditingEntry(null);
+    setEditTagError('');
   }
 
   function handleRemoveEditTag(tagToRemove) {
     const remainingTags = parseTagInput(editTags).filter(tag => tag !== tagToRemove);
     setEditTags(tagsToInput(remainingTags));
+    setEditTagError('');
   }
 
   function handleAddEditTag() {
     const nextTag = normalizeTagValue(editTagDraft);
     if (!nextTag || !canAddMoreTags) return;
+    setEditTagError('');
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
+    const isNewBillableTag = isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
+    if (isNewBillableTag && countBillableGlobalTags(globalTags) >= MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return;
+    }
     const mergedTags = parseTagInput([...parseTagInput(editTags), nextTag].join(','));
     setEditTags(tagsToInput(mergedTags));
     setEditTagDraft('');
@@ -642,6 +691,19 @@ export default function App({ authToken, onUnauthorized }) {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     handleAddEditTag();
+  }
+
+  function validateGlobalTagLimit(nextTags) {
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const newBillableGlobalTags = nextTags.filter(tag => (
+      !existingGlobalTags.has(tag) && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag)
+    ));
+    if (newBillableGlobalTags.length === 0) return true;
+    if (countBillableGlobalTags(globalTags) + newBillableGlobalTags.length > MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return false;
+    }
+    return true;
   }
 
   function handleAddDescriptionBulletPoint() {
@@ -772,6 +834,7 @@ export default function App({ authToken, onUnauthorized }) {
       alert('Priority must be an integer from 0 to 10.');
       return;
     }
+    if (!validateGlobalTagLimit(tags)) return;
 
     setSavingEdit(true);
     try {
@@ -1230,23 +1293,26 @@ export default function App({ authToken, onUnauthorized }) {
                   fontWeight: 500,
                 }}
               >
-                {`Tags (${availableTags.length}/10)`}
+                {`Tags (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}
               </span>
-              {availableTags.map(tag => {
+              {globalTags.map(tag => {
                 const active = activeTag.toLowerCase() === tag.toLowerCase();
+                const isDisabled = !tagUsageCounts.has(tag);
                 return (
                   <button
                     key={tag}
+                    disabled={isDisabled}
                     onClick={() => handleSelectTag(tag)}
                     style={{
                       border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
                       background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
-                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      color: active ? 'var(--brand-text)' : (isDisabled ? 'var(--text-muted)' : 'var(--text-secondary)'),
                       borderRadius: 999,
                       padding: '4px 10px',
                       fontSize: 11,
                       fontFamily: 'inherit',
-                      cursor: 'pointer',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      opacity: isDisabled ? 0.55 : 1,
                       transition: 'all .15s',
                     }}
                   >
@@ -1386,23 +1452,26 @@ export default function App({ authToken, onUnauthorized }) {
                   fontWeight: 500,
                 }}
               >
-                {`Tags (${availableTags.length}/10)`}
+                {`Tags (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}
               </span>
-              {availableTags.map(tag => {
+              {globalTags.map(tag => {
                 const active = activeTag.toLowerCase() === tag.toLowerCase();
+                const isDisabled = !tagUsageCounts.has(tag);
                 return (
                   <button
                     key={tag}
+                    disabled={isDisabled}
                     onClick={() => handleSelectTag(tag)}
                     style={{
                       border: `0.5px solid ${active ? 'var(--brand)' : 'var(--border)'}`,
                       background: active ? 'var(--brand-dim)' : 'var(--bg-surface)',
-                      color: active ? 'var(--brand-text)' : 'var(--text-secondary)',
+                      color: active ? 'var(--brand-text)' : (isDisabled ? 'var(--text-muted)' : 'var(--text-secondary)'),
                       borderRadius: 999,
                       padding: '4px 10px',
                       fontSize: 11,
                       fontFamily: 'inherit',
-                      cursor: 'pointer',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      opacity: isDisabled ? 0.55 : 1,
                       transition: 'all .15s',
                     }}
                   >
@@ -1785,7 +1854,10 @@ export default function App({ authToken, onUnauthorized }) {
                 <input
                   type="text"
                   value={editTagDraft}
-                  onChange={e => setEditTagDraft(e.target.value)}
+                  onChange={e => {
+                    setEditTagDraft(e.target.value);
+                    setEditTagError('');
+                  }}
                   onKeyDown={handleEditTagDraftKeyDown}
                   placeholder={canAddMoreTags ? 'Type a tag and press Enter' : `Maximum ${MAX_ENTRY_TAGS} tags reached`}
                   disabled={!canAddMoreTags}
@@ -1818,6 +1890,9 @@ export default function App({ authToken, onUnauthorized }) {
                   Add
                 </button>
               </div>
+              {editTagError ? (
+                <span style={{ fontSize: 11, color: 'var(--danger)' }}>{editTagError}</span>
+              ) : null}
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 {editTagList.length}/{MAX_ENTRY_TAGS} tags
               </span>

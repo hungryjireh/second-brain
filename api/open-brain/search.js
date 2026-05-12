@@ -1,49 +1,8 @@
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../../lib/auth.js';
+import { json, supabaseRequest } from './helpers.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 const USER_LIMIT = 8;
 const THOUGHT_LIMIT = 10;
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
-function requireSupabaseEnv() {
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error('Missing Supabase env configuration');
-  }
-}
-
-async function supabaseRequest(path, { method = 'GET', query, authToken } = {}) {
-  requireSupabaseEnv();
-  const url = new URL(path, SUPABASE_URL);
-
-  for (const [key, value] of Object.entries(query || {})) {
-    if (value === undefined || value === null) continue;
-    url.searchParams.set(key, String(value));
-  }
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${authToken}`,
-    },
-  });
-
-  const raw = await response.text();
-  const data = raw ? JSON.parse(raw) : null;
-  if (!response.ok) {
-    const err = new Error(data?.message || `Supabase request failed (${response.status})`);
-    err.status = response.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
-}
 
 function toSafeText(value) {
   return typeof value === 'string' ? value : '';

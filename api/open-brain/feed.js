@@ -1,71 +1,8 @@
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../../lib/auth.js';
+import { json, supabaseRequest, getEpochDayInTimezone } from './helpers.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 const REACTION_TYPES = new Set(['felt_this', 'me_too', 'made_me_think']);
 const EVERYONE_LIMIT = 60;
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
-
-function requireSupabaseEnv() {
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error('Missing Supabase env configuration');
-  }
-}
-
-function getEpochDayInTimezone(date, timeZone) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timeZone || 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = formatter.formatToParts(date);
-  const year = Number(parts.find(part => part.type === 'year')?.value);
-  const month = Number(parts.find(part => part.type === 'month')?.value);
-  const day = Number(parts.find(part => part.type === 'day')?.value);
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
-  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-}
-
-async function supabaseRequest(path, { method = 'GET', query, body, authToken, prefer } = {}) {
-  requireSupabaseEnv();
-  const url = new URL(path, SUPABASE_URL);
-
-  for (const [key, value] of Object.entries(query || {})) {
-    if (value === undefined || value === null) continue;
-    url.searchParams.set(key, String(value));
-  }
-
-  const headers = {
-    apikey: SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${authToken}`,
-  };
-
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (prefer) headers.Prefer = prefer;
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  const raw = await response.text();
-  const data = raw ? JSON.parse(raw) : null;
-
-  if (!response.ok) {
-    const err = new Error(data?.message || `Supabase request failed (${response.status})`);
-    err.status = response.status;
-    err.data = data;
-    throw err;
-  }
-
-  return data;
-}
 
 function mapThoughtRows(rows, profileMap) {
   return (rows || []).map(row => ({

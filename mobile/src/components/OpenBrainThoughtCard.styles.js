@@ -141,6 +141,11 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 20,
   },
+  actionsGroup: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    gap: 10,
+  },
   reactionChip: {
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.09)',
@@ -163,12 +168,57 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.09)',
     paddingHorizontal: 12,
     paddingVertical: 7,
-    marginLeft: 'auto',
+    position: 'relative',
+  },
+  secondaryActionButton: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    position: 'relative',
+  },
+  secondaryActionButtonAdded: {
+    backgroundColor: 'rgba(29,158,117,0.22)',
+    borderColor: 'rgba(29,158,117,0.7)',
+  },
+  secondaryActionButtonText: {
+    color: 'rgba(243,241,236,0.8)',
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+  },
+  secondaryActionButtonTextAdded: {
+    color: '#8ef1cf',
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   shareButtonText: {
     color: 'rgba(243,241,236,0.8)',
     fontFamily: 'DMSans_400Regular',
     fontSize: 12,
+  },
+  actionTooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    marginBottom: 8,
+    backgroundColor: '#111',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    zIndex: 20,
+  },
+  actionTooltipText: {
+    color: '#f5f3ef',
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    lineHeight: 14,
   },
 });
 

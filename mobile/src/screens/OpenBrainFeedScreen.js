@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, Share, Text, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, Share, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { apiRequest } from '../api';
+import { apiRequest, sendFollowNotification } from '../api';
 import { buildSharedThoughtUrl } from '../share';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
@@ -201,6 +201,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
         await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`, { method: 'DELETE', token });
       } else {
         await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: targetUserId } });
+        await sendFollowNotification(token, targetUserId);
       }
       await loadFeed();
     } finally {
@@ -222,6 +223,23 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
       setComposerError(err.message || 'Unable to save thought.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function addToSecondBrain(thought) {
+    const thoughtText = String(thought?.text || '').trim();
+    if (!thoughtText) return;
+    const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
+    const description = `Thought taken from @${username}:\n\n${thoughtText}`;
+    try {
+      await apiRequest('/entries', {
+        method: 'POST',
+        token,
+        body: { description, category: 'thought', tags: ['openbrain'] },
+      });
+      Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
+    } catch (err) {
+      Alert.alert('Add to SecondBrain', err.message || 'Unable to save thought.');
     }
   }
 
@@ -262,6 +280,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
                 date={formatDateTimeLabel(item.item.created_at)}
                 onReact={handleReact}
                 onShare={shareThought}
+                onAddToSecondBrain={addToSecondBrain}
                 reactingKey={reactingKey}
                 onToggleFollow={handleToggleFollow}
                 followBusyUserId={followBusyUserId}

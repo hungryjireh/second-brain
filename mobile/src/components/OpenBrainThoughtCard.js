@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
 
@@ -31,6 +32,7 @@ function normalizeThoughtText(text) {
 }
 
 const PREVIEW_CHAR_LIMIT = 220;
+const ACTION_ICON_ONLY_MAX_WIDTH = 768;
 
 function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
   const normalized = normalizeThoughtText(text);
@@ -86,19 +88,43 @@ export default function OpenBrainThoughtCard({
   onToggleFollow,
   onReact,
   onShare,
+  onAddToSecondBrain,
   reactingKey = '',
   followBusyUserId = '',
   largeBody = false,
   feedBody = false,
   transparentCard = false,
 }) {
+  const { width } = useWindowDimensions();
+  const iconOnlyActions = Platform.OS !== 'web' || width <= ACTION_ICON_ONLY_MAX_WIDTH;
+  const [hoveredAction, setHoveredAction] = useState('');
   const sourceText = item ? item.text : text;
   const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
   const [expanded, setExpanded] = useState(false);
+  const [isAddingToSecondBrain, setIsAddingToSecondBrain] = useState(false);
+  const [addedToSecondBrain, setAddedToSecondBrain] = useState(false);
 
   useEffect(() => {
     setExpanded(false);
   }, [thoughtContent.full]);
+
+  useEffect(() => {
+    setIsAddingToSecondBrain(false);
+    setAddedToSecondBrain(false);
+  }, [item?.id, sourceText]);
+
+  async function handleAddToSecondBrain(payload) {
+    if (isAddingToSecondBrain || addedToSecondBrain) return;
+    setIsAddingToSecondBrain(true);
+    try {
+      await onAddToSecondBrain?.(payload);
+      setAddedToSecondBrain(true);
+    } catch (_err) {
+      // Keep button enabled so the user can retry after a failed save.
+    } finally {
+      setIsAddingToSecondBrain(false);
+    }
+  }
 
   if (item?.missing_today) {
     const name = item.profile?.username || 'unknown';
@@ -193,9 +219,49 @@ export default function OpenBrainThoughtCard({
             );
           })}
           {onShare ? (
-            <Pressable onPress={() => onShare?.(item)} style={styles.shareButton}>
-              <Text style={styles.shareButtonText}>↗ Share</Text>
-            </Pressable>
+            <View style={styles.actionsGroup}>
+              <Pressable
+                onPress={() => handleAddToSecondBrain(item)}
+                disabled={isAddingToSecondBrain || addedToSecondBrain}
+                style={[styles.secondaryActionButton, addedToSecondBrain && styles.secondaryActionButtonAdded]}
+                accessibilityRole="button"
+                accessibilityLabel={addedToSecondBrain ? 'Added to SecondBrain' : 'Add to SecondBrain'}
+                onHoverIn={Platform.OS === 'web' ? () => setHoveredAction(`add-${item.id}`) : undefined}
+                onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? '#8ef1cf' : theme.colors.textSecondary} />
+                  {!iconOnlyActions ? (
+                    <Text style={[styles.secondaryActionButtonText, addedToSecondBrain && styles.secondaryActionButtonTextAdded]}>
+                      {addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}
+                    </Text>
+                  ) : null}
+                </View>
+                {Platform.OS === 'web' && hoveredAction === `add-${item.id}` ? (
+                  <View pointerEvents="none" style={styles.actionTooltip}>
+                    <Text style={styles.actionTooltipText}>{addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable
+                onPress={() => onShare?.(item)}
+                style={styles.shareButton}
+                accessibilityRole="button"
+                accessibilityLabel="Share"
+                onHoverIn={Platform.OS === 'web' ? () => setHoveredAction(`share-${item.id}`) : undefined}
+                onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Feather name="share" size={12} color={theme.colors.textSecondary} />
+                  {!iconOnlyActions ? <Text style={styles.shareButtonText}>Share</Text> : null}
+                </View>
+                {Platform.OS === 'web' && hoveredAction === `share-${item.id}` ? (
+                  <View pointerEvents="none" style={styles.actionTooltip}>
+                    <Text style={styles.actionTooltipText}>Share</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            </View>
           ) : null}
         </View>
       </View>
@@ -236,9 +302,49 @@ export default function OpenBrainThoughtCard({
       {!!bottomMeta && <Text style={styles.meta}>{bottomMeta}</Text>}
       {onShare ? (
         <View style={styles.reactions}>
-          <Pressable onPress={() => onShare?.({ text: sourceText })} style={styles.shareButton}>
-            <Text style={styles.shareButtonText}>↗ Share</Text>
-          </Pressable>
+          <View style={styles.actionsGroup}>
+            <Pressable
+              onPress={() => handleAddToSecondBrain({ text: sourceText })}
+              disabled={isAddingToSecondBrain || addedToSecondBrain}
+              style={[styles.secondaryActionButton, addedToSecondBrain && styles.secondaryActionButtonAdded]}
+              accessibilityRole="button"
+              accessibilityLabel={addedToSecondBrain ? 'Added to SecondBrain' : 'Add to SecondBrain'}
+              onHoverIn={Platform.OS === 'web' ? () => setHoveredAction('add-standalone') : undefined}
+              onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
+            >
+              <View style={styles.actionButtonContent}>
+                <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? '#8ef1cf' : theme.colors.textSecondary} />
+                {!iconOnlyActions ? (
+                  <Text style={[styles.secondaryActionButtonText, addedToSecondBrain && styles.secondaryActionButtonTextAdded]}>
+                    {addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}
+                  </Text>
+                ) : null}
+              </View>
+              {Platform.OS === 'web' && hoveredAction === 'add-standalone' ? (
+                <View pointerEvents="none" style={styles.actionTooltip}>
+                  <Text style={styles.actionTooltipText}>{addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable
+              onPress={() => onShare?.({ text: sourceText })}
+              style={styles.shareButton}
+              accessibilityRole="button"
+              accessibilityLabel="Share"
+              onHoverIn={Platform.OS === 'web' ? () => setHoveredAction('share-standalone') : undefined}
+              onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
+            >
+              <View style={styles.actionButtonContent}>
+                <Feather name="share" size={12} color={theme.colors.textSecondary} />
+                {!iconOnlyActions ? <Text style={styles.shareButtonText}>Share</Text> : null}
+              </View>
+              {Platform.OS === 'web' && hoveredAction === 'share-standalone' ? (
+                <View pointerEvents="none" style={styles.actionTooltip}>
+                  <Text style={styles.actionTooltipText}>Share</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          </View>
         </View>
       ) : null}
     </Container>

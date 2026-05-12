@@ -90,7 +90,7 @@ describe('SecondBrainScreen', () => {
 
     apiRequest.mockResolvedValueOnce({ entries: [entry] });
 
-    const { getByText, getAllByText, queryByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText, getAllByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
 
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
     fireEvent.press(getByText('Ship tests'));
@@ -181,17 +181,17 @@ describe('SecondBrainScreen', () => {
       return {};
     });
 
-    const { getByText, getAllByText, queryByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText, getAllByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
 
     await waitFor(() => expect(getByText('Work item')).toBeTruthy());
     expect(getByText('Home item')).toBeTruthy();
 
-    fireEvent.press(getAllByText('#work')[0]);
-    expect(getByText('Work item')).toBeTruthy();
+    fireEvent.press(getByTestId('tag-filter-work'));
+    expect(getAllByText('Work item').length).toBeGreaterThan(0);
     expect(queryByText('Home item')).toBeNull();
 
-    fireEvent.press(getAllByText('#work')[0]);
-    expect(getByText('Work item')).toBeTruthy();
+    fireEvent.press(getByTestId('tag-filter-work'));
+    expect(getAllByText('Work item').length).toBeGreaterThan(0);
     expect(getByText('Home item')).toBeTruthy();
   });
 
