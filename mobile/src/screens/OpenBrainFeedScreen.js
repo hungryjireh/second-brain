@@ -73,6 +73,24 @@ function isSameLocalDay(a, b) {
     && a.getDate() === b.getDate();
 }
 
+function updateThoughtAcrossFeed(feed, thoughtId, updater) {
+  const updateList = list => list.map(item => (item?.id === thoughtId ? updater(item) : item));
+  return {
+    following: updateList(feed.following || []),
+    everyone: updateList(feed.everyone || []),
+  };
+}
+
+function updateUserAcrossFeed(feed, userId, updater) {
+  const updateList = list => list.map(item => (
+    item?.user_id === userId || item?.profile?.id === userId ? updater(item) : item
+  ));
+  return {
+    following: updateList(feed.following || []),
+    everyone: updateList(feed.everyone || []),
+  };
+}
+
 export default function OpenBrainFeedScreen({ token, navigation }) {
   const [tab, setTab] = useState('following');
   const [feed, setFeed] = useState({ following: [], everyone: [] });
@@ -111,11 +129,19 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     const items = [];
     if (todaysThoughts.length > 0) {
       items.push({ type: 'section', id: 'section-today', title: "Today's Thoughts" });
-      todaysThoughts.forEach(item => items.push({ type: 'thought', item }));
+      todaysThoughts.forEach(item => items.push({
+        type: 'thought',
+        item,
+        dateLabel: formatDateTimeLabel(item.created_at),
+      }));
     }
     if (pastThoughts.length > 0) {
       items.push({ type: 'section', id: 'section-past', title: 'Past Thoughts' });
-      pastThoughts.forEach(item => items.push({ type: 'thought', item }));
+      pastThoughts.forEach(item => items.push({
+        type: 'thought',
+        item,
+        dateLabel: formatDateTimeLabel(item.created_at),
+      }));
     }
 
     return items;
@@ -177,25 +203,52 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     };
   }, [isDraftOpen, loadComposerData, navigation]);
 
-  async function handleReact(thoughtId, type, active) {
+  const handleReact = useCallback(async (thoughtId, type, active) => {
     if (!thoughtId || !type || reactingKey) return;
     const key = `${thoughtId}-${type}`;
     setReactingKey(key);
+    const previousFeed = feed;
+    setFeed(current => updateThoughtAcrossFeed(current, thoughtId, thought => {
+      const mine = { ...(thought?.reactions?.mine || {}) };
+      const counts = { ...(thought?.reactions || {}) };
+      const currentCount = Number(counts[type] || 0);
+      if (active) {
+        mine[type] = false;
+        counts[type] = Math.max(0, currentCount - 1);
+      } else {
+        mine[type] = true;
+        counts[type] = currentCount + 1;
+      }
+      return {
+        ...thought,
+        reactions: {
+          ...counts,
+          mine,
+        },
+      };
+    }));
     try {
       if (active) {
         await apiRequest(`/open-brain/feed?thought_id=${encodeURIComponent(thoughtId)}&type=${encodeURIComponent(type)}`, { method: 'DELETE', token });
       } else {
         await apiRequest('/open-brain/feed', { method: 'POST', token, body: { thought_id: thoughtId, type } });
       }
-      await loadFeed();
+    } catch (err) {
+      setFeed(previousFeed);
+      setError(err.message || 'Unable to update reaction.');
     } finally {
       setReactingKey('');
     }
-  }
+  }, [feed, reactingKey, token]);
 
-  async function handleToggleFollow(targetUserId, isFollowing) {
+  const handleToggleFollow = useCallback(async (targetUserId, isFollowing) => {
     if (!targetUserId || followBusyUserId) return;
     setFollowBusyUserId(targetUserId);
+    const previousFeed = feed;
+    setFeed(current => updateUserAcrossFeed(current, targetUserId, thought => ({
+      ...thought,
+      profile: thought?.profile ? { ...thought.profile, is_following: !isFollowing } : thought?.profile,
+    })));
     try {
       if (isFollowing) {
         await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`, { method: 'DELETE', token });
@@ -203,11 +256,13 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
         await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: targetUserId } });
         await sendFollowNotification(token, targetUserId);
       }
-      await loadFeed();
+    } catch (err) {
+      setFeed(previousFeed);
+      setError(err.message || 'Unable to update follow status.');
     } finally {
       setFollowBusyUserId('');
     }
-  }
+  }, [feed, followBusyUserId, token]);
 
   async function postThought() {
     if (!draft.trim() || saving || hasPostedToday) return;
@@ -218,7 +273,16 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
       setHasPostedToday(true);
       setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
       setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : streakCount);
-      await loadFeed();
+      const createdThought = data?.thought;
+      if (createdThought && typeof createdThought === 'object') {
+        setFeed(current => ({
+          ...current,
+          following: [createdThought, ...(current.following || [])],
+          everyone: [createdThought, ...(current.everyone || [])],
+        }));
+      } else {
+        await loadFeed();
+      }
     } catch (err) {
       setComposerError(err.message || 'Unable to save thought.');
     } finally {
@@ -226,7 +290,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     }
   }
 
-  async function addToSecondBrain(thought) {
+  const addToSecondBrain = useCallback(async thought => {
     const thoughtText = String(thought?.text || '').trim();
     if (!thoughtText) return;
     const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
@@ -241,7 +305,38 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     } catch (err) {
       Alert.alert('Add to SecondBrain', err.message || 'Unable to save thought.');
     }
-  }
+  }, [token]);
+
+  const openProfile = useCallback(
+    safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername }),
+    [navigation]
+  );
+
+  const keyExtractor = useCallback(item => (item.type === 'section' ? item.id : String(item.item.id)), []);
+
+  const renderItem = useCallback(({ item }) => {
+    if (item.type === 'section') {
+      return (
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>{item.title}</Text>
+          <View style={styles.sectionHeaderLine} />
+        </View>
+      );
+    }
+    return (
+      <OpenBrainThoughtCard
+        item={item.item}
+        date={item.dateLabel}
+        onReact={handleReact}
+        onShare={shareThought}
+        onAddToSecondBrain={addToSecondBrain}
+        reactingKey={reactingKey}
+        onToggleFollow={handleToggleFollow}
+        followBusyUserId={followBusyUserId}
+        onOpenProfile={openProfile}
+      />
+    );
+  }, [addToSecondBrain, followBusyUserId, handleReact, handleToggleFollow, openProfile, reactingKey]);
 
   return (
     <View style={styles.container}>
@@ -263,31 +358,14 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
         {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
         <FlatList
           data={loading ? [] : displayItems}
-          keyExtractor={item => (item.type === 'section' ? item.id : String(item.item.id))}
+          keyExtractor={keyExtractor}
           contentContainerStyle={[styles.list, isEmptyState && styles.listEmpty]}
-          renderItem={({ item }) => {
-            if (item.type === 'section') {
-              return (
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionHeader}>{item.title}</Text>
-                  <View style={styles.sectionHeaderLine} />
-                </View>
-              );
-            }
-            return (
-              <OpenBrainThoughtCard
-                item={item.item}
-                date={formatDateTimeLabel(item.item.created_at)}
-                onReact={handleReact}
-                onShare={shareThought}
-                onAddToSecondBrain={addToSecondBrain}
-                reactingKey={reactingKey}
-                onToggleFollow={handleToggleFollow}
-                followBusyUserId={followBusyUserId}
-                onOpenProfile={safeUsername => navigation.navigate('OpenBrainProfile', { username: safeUsername })}
-              />
-            );
-          }}
+          renderItem={renderItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={50}
+          windowSize={7}
+          removeClippedSubviews
           ListEmptyComponent={isEmptyState ? (
             <View style={styles.emptyState}>
               <Text style={styles.meta}>No human is thinking right now</Text>

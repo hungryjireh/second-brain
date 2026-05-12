@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
@@ -77,7 +77,7 @@ function parseThoughtForCard(text) {
   return { title, blocks, hasTitle: true };
 }
 
-export default function OpenBrainThoughtCard({
+function OpenBrainThoughtCard({
   item,
   text,
   topMeta,
@@ -101,6 +101,8 @@ export default function OpenBrainThoughtCard({
   const sourceText = item ? item.text : text;
   const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
   const [expanded, setExpanded] = useState(false);
+  const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
+  const parsedThought = useMemo(() => parseThoughtForCard(displayedText), [displayedText]);
   const [isAddingToSecondBrain, setIsAddingToSecondBrain] = useState(false);
   const [addedToSecondBrain, setAddedToSecondBrain] = useState(false);
 
@@ -145,8 +147,6 @@ export default function OpenBrainThoughtCard({
     const isFollowing = Boolean(item.profile?.is_following);
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
-    const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
-    const parsedThought = parseThoughtForCard(displayedText);
 
     return (
       <View style={styles.card}>
@@ -278,26 +278,20 @@ export default function OpenBrainThoughtCard({
         disabled={!thoughtContent.isTruncated}
         accessibilityRole={thoughtContent.isTruncated ? 'button' : undefined}
       >
-        {(() => {
-          const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
-          const parsedThought = parseThoughtForCard(displayedText);
-          return (
-            <View style={styles.thoughtBlocks}>
-              {!!parsedThought.hasTitle && (
-                <Text style={[styles.thoughtTitle, feedBody && styles.thoughtTitleFeed, largeBody && styles.bodyLarge]}>
-                  {parsedThought.title}
-                </Text>
-              )}
-              {parsedThought.blocks.map((block, index) => (
-                <View key={`standalone-thought-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
-                  <Text style={[styles.body, feedBody && styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>
-                    {block.text}
-                  </Text>
-                </View>
-              ))}
+        <View style={styles.thoughtBlocks}>
+          {!!parsedThought.hasTitle && (
+            <Text style={[styles.thoughtTitle, feedBody && styles.thoughtTitleFeed, largeBody && styles.bodyLarge]}>
+              {parsedThought.title}
+            </Text>
+          )}
+          {parsedThought.blocks.map((block, index) => (
+            <View key={`standalone-thought-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
+              <Text style={[styles.body, feedBody && styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>
+                {block.text}
+              </Text>
             </View>
-          );
-        })()}
+          ))}
+        </View>
       </Pressable>
       {!!bottomMeta && <Text style={styles.meta}>{bottomMeta}</Text>}
       {onShare ? (
@@ -350,3 +344,5 @@ export default function OpenBrainThoughtCard({
     </Container>
   );
 }
+
+export default memo(OpenBrainThoughtCard);

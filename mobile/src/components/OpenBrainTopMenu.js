@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest } from '../api';
@@ -129,6 +129,50 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
   const unreadCount = notifications.filter(item => !item?.read_at).length;
+  const searchRows = useMemo(() => {
+    const rows = [];
+    if (results.users.length > 0) {
+      rows.push({ type: 'section', key: 'section-users', label: 'Users' });
+      results.users.forEach(user => rows.push({ type: 'user', key: `user-${user.id}`, user }));
+    }
+    if (results.thoughts.length > 0) {
+      rows.push({ type: 'section', key: 'section-thoughts', label: 'Thoughts' });
+      results.thoughts.forEach(thought => rows.push({ type: 'thought', key: `thought-${thought.id}`, thought }));
+    }
+    return rows;
+  }, [results]);
+  const keyExtractor = useCallback(item => item.key, []);
+  const renderSearchResultItem = useCallback(({ item }) => {
+    if (item.type === 'section') {
+      return (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{item.label}</Text>
+        </View>
+      );
+    }
+    if (item.type === 'user') {
+      const user = item.user;
+      return (
+        <Pressable style={styles.resultRow} onPress={() => openProfile(user.username)}>
+          <Text style={styles.resultPrimary}>@{user.username}</Text>
+          <Text style={styles.resultSecondary}>
+            {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
+          </Text>
+        </Pressable>
+      );
+    }
+    const thought = item.thought;
+    return (
+      <Pressable style={styles.resultRow} onPress={() => openProfile(thought?.profile?.username)}>
+        <Text style={styles.resultPrimary}>
+          {(thought?.text || '').replace(/\s+/g, ' ').slice(0, 100) || 'View thought'}
+        </Text>
+        <Text style={styles.resultSecondary}>
+          {thought?.profile?.username ? `by @${thought.profile.username}` : 'open profile'}
+        </Text>
+      </Pressable>
+    );
+  }, [openProfile]);
 
   return (
     <View style={styles.outer}>
@@ -260,44 +304,18 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             {!error && hasSearched && !hasResults ? (
               <Text style={styles.emptyText}>No matching users or thoughts.</Text>
             ) : null}
-            <ScrollView style={styles.resultsWrap} keyboardShouldPersistTaps="handled">
-              {results.users.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>Users</Text>
-                  {results.users.map(user => (
-                    <Pressable
-                      key={user.id}
-                      style={styles.resultRow}
-                      onPress={() => openProfile(user.username)}
-                    >
-                      <Text style={styles.resultPrimary}>@{user.username}</Text>
-                      <Text style={styles.resultSecondary}>
-                        {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-              {results.thoughts.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>Thoughts</Text>
-                  {results.thoughts.map(thought => (
-                    <Pressable
-                      key={thought.id}
-                      style={styles.resultRow}
-                      onPress={() => openProfile(thought?.profile?.username)}
-                    >
-                      <Text style={styles.resultPrimary}>
-                        {(thought?.text || '').replace(/\s+/g, ' ').slice(0, 100) || 'View thought'}
-                      </Text>
-                      <Text style={styles.resultSecondary}>
-                        {thought?.profile?.username ? `by @${thought.profile.username}` : 'open profile'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </ScrollView>
+            <FlatList
+              data={searchRows}
+              style={styles.resultsWrap}
+              keyExtractor={keyExtractor}
+              renderItem={renderSearchResultItem}
+              keyboardShouldPersistTaps="handled"
+              initialNumToRender={12}
+              maxToRenderPerBatch={8}
+              updateCellsBatchingPeriod={50}
+              windowSize={7}
+              removeClippedSubviews
+            />
             <Pressable style={styles.seeMorePressable} onPress={openSeeMore} disabled={!query.trim()}>
               <Text style={styles.seeMoreLabel}>See More</Text>
             </Pressable>

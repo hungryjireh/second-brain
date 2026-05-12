@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 
 function getEntryBody(entry) {
@@ -24,11 +25,10 @@ const CATEGORY_ICONS = {
   note: '📝',
 };
 
-export default function SecondBrainEntryCard({
+function SecondBrainEntryCard({
   entry,
   styles,
   theme,
-  timezone,
   isBusy,
   isSwipeOpen,
   isDeleteConfirm,
@@ -38,8 +38,8 @@ export default function SecondBrainEntryCard({
   onToggleArchive,
   onDownloadIcs,
   onRequestDelete,
-  formatRemindAt,
-  formatDate,
+  displayRemindAt,
+  displayDate,
 }) {
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? '📝';
@@ -128,12 +128,12 @@ export default function SecondBrainEntryCard({
         {entry.remind_at ? (
           <>
             <View style={styles.reminderMetaPill}>
-              <Text style={styles.reminderMetaText}>⏰ {formatRemindAt(entry.remind_at, timezone)}</Text>
+              <Text style={styles.reminderMetaText}>⏰ {displayRemindAt || ''}</Text>
             </View>
             <Text style={styles.metaDot}>•</Text>
           </>
         ) : null}
-        <Text style={styles.metaText}>{formatDate(entry.created_at, timezone) || ''}</Text>
+        <Text style={styles.metaText}>{displayDate || ''}</Text>
       </View>
 
       {Array.isArray(entry.tags) && entry.tags.length > 0 ? (
@@ -148,3 +148,5 @@ export default function SecondBrainEntryCard({
     </Pressable>
   );
 }
+
+export default memo(SecondBrainEntryCard);

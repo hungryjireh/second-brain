@@ -104,40 +104,58 @@ function getPriorityLevel(priority) {
   return 'low';
 }
 
-function getDateKey(date, timezone) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+function createDateFormatters(timezone) {
+  return {
+    dayKeyFormatter: new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }),
+    timeFormatter: new Intl.DateTimeFormat('en-SG', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    shortDateFormatter: new Intl.DateTimeFormat('en-SG', {
+      timeZone: timezone,
+      month: 'short',
+      day: 'numeric',
+    }),
+    remindDateFormatter: new Intl.DateTimeFormat('en-SG', {
+      timeZone: timezone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }),
+  };
 }
 
-function formatDate(unixTs, timezone = 'Asia/Singapore') {
+function formatDateWithFormatters(unixTs, formatters) {
   if (!unixTs) return null;
   const d = new Date(unixTs * 1000);
   const now = new Date();
   const yesterday = new Date(now.getTime() - 86400000);
-  const dayKey = getDateKey(d, timezone);
-  const todayKey = getDateKey(now, timezone);
-  const yesterdayKey = getDateKey(yesterday, timezone);
-  const time = d.toLocaleTimeString('en-SG', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
+  const dayKey = formatters.dayKeyFormatter.format(d);
+  const todayKey = formatters.dayKeyFormatter.format(now);
+  const yesterdayKey = formatters.dayKeyFormatter.format(yesterday);
+  const time = formatters.timeFormatter.format(d);
 
   if (dayKey === todayKey) return `Today · ${time}`;
   if (dayKey === yesterdayKey) return `Yesterday · ${time}`;
-  return `${d.toLocaleDateString('en-SG', { timeZone: timezone, month: 'short', day: 'numeric' })} · ${time}`;
+  return `${formatters.shortDateFormatter.format(d)} · ${time}`;
 }
 
-function formatRemindAt(unixTs, timezone = 'Asia/Singapore') {
+function formatRemindAtWithFormatters(unixTs, formatters) {
   if (!unixTs) return null;
   const d = new Date(unixTs * 1000);
   const now = new Date();
-  const dayKey = getDateKey(d, timezone);
-  const todayKey = getDateKey(now, timezone);
-  const time = d.toLocaleTimeString('en-SG', { timeZone: timezone, hour: '2-digit', minute: '2-digit' });
+  const dayKey = formatters.dayKeyFormatter.format(d);
+  const todayKey = formatters.dayKeyFormatter.format(now);
+  const time = formatters.timeFormatter.format(d);
 
   if (dayKey === todayKey) return `${time} tonight`;
-  return `${d.toLocaleDateString('en-SG', { timeZone: timezone, weekday: 'short', month: 'short', day: 'numeric' })} · ${time}`;
+  return `${formatters.remindDateFormatter.format(d)} · ${time}`;
 }
 
 function unixToDatetimeLocal(unixTs) {
@@ -230,11 +248,13 @@ export default function SecondBrainScreen({ token }) {
   const loadEntries = useCallback(async () => {
     try {
       setError('');
-      const data = await apiRequest('/entries?limit=60', { token });
+      const [data, tagsData] = await Promise.all([
+        apiRequest('/entries?limit=60', { token }),
+        apiRequest('/tags', { token }),
+      ]);
       const list = Array.isArray(data.entries) ? data.entries : Array.isArray(data) ? data : [];
       setEntries(list);
 
-      const tagsData = await apiRequest('/tags', { token });
       const normalizedUserTags = (Array.isArray(tagsData?.tags) ? tagsData.tags : [])
         .map(tag => normalizeTagValue(tag))
         .filter(Boolean);
@@ -474,6 +494,51 @@ export default function SecondBrainScreen({ token }) {
     setSelectedEntry(null);
   }
 
+  const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
+  const keyExtractor = useCallback(item => item.key, []);
+  const renderListItem = useCallback(({ item }) => {
+    if (item.type === 'header') {
+      return <Text style={styles.sectionHeaderText}>{`${item.group} · ${item.count}`}</Text>;
+    }
+
+    const entry = item.entry;
+    if (!entry) return null;
+    const isBusy = busyId === entry.id;
+    const isWeb = Platform.OS === 'web';
+    const cardContent = (
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={isBusy}
+        isSwipeOpen={openSwipeId === entry.id}
+        isDeleteConfirm={confirmDeleteId === entry.id}
+        displayDate={item.displayDate}
+        displayRemindAt={item.displayRemindAt}
+        onOpenEntry={openEntry}
+        onCloseSwipe={closeSwipe}
+        onStartEdit={startEdit}
+        onToggleArchive={toggleArchive}
+        onDownloadIcs={downloadIcs}
+        onRequestDelete={requestDelete}
+      />
+    );
+    if (isWeb) return cardContent;
+    return (
+      <SwipeToDeleteRow
+        id={entry.id}
+        isOpen={openSwipeId === entry.id}
+        onOpen={setOpenSwipeId}
+        actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
+        onActionPress={() => requestDelete(entry.id)}
+        actionWidth={SWIPE_ACTION_WIDTH}
+        styles={styles}
+      >
+        {cardContent}
+      </SwipeToDeleteRow>
+    );
+  }, [busyId, closeSwipe, confirmDeleteId, downloadIcs, openEntry, openSwipeId, requestDelete, startEdit, toggleArchive]);
+
   function openSettings() {
     setTimezoneDraft(timezone);
     setTimezoneMenuOpen(false);
@@ -597,42 +662,43 @@ export default function SecondBrainScreen({ token }) {
     }
   }
 
-  const counts = useMemo(() => {
-    const base = { reminder: 0, todo: 0, thought: 0, note: 0 };
-    for (const entry of entries) {
-      if (entry.is_archived) continue;
-      const key = entry.category;
-      if (Object.prototype.hasOwnProperty.call(base, key)) base[key] += 1;
-    }
-    return base;
-  }, [entries]);
+  const derivedData = useMemo(() => {
+    const categoryCounts = { reminder: 0, todo: 0, thought: 0, note: 0 };
+    const usageCounts = new Map();
+    const filteredEntries = [];
+    const selectedTag = activeTag.toLowerCase();
 
-  const visibleEntries = useMemo(() => {
-    let list = entries.filter(entry => (showArchived ? Boolean(entry.is_archived) : !entry.is_archived));
-    if (activeCategory) list = list.filter(entry => entry.category === activeCategory);
-    if (activePriorityLevel) {
-      list = list.filter(entry => getPriorityLevel(entry.priority ?? 0) === activePriorityLevel);
+    for (const entry of entries) {
+      const isArchived = Boolean(entry.is_archived);
+      const normalizedTags = Array.isArray(entry.tags)
+        ? entry.tags.map(tag => String(tag).trim()).filter(Boolean)
+        : [];
+
+      if (!isArchived) {
+        const key = entry.category;
+        if (Object.prototype.hasOwnProperty.call(categoryCounts, key)) categoryCounts[key] += 1;
+      }
+
+      for (const tag of normalizedTags) {
+        usageCounts.set(tag, (usageCounts.get(tag) ?? 0) + 1);
+      }
+
+      if (showArchived ? !isArchived : isArchived) continue;
+      if (activeCategory && entry.category !== activeCategory) continue;
+      if (activePriorityLevel && getPriorityLevel(entry.priority ?? 0) !== activePriorityLevel) continue;
+      if (selectedTag && !normalizedTags.some(tag => tag.toLowerCase() === selectedTag)) continue;
+
+      filteredEntries.push(entry);
     }
-    if (activeTag) {
-      const selectedTag = activeTag.toLowerCase();
-      list = list.filter(entry =>
-        Array.isArray(entry.tags) && entry.tags.some(tag => String(tag).toLowerCase() === selectedTag)
-      );
-    }
-    return list;
+
+    return {
+      counts: categoryCounts,
+      visibleEntries: filteredEntries,
+      tagUsageCounts: usageCounts,
+    };
   }, [entries, showArchived, activeCategory, activePriorityLevel, activeTag]);
 
-  const tagUsageCounts = useMemo(() => {
-    const counts = new Map();
-    for (const entry of entries) {
-      if (!Array.isArray(entry.tags)) continue;
-      for (const tag of entry.tags) {
-        const value = String(tag).trim();
-        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }, [entries]);
+  const { counts, visibleEntries, tagUsageCounts } = derivedData;
 
   const availableTags = useMemo(() => {
     return Array.from(tagUsageCounts.keys()).sort((a, b) => a.localeCompare(b));
@@ -648,6 +714,7 @@ export default function SecondBrainScreen({ token }) {
     const options = getTimezoneOptions();
     return options.includes(timezoneDraft) ? options : [timezoneDraft, ...options];
   }, [timezoneDraft]);
+  const dateFormatters = useMemo(() => createDateFormatters(timezone), [timezone]);
   const groupedRows = useMemo(() => {
     const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
     const rows = [];
@@ -656,11 +723,17 @@ export default function SecondBrainScreen({ token }) {
       if (!items || items.length === 0) continue;
       rows.push({ type: 'header', key: `header-${group}`, group, count: items.length });
       for (const entry of items) {
-        rows.push({ type: 'entry', key: `entry-${entry.id}`, entry });
+        rows.push({
+          type: 'entry',
+          key: `entry-${entry.id}`,
+          entry,
+          displayDate: formatDateWithFormatters(entry.created_at, dateFormatters),
+          displayRemindAt: formatRemindAtWithFormatters(entry.remind_at, dateFormatters),
+        });
       }
     }
     return rows;
-  }, [groupedEntries]);
+  }, [dateFormatters, groupedEntries]);
 
   return (
     <View style={styles.container}>
@@ -914,50 +987,13 @@ export default function SecondBrainScreen({ token }) {
         data={groupedRows}
         style={styles.list}
         contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
-        keyExtractor={item => item.key}
-        renderItem={({ item }) => {
-          if (item.type === 'header') {
-            return <Text style={styles.sectionHeaderText}>{`${item.group} · ${item.count}`}</Text>;
-          }
-
-          const entry = item.entry;
-          if (!entry) return null;
-          const isBusy = busyId === entry.id;
-          const isWeb = Platform.OS === 'web';
-          const cardContent = (
-            <SecondBrainEntryCard
-              entry={entry}
-              styles={styles}
-              theme={theme}
-              timezone={timezone}
-              isBusy={isBusy}
-              isSwipeOpen={openSwipeId === entry.id}
-              isDeleteConfirm={confirmDeleteId === entry.id}
-              onOpenEntry={openEntry}
-              onCloseSwipe={() => setOpenSwipeId(null)}
-              onStartEdit={startEdit}
-              onToggleArchive={toggleArchive}
-              onDownloadIcs={downloadIcs}
-              onRequestDelete={requestDelete}
-              formatRemindAt={formatRemindAt}
-              formatDate={formatDate}
-            />
-          );
-          if (isWeb) return cardContent;
-          return (
-            <SwipeToDeleteRow
-              id={entry.id}
-              isOpen={openSwipeId === entry.id}
-              onOpen={setOpenSwipeId}
-              actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
-              onActionPress={() => requestDelete(entry.id)}
-              actionWidth={SWIPE_ACTION_WIDTH}
-              styles={styles}
-            >
-              {cardContent}
-            </SwipeToDeleteRow>
-          );
-        }}
+        keyExtractor={keyExtractor}
+        renderItem={renderListItem}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        windowSize={9}
+        removeClippedSubviews
       />
 
       {selectedEntry ? (

@@ -77,11 +77,19 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
     const items = [];
     if (todaysThoughts.length > 0) {
       items.push({ type: 'section', id: 'section-today', title: "Today's Thoughts" });
-      todaysThoughts.forEach(thought => items.push({ type: 'thought', thought }));
+      todaysThoughts.forEach(thought => items.push({
+        type: 'thought',
+        thought,
+        dateLabel: formatThoughtDate(thought.created_at),
+      }));
     }
     if (otherThoughts.length > 0) {
       items.push({ type: 'section', id: 'section-other', title: 'Past Thoughts' });
-      otherThoughts.forEach(thought => items.push({ type: 'thought', thought }));
+      otherThoughts.forEach(thought => items.push({
+        type: 'thought',
+        thought,
+        dateLabel: formatThoughtDate(thought.created_at),
+      }));
     }
     return items;
   }, [error, profile, thoughts]);
@@ -129,7 +137,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
     }
   }
 
-  async function addToSecondBrain(thought) {
+  const addToSecondBrain = useCallback(async thought => {
     const thoughtText = String(thought?.text || '').trim();
     if (!thoughtText) return;
     const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
@@ -144,7 +152,30 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
     } catch (err) {
       Alert.alert('Add to SecondBrain', err.message || 'Unable to save thought.');
     }
-  }
+  }, [token]);
+
+  const keyExtractor = useCallback(item => (item.type === 'section' ? item.id : String(item.thought.id)), []);
+
+  const renderItem = useCallback(({ item }) => {
+    if (item.type === 'section') {
+      return (
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>{item.title}</Text>
+          <View style={styles.sectionHeaderLine} />
+        </View>
+      );
+    }
+    return (
+      <OpenBrainThoughtCard
+        text={item.thought.text}
+        date={item.dateLabel}
+        feedBody
+        transparentCard
+        onShare={() => shareThought(item.thought, profile?.username)}
+        onAddToSecondBrain={addToSecondBrain}
+      />
+    );
+  }, [addToSecondBrain, profile?.username]);
 
   return (
     <View style={styles.container}>
@@ -157,7 +188,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       <FlatList
         data={thoughtDisplayItems}
         style={styles.list}
-        keyExtractor={item => (item.type === 'section' ? item.id : String(item.thought.id))}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={(
           <>
@@ -200,26 +231,12 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
             ) : null}
           </>
         )}
-        renderItem={({ item }) => {
-          if (item.type === 'section') {
-            return (
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionHeader}>{item.title}</Text>
-                <View style={styles.sectionHeaderLine} />
-              </View>
-            );
-          }
-          return (
-            <OpenBrainThoughtCard
-              text={item.thought.text}
-              date={formatThoughtDate(item.thought.created_at)}
-              feedBody
-              transparentCard
-              onShare={() => shareThought(item.thought, profile?.username)}
-              onAddToSecondBrain={addToSecondBrain}
-            />
-          );
-        }}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
+        removeClippedSubviews
       />
       <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrainProfile" />
     </View>
