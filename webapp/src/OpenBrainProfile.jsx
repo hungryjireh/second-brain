@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -327,7 +328,7 @@ export default function OpenBrainProfile() {
                       border: '0.5px solid var(--border)',
                       borderRadius: 999,
                       padding: '7px 12px',
-                      background: profile.is_following ? 'var(--bg-hover)' : '#2f9de4',
+                      background: profile.is_following ? 'var(--bg-hover)' : openBrainStyle.accentStrong,
                       color: profile.is_following ? 'var(--text-secondary)' : '#f2fbff',
                       fontSize: 12,
                       cursor: isFollowBusy ? 'not-allowed' : 'pointer',

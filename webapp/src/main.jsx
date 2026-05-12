@@ -8,6 +8,7 @@ import OpenBrainFeed from './OpenBrainFeed.jsx';
 import OpenBrainProfile from './OpenBrainProfile.jsx';
 import SharedThoughtPage from './SharedThoughtPage.jsx';
 import NotFoundPage from './NotFoundPage.jsx';
+import { openBrainStyle } from './constants/openbrainStyle';
 import './index.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -37,7 +38,7 @@ function AppLogo({ name }) {
         color: 'var(--text-primary)',
       }}
     >
-      open<span style={{ color: '#7ec8ff' }}>brain</span>
+      open<span style={{ color: openBrainStyle.accent }}>brain</span>
     </span>
   );
 }

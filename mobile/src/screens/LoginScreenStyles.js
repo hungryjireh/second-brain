@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { openBrainStyle } from '../constants/openbrainStyle';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: openBrainStyle.shadow,
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.9,
     textTransform: 'uppercase',
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   title: {
     marginTop: 8,
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.4,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
   },
   titleAccent: {
     color: theme.colors.brand,
@@ -48,7 +49,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     color: theme.colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   form: {
     gap: 10,
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 10,
     fontSize: 14,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   button: {
     marginTop: 2,
@@ -80,8 +81,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgHover,
   },
   buttonText: {
-    color: '#f5fff9',
-    fontFamily: 'DMSans_600SemiBold',
+    color: openBrainStyle.buttonTextOnBrand,
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
   buttonTextDisabled: {
@@ -91,15 +92,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 0.5,
-    borderColor: 'rgba(220,60,60,0.28)',
-    backgroundColor: 'rgba(220,60,60,0.1)',
+    borderColor: openBrainStyle.dangerBorder,
+    backgroundColor: openBrainStyle.dangerBg,
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
   errorText: {
-    color: '#f87171',
+    color: openBrainStyle.dangerStrong,
     fontSize: 12,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
 });
 

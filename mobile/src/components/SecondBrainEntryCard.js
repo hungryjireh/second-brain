@@ -1,21 +1,22 @@
 import { memo } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 function getEntryBody(entry) {
   return entry.raw_text || entry.summary || '';
 }
 
 function getPriorityColor(priority, theme) {
-  if (priority >= 8) return '#ef4444';
-  if (priority >= 4) return '#f59e0b';
+  if (priority >= 8) return openBrainStyle.priorityHigh;
+  if (priority >= 4) return openBrainStyle.note;
   return theme.colors.textSecondary;
 }
 
 const TAG_STYLES = {
-  reminder: { bg: 'rgba(29,158,117,0.15)', color: '#2ecf9a', label: 'Reminder' },
-  todo: { bg: 'rgba(55,138,221,0.15)', color: '#6ab4f5', label: 'TODO' },
-  thought: { bg: 'rgba(127,119,221,0.15)', color: '#a8a3f0', label: 'Thought' },
-  note: { bg: 'rgba(239,159,39,0.15)', color: '#f5bf6a', label: 'Note' },
+  reminder: { bg: openBrainStyle.reminderTagBg, color: openBrainStyle.reminderTagText, label: 'Reminder' },
+  todo: { bg: openBrainStyle.todoDim, color: openBrainStyle.todoTagText, label: 'TODO' },
+  thought: { bg: openBrainStyle.thoughtDim, color: openBrainStyle.thoughtTagText, label: 'Thought' },
+  note: { bg: openBrainStyle.noteDim, color: openBrainStyle.noteTagText, label: 'Note' },
 };
 
 const CATEGORY_ICONS = {

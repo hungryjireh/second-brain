@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -46,7 +47,7 @@ export default function Login() {
         placeItems: 'center',
         padding: 20,
         background:
-          'radial-gradient(circle at 15% 15%, rgba(29,158,117,0.13), transparent 38%), var(--bg-base)',
+          openBrainStyle.brandGlow,
       }}
     >
       <div
@@ -57,7 +58,7 @@ export default function Login() {
           border: '0.5px solid var(--border)',
           borderRadius: 16,
           padding: 24,
-          boxShadow: '0 18px 40px rgba(0,0,0,0.35)',
+          boxShadow: `0 18px 40px ${openBrainStyle.shadowStrong}`,
         }}
       >
         <p
@@ -76,7 +77,7 @@ export default function Login() {
           style={{
             marginTop: 8,
             marginBottom: 8,
-            fontFamily: 'DM Serif Display, serif',
+            fontFamily: openBrainStyle.serifFamily,
             fontSize: 34,
             letterSpacing: '-0.4px',
             lineHeight: 1.1,
@@ -137,7 +138,7 @@ export default function Login() {
               borderRadius: 10,
               border: '0.5px solid transparent',
               background: loading || !email.trim() || !password ? 'var(--bg-hover)' : 'var(--brand)',
-              color: loading || !email.trim() || !password ? 'var(--text-muted)' : '#f5fff9',
+              color: loading || !email.trim() || !password ? 'var(--text-muted)' : openBrainStyle.buttonTextOnBrand,
               fontWeight: 600,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -154,10 +155,10 @@ export default function Login() {
             style={{
               marginTop: 12,
               marginBottom: 0,
-              color: '#f87171',
+              color: openBrainStyle.dangerStrong,
               fontSize: 12,
-              background: 'rgba(220,60,60,0.1)',
-              border: '0.5px solid rgba(220,60,60,0.28)',
+              background: openBrainStyle.dangerBg,
+              border: `0.5px solid ${openBrainStyle.dangerBorder}`,
               borderRadius: 8,
               padding: '8px 10px',
             }}

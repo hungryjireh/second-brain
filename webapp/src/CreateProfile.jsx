@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -54,7 +55,7 @@ export default function CreateProfile() {
         placeItems: 'center',
         padding: 20,
         background:
-          'radial-gradient(circle at 15% 15%, rgba(126,200,255,0.12), transparent 40%), var(--bg-base)',
+          `radial-gradient(circle at 15% 15%, ${openBrainStyle.accentBg}, transparent 40%), var(--bg-base)`,
       }}
     >
       <form
@@ -71,7 +72,7 @@ export default function CreateProfile() {
           gap: 12,
         }}
       >
-        <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7ec8ff', fontWeight: 600 }}>
+        <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
           Open-brain setup
         </p>
         <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, serif', fontSize: 34, lineHeight: 1.1 }}>
@@ -150,7 +151,7 @@ export default function CreateProfile() {
             padding: '11px 14px',
             borderRadius: 10,
             border: '0.5px solid transparent',
-            background: loading || !username.trim() || !timezone.trim() ? 'var(--bg-hover)' : '#2f9de4',
+            background: loading || !username.trim() || !timezone.trim() ? 'var(--bg-hover)' : openBrainStyle.accentStrong,
             color: loading || !username.trim() || !timezone.trim() ? 'var(--text-muted)' : '#f2fbff',
             fontWeight: 600,
             fontSize: 14,
