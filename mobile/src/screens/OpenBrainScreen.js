@@ -56,7 +56,7 @@ export default function OpenBrainScreen({ token, navigation }) {
 
   const ensureProfile = useCallback(async () => {
     try {
-      const data = await apiRequest('/open-brain/profile', { token });
+      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: 60000 } });
       setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : 0);
       return true;
     } catch (err) {
@@ -76,7 +76,7 @@ export default function OpenBrainScreen({ token, navigation }) {
     let cancelled = false;
     async function loadTodaysThought() {
       try {
-        const data = await apiRequest('/open-brain/thoughts', { token });
+        const data = await apiRequest('/open-brain/thoughts', { token, cache: { ttlMs: 30000 } });
         if (cancelled || !data?.has_posted_today || !data?.thought) return;
         const postedText = typeof data.thought?.content?.text === 'string' ? data.thought.content.text : '';
         setDraft(postedText);

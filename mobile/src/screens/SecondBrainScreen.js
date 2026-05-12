@@ -249,8 +249,8 @@ export default function SecondBrainScreen({ token }) {
     try {
       setError('');
       const [data, tagsData] = await Promise.all([
-        apiRequest('/entries?limit=60', { token }),
-        apiRequest('/tags', { token }),
+        apiRequest('/entries?limit=60', { token, cache: { ttlMs: 30000 } }),
+        apiRequest('/tags', { token, cache: { ttlMs: 120000 } }),
       ]);
       const list = Array.isArray(data.entries) ? data.entries : Array.isArray(data) ? data : [];
       setEntries(list);
@@ -272,7 +272,7 @@ export default function SecondBrainScreen({ token }) {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await apiRequest('/settings', { token });
+        const data = await apiRequest('/settings', { token, cache: { ttlMs: 120000 } });
         if (data?.timezone) {
           setTimezone(data.timezone);
           setTimezoneDraft(data.timezone);

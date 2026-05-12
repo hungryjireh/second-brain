@@ -17,7 +17,7 @@ describe('AppPickerScreen', () => {
     render(<AppPickerScreen token="token-123" navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith('/settings', { token: 'token-123' });
+      expect(apiRequest).toHaveBeenCalledWith('/settings', expect.objectContaining({ token: 'token-123' }));
     });
   });
 

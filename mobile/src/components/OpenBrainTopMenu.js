@@ -55,7 +55,10 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     setLoading(true);
     setError('');
     try {
-      const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, { token });
+      const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, {
+        token,
+        cache: { ttlMs: 15000 },
+      });
       setDidSearch(true);
       const rawUsers = Array.isArray(data?.users) ? data.users : [];
       setResults({
@@ -87,7 +90,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     setNotificationsLoading(true);
     setNotificationsError('');
     try {
-      const data = await apiRequest('/open-brain/notifications', { token });
+      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: 10000 } });
       setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
     } catch (err) {
       setNotificationsError(err.message || 'Failed to load notifications.');

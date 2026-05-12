@@ -72,6 +72,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
+  timezoneDropdownWrapper: {
+    position: 'relative',
+    zIndex: 20,
+  },
   timezoneDropdownText: {
     color: theme.colors.textPrimary,
     fontFamily: 'DMSans_400Regular',
@@ -83,14 +87,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   timezoneDropdownList: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
     backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 10,
     maxHeight: 220,
+    zIndex: 30,
+    elevation: 8,
   },
   timezoneDropdownListContent: {
     paddingVertical: 4,
+  },
+  timezoneSearchInput: {
+    backgroundColor: theme.colors.bgSurface,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 8,
+    color: theme.colors.textPrimary,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    marginHorizontal: 8,
+    marginBottom: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   timezoneDropdownOption: {
     paddingHorizontal: 12,
@@ -106,6 +129,13 @@ const styles = StyleSheet.create({
   },
   timezoneDropdownOptionTextSelected: {
     color: '#c9ecff',
+  },
+  timezoneNoResults: {
+    color: theme.colors.textMuted,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   primaryButton: {
     alignItems: 'center',

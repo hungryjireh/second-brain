@@ -16,7 +16,10 @@ export default function OpenBrainUserSearchScreen({ token, navigation }) {
     setLoading(true);
     setError('');
     try {
-      const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(username)}`, { token });
+      const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(username)}`, {
+        token,
+        cache: { ttlMs: 60000 },
+      });
       const targetUsername = response?.profile?.username || username;
       navigation.navigate('OpenBrainProfile', { username: targetUsername });
     } catch (err) {

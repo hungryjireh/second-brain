@@ -50,7 +50,10 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
     setLoading(true);
     setError('');
     try {
-      const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, { token });
+      const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, {
+        token,
+        cache: { ttlMs: 15000 },
+      });
       setDidSearch(true);
       const rawUsers = Array.isArray(data?.users) ? data.users : [];
       setResults({

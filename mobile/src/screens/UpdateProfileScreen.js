@@ -31,6 +31,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [timezone, setTimezone] = useState(defaultTimezone);
   const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
+  const [timezoneSearch, setTimezoneSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -39,12 +40,17 @@ export default function UpdateProfileScreen({ token, navigation }) {
     const options = getTimezoneOptions();
     return options.includes(timezone) ? options : [timezone, ...options];
   }, [timezone]);
+  const filteredTimezoneOptions = useMemo(() => {
+    const query = timezoneSearch.trim().toLowerCase();
+    if (!query) return timezoneOptions;
+    return timezoneOptions.filter(option => option.toLowerCase().includes(query));
+  }, [timezoneOptions, timezoneSearch]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiRequest('/open-brain/profile', { token });
+      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: 60000 } });
       setUsername(String(data.profile?.username || ''));
       setAvatarUrl(String(data.profile?.avatar_url || ''));
       setTimezone(String(data.profile?.timezone || defaultTimezone));
@@ -121,38 +127,58 @@ export default function UpdateProfileScreen({ token, navigation }) {
               />
 
               <Text style={styles.label}>Timezone</Text>
-              <Pressable
-                style={styles.timezoneDropdown}
-                onPress={() => setTimezoneMenuOpen(prev => !prev)}
-              >
-                <Text style={styles.timezoneDropdownText}>{timezone || 'Select timezone'}</Text>
-                <Text style={styles.timezoneDropdownChevron}>{timezoneMenuOpen ? '▲' : '▼'}</Text>
-              </Pressable>
-              {timezoneMenuOpen ? (
-                <ScrollView
-                  style={styles.timezoneDropdownList}
-                  showsVerticalScrollIndicator
-                  contentContainerStyle={styles.timezoneDropdownListContent}
+              <View style={styles.timezoneDropdownWrapper}>
+                <Pressable
+                  style={styles.timezoneDropdown}
+                  onPress={() => {
+                    setTimezoneMenuOpen(prev => {
+                      if (prev) setTimezoneSearch('');
+                      return !prev;
+                    });
+                  }}
                 >
-                  {timezoneOptions.map(option => {
-                    const isSelected = option === timezone;
-                    return (
-                      <Pressable
-                        key={option}
-                        style={[styles.timezoneDropdownOption, isSelected && styles.timezoneDropdownOptionSelected]}
-                        onPress={() => {
-                          setTimezone(option);
-                          setTimezoneMenuOpen(false);
-                        }}
-                      >
-                        <Text style={[styles.timezoneDropdownOptionText, isSelected && styles.timezoneDropdownOptionTextSelected]}>
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              ) : null}
+                  <Text style={styles.timezoneDropdownText}>{timezone || 'Select timezone'}</Text>
+                  <Text style={styles.timezoneDropdownChevron}>{timezoneMenuOpen ? '▲' : '▼'}</Text>
+                </Pressable>
+                {timezoneMenuOpen ? (
+                  <ScrollView
+                    style={styles.timezoneDropdownList}
+                    showsVerticalScrollIndicator
+                    contentContainerStyle={styles.timezoneDropdownListContent}
+                  >
+                    <TextInput
+                      value={timezoneSearch}
+                      onChangeText={setTimezoneSearch}
+                      placeholder="Search timezone"
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={styles.timezoneSearchInput}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    {filteredTimezoneOptions.map(option => {
+                      const isSelected = option === timezone;
+                      return (
+                        <Pressable
+                          key={option}
+                          style={[styles.timezoneDropdownOption, isSelected && styles.timezoneDropdownOptionSelected]}
+                          onPress={() => {
+                            setTimezone(option);
+                            setTimezoneMenuOpen(false);
+                            setTimezoneSearch('');
+                          }}
+                        >
+                          <Text style={[styles.timezoneDropdownOptionText, isSelected && styles.timezoneDropdownOptionTextSelected]}>
+                            {option}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                    {filteredTimezoneOptions.length === 0 ? (
+                      <Text style={styles.timezoneNoResults}>No timezones found.</Text>
+                    ) : null}
+                  </ScrollView>
+                ) : null}
+              </View>
 
               <Pressable
                 style={[styles.primaryButton, (saving || !timezone.trim()) && styles.buttonDisabled]}

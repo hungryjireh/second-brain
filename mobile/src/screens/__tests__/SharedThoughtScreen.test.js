@@ -23,7 +23,12 @@ describe('SharedThoughtScreen', () => {
     fireEvent.press(getByText('Load thought'));
 
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith('/open-brain/shared-thought?slug=my-shared-slug');
+      expect(apiRequest).toHaveBeenCalledWith(
+        '/open-brain/shared-thought?slug=my-shared-slug',
+        expect.objectContaining({
+          cache: expect.objectContaining({ ttlMs: 30000 }),
+        })
+      );
       expect(getByText('A shared idea')).toBeTruthy();
       expect(getByText('by @jireh')).toBeTruthy();
     });

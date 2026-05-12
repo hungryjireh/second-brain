@@ -25,7 +25,7 @@ export default function AppPickerScreen({ navigation, token }) {
 
     async function verifySession() {
       try {
-        await apiRequest('/settings', { token });
+        await apiRequest('/settings', { token, cache: { ttlMs: 120000 } });
       } catch {
         // Expired/invalid auth is handled globally by apiRequest via authExpiredHandler.
         if (cancelled) return;

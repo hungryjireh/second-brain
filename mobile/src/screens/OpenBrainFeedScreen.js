@@ -150,8 +150,8 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
 
   const loadComposerData = useCallback(async () => {
     const [profileData, thoughtData] = await Promise.all([
-      apiRequest('/open-brain/profile', { token }),
-      apiRequest('/open-brain/thoughts', { token }),
+      apiRequest('/open-brain/profile', { token, cache: { ttlMs: 60000 } }),
+      apiRequest('/open-brain/thoughts', { token, cache: { ttlMs: 30000 } }),
     ]);
     setStreakCount(Number.isInteger(profileData?.profile?.streak_count) ? profileData.profile.streak_count : 0);
     if (thoughtData?.has_posted_today && thoughtData?.thought) {
@@ -169,7 +169,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     setLoading(true);
     setError('');
     try {
-      const data = await apiRequest('/open-brain/feed', { token });
+      const data = await apiRequest('/open-brain/feed', { token, cache: { ttlMs: 30000 } });
       const payload = data?.feed && typeof data.feed === 'object' ? data.feed : data;
       setFeed({
         following: Array.isArray(payload?.following) ? payload.following : [],

@@ -31,7 +31,9 @@ export default function SharedThoughtScreen({ navigation }) {
     setError('');
     setPayload(null);
     try {
-      const data = await apiRequest(`/open-brain/shared-thought?slug=${encodeURIComponent(slug.trim())}`);
+      const data = await apiRequest(`/open-brain/shared-thought?slug=${encodeURIComponent(slug.trim())}`, {
+        cache: { ttlMs: 30000 },
+      });
       setPayload(data);
     } catch (err) {
       setError(err.message);
