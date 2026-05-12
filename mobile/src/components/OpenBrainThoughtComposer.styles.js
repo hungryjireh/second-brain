@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   card: {
@@ -9,7 +10,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 14,
-    shadowColor: '#000',
+    shadowColor: openBrainStyle.shadow,
     shadowOpacity: 0.28,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 11,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
@@ -43,12 +44,12 @@ const styles = StyleSheet.create({
   },
   metric: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 11,
   },
   heading: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
     fontSize: 29,
     lineHeight: 34,
     marginTop: 12,
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
   },
   prompt: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 13,
     fontStyle: 'italic',
     flex: 1,
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 13,
   },
   divider: {
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.colors.bgSurface,
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 16,
     lineHeight: 23,
     borderRadius: 10,
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   },
   postedText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 16,
     lineHeight: 23,
   },
@@ -137,14 +138,14 @@ const styles = StyleSheet.create({
   },
   postedTitle: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
     fontSize: 34,
     lineHeight: 40,
     marginBottom: 12,
   },
   postedQuoteBlock: {
     borderLeftWidth: 3,
-    borderLeftColor: '#1d9e75',
+    borderLeftColor: openBrainStyle.accent,
     paddingLeft: 10,
   },
   postedQuoteText: {
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   },
   remaining: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 13,
   },
   visibilityButton: {
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   },
   visibilityText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 12,
     flexShrink: 1,
   },
@@ -216,24 +217,24 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   buttonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: openBrainStyle.white04,
   },
   buttonText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
     lineHeight: 16,
   },
   helperText: {
     color: theme.colors.textMuted,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
     textAlign: 'right',
     marginTop: 10,
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
   },
   formatButtonText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
     lineHeight: 16,
   },

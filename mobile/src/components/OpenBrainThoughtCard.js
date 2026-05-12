@@ -3,24 +3,13 @@ import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'rea
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
+import { initialsFromName, mutedTint } from '../utils/profileAvatar';
 
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
   { key: 'me_too', label: 'me too' },
   { key: 'made_me_think', label: 'made me think' },
 ];
-
-function initialsFromName(name) {
-  const cleaned = String(name || '').trim();
-  if (!cleaned) return '?';
-  return cleaned.slice(0, 1).toUpperCase();
-}
-
-function mutedTint(seed = '') {
-  const palette = ['#514876', '#495072', '#5a465f', '#425467', '#5c4f46', '#4f4f70'];
-  const total = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return palette[total % palette.length];
-}
 
 function normalizeThoughtText(text) {
   if (typeof text !== 'string') return '';

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   container: {
@@ -48,8 +49,9 @@ const styles = StyleSheet.create({
   },
   avatarFallbackText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: 'sans-serif',
     fontSize: 24,
+    fontWeight: '700',
   },
   profileText: {
     flex: 1,
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
   },
   username: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 20,
     lineHeight: 24,
   },
@@ -70,18 +72,18 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.borderStrong,
     borderWidth: 1,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.14)',
+    backgroundColor: theme.colors.bgHover,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   streakPillText: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   thoughtCount: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
   followButton: {
@@ -93,23 +95,23 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   followActiveButton: {
-    backgroundColor: '#2f9de4',
+    backgroundColor: openBrainStyle.accentStrong,
   },
   followingButton: {
     backgroundColor: theme.colors.bgHover,
   },
   followButtonText: {
-    color: '#f2fbff',
-    fontFamily: 'DMSans_400Regular',
+    color: openBrainStyle.accentOnSolid,
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   muted: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   empty: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontStyle: 'italic',
   },
   sectionHeaderRow: {
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: theme.colors.textMuted,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 11,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     fontSize: 13,
   },
 });

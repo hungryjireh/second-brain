@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   container: {
@@ -26,12 +27,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   floatingDraftButtonActive: {
-    borderColor: theme.colors.brand,
-    backgroundColor: theme.colors.brandDim,
+    borderColor: openBrainStyle.accentStrong,
+    backgroundColor: openBrainStyle.accentDim,
   },
   draftIcon: {
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 22,
     lineHeight: 22,
   },
@@ -69,12 +70,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgBase,
   },
   tabActive: {
-    borderColor: theme.colors.brand,
+    borderColor: openBrainStyle.accentStrong,
     backgroundColor: theme.colors.bgRaised,
   },
   tabLabel: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 13,
   },
   tabLabelActive: {
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: theme.colors.textMuted,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 11,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
@@ -117,12 +118,12 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: theme.colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     marginBottom: 12,
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     marginBottom: 12,
   },
 });

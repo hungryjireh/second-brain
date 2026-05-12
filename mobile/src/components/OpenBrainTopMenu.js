@@ -183,7 +183,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
       <View style={styles.wrap}>
         <Pressable
           style={styles.backButton}
-          onPress={() => navigation.navigate('Apps')}
+          onPress={() => navigation.replace('Apps')}
           accessibilityRole="button"
           accessibilityLabel="Back to Apps"
         >

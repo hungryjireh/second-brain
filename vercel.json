@@ -1,8 +1,8 @@
 {
-  "buildCommand": "cd webapp && npm install && npm run build",
-  "outputDirectory": "webapp/dist",
-  "installCommand": "npm install",
   "framework": null,
+  "installCommand": "cd mobile && npm install",
+  "buildCommand": "cd mobile && npx expo export --platform web",
+  "outputDirectory": "mobile/dist",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],

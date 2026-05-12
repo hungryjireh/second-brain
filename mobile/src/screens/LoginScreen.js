@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { login, setToken } from '../api';
 import { theme } from '../theme';
 import styles from './LoginScreenStyles';
 
 export default function LoginScreen({ onLoggedIn }) {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,6 +19,7 @@ export default function LoginScreen({ onLoggedIn }) {
       const data = await login(email.trim(), password);
       await setToken(data.token);
       onLoggedIn(data.token);
+      navigation.replace('Apps');
     } catch (err) {
       setError(err.message);
     } finally {

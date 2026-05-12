@@ -60,6 +60,23 @@ const styles = StyleSheet.create({
   },
   logoBrand: { color: theme.colors.brand },
   logoBlue: { color: '#7ec8ff' },
+  logoutButton: {
+    marginTop: 10,
+    borderWidth: 0.5,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    backgroundColor: theme.colors.bgSurface,
+  },
+  logoutText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    letterSpacing: 0.2,
+    fontFamily: 'DMSans_600SemiBold',
+    textTransform: 'uppercase',
+  },
 });
 
 export default styles;

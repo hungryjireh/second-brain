@@ -356,7 +356,7 @@ export default function SecondBrainScreen({ token }) {
     input.click();
   }
 
-  async function toggleArchive(entry) {
+  const toggleArchive = useCallback(async entry => {
     setBusyId(entry.id);
     try {
       const updated = await apiRequest(`/entries?id=${entry.id}`, {
@@ -370,9 +370,9 @@ export default function SecondBrainScreen({ token }) {
     } finally {
       setBusyId(null);
     }
-  }
+  }, [token]);
 
-  async function deleteEntry(entryId) {
+  const deleteEntry = useCallback(async entryId => {
     setBusyId(entryId);
     try {
       await apiRequest(`/entries?id=${entryId}`, { method: 'DELETE', token });
@@ -382,9 +382,9 @@ export default function SecondBrainScreen({ token }) {
     } finally {
       setBusyId(null);
     }
-  }
+  }, [token]);
 
-  function requestDelete(entryId) {
+  const requestDelete = useCallback(entryId => {
     setOpenSwipeId(entryId);
     if (confirmDeleteId !== entryId) {
       setConfirmDeleteId(entryId);
@@ -402,9 +402,9 @@ export default function SecondBrainScreen({ token }) {
     }
     setConfirmDeleteId(null);
     deleteEntry(entryId);
-  }
+  }, [confirmDeleteId, deleteEntry]);
 
-  async function downloadIcs(entryId) {
+  const downloadIcs = useCallback(async entryId => {
     try {
       const response = await fetch(`api/ics?id=${entryId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -459,9 +459,9 @@ export default function SecondBrainScreen({ token }) {
     } catch (err) {
       setError(err.message);
     }
-  }
+  }, [token]);
 
-  function startEdit(entry) {
+  const startEdit = useCallback(entry => {
     setEditingEntry(entry);
     setEditCategory(entry.category || 'note');
     setEditTitle(entry.title || '');
@@ -472,9 +472,9 @@ export default function SecondBrainScreen({ token }) {
     setEditTags(tagsToInput(entry.tags));
     setEditTagDraft('');
     setEditTagError('');
-  }
+  }, []);
 
-  function closeEdit() {
+  const closeEdit = useCallback(() => {
     setEditingEntry(null);
     setEditCategory('note');
     setEditTitle('');
@@ -485,15 +485,15 @@ export default function SecondBrainScreen({ token }) {
     setEditTags('');
     setEditTagDraft('');
     setEditTagError('');
-  }
+  }, []);
 
-  function openEntry(entry) {
+  const openEntry = useCallback(entry => {
     setSelectedEntry(entry);
-  }
+  }, []);
 
-  function closeEntry() {
+  const closeEntry = useCallback(() => {
     setSelectedEntry(null);
-  }
+  }, []);
 
   const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
   const keyExtractor = useCallback(item => item.key, []);
@@ -596,73 +596,6 @@ export default function SecondBrainScreen({ token }) {
     }
   }
 
-  function addEditTag() {
-    const nextTag = normalizeTagValue(editTagDraft);
-    if (!nextTag) return;
-    setEditTagError('');
-    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
-    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
-    const isNewBillableTag = isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
-    if (isNewBillableTag && countBillableGlobalTags(globalTags) >= MAX_USER_TAGS) {
-      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
-      return;
-    }
-    const merged = parseTagInput([...parseTagInput(editTags), nextTag].join(','));
-    setEditTags(merged.join(','));
-    setEditTagDraft('');
-  }
-
-  function removeEditTag(tagToRemove) {
-    setEditTags(parseTagInput(editTags).filter(tag => tag !== tagToRemove).join(','));
-    setEditTagError('');
-  }
-
-  function validateGlobalTagLimit(nextTags) {
-    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
-    const newBillableGlobalTags = nextTags.filter(tag => (
-      !existingGlobalTags.has(tag) && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag)
-    ));
-    if (newBillableGlobalTags.length === 0) return true;
-    if (countBillableGlobalTags(globalTags) + newBillableGlobalTags.length > MAX_USER_TAGS) {
-      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
-      return false;
-    }
-    return true;
-  }
-
-  async function saveEdit() {
-    if (!editingEntry || !editText.trim()) return;
-    const priority = Number(editPriority);
-    const tags = parseTagInput(editTags);
-    if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
-      setError('Priority must be an integer from 0 to 10.');
-      return;
-    }
-    if (!validateGlobalTagLimit(tags)) return;
-    setBusyId(editingEntry.id);
-    try {
-      const updated = await apiRequest(`/entries?id=${editingEntry.id}`, {
-        method: 'PATCH',
-        token,
-        body: {
-          category: editCategory,
-          title: editTitle.trim(),
-          summary: editSummary.trim(),
-          description: editText.trim(),
-          remind_at: editCategory === 'reminder' ? datetimeLocalToUnix(editRemindAt) : null,
-          priority,
-          tags,
-        },
-      });
-      setEntries(prev => prev.map(item => (item.id === editingEntry.id ? updated : item)));
-      closeEdit();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   const derivedData = useMemo(() => {
     const categoryCounts = { reminder: 0, todo: 0, thought: 0, note: 0 };
     const usageCounts = new Map();
@@ -709,6 +642,75 @@ export default function SecondBrainScreen({ token }) {
     const sortedUserTags = sortTagsByUsage(userTags, tagUsageCounts);
     return sortedUserTags.length > 0 ? sortedUserTags : availableTags;
   }, [userTagsLoaded, userTags, availableTags, tagUsageCounts]);
+
+  const parsedEditTags = useMemo(() => parseTagInput(editTags), [editTags]);
+
+  const addEditTag = useCallback(() => {
+    const nextTag = normalizeTagValue(editTagDraft);
+    if (!nextTag) return;
+    setEditTagError('');
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
+    const isNewBillableTag = isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
+    if (isNewBillableTag && countBillableGlobalTags(globalTags) >= MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return;
+    }
+    const merged = parseTagInput([...parsedEditTags, nextTag].join(','));
+    setEditTags(merged.join(','));
+    setEditTagDraft('');
+  }, [editTagDraft, globalTags, parsedEditTags]);
+
+  const removeEditTag = useCallback(tagToRemove => {
+    setEditTags(parsedEditTags.filter(tag => tag !== tagToRemove).join(','));
+    setEditTagError('');
+  }, [parsedEditTags]);
+
+  function validateGlobalTagLimit(nextTags) {
+    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
+    const newBillableGlobalTags = nextTags.filter(tag => (
+      !existingGlobalTags.has(tag) && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag)
+    ));
+    if (newBillableGlobalTags.length === 0) return true;
+    if (countBillableGlobalTags(globalTags) + newBillableGlobalTags.length > MAX_USER_TAGS) {
+      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
+      return false;
+    }
+    return true;
+  }
+
+  async function saveEdit() {
+    if (!editingEntry || !editText.trim()) return;
+    const priority = Number(editPriority);
+    const tags = parseTagInput(editTags);
+    if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
+      setError('Priority must be an integer from 0 to 10.');
+      return;
+    }
+    if (!validateGlobalTagLimit(tags)) return;
+    setBusyId(editingEntry.id);
+    try {
+      const updated = await apiRequest(`/entries?id=${editingEntry.id}`, {
+        method: 'PATCH',
+        token,
+        body: {
+          category: editCategory,
+          title: editTitle.trim(),
+          summary: editSummary.trim(),
+          description: editText.trim(),
+          remind_at: editCategory === 'reminder' ? datetimeLocalToUnix(editRemindAt) : null,
+          priority,
+          tags,
+        },
+      });
+      setEntries(prev => prev.map(item => (item.id === editingEntry.id ? updated : item)));
+      closeEdit();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   const groupedEntries = useMemo(() => groupByDate(visibleEntries), [visibleEntries]);
   const timezoneOptions = useMemo(() => {
@@ -865,18 +867,18 @@ export default function SecondBrainScreen({ token }) {
                     setEditTagError('');
                   }}
                   style={[styles.editField, styles.tagInput]}
-                  placeholder={parseTagInput(editTags).length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
+                  placeholder={parsedEditTags.length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
                   placeholderTextColor={theme.colors.textSecondary}
-                  editable={parseTagInput(editTags).length < MAX_ENTRY_TAGS}
+                  editable={parsedEditTags.length < MAX_ENTRY_TAGS}
                 />
                 <Pressable style={styles.secondaryButton} onPress={addEditTag}>
                   <Text style={styles.secondaryButtonText}>Add</Text>
                 </Pressable>
               </View>
               {editTagError ? <Text style={[styles.tagCountText, { color: theme.colors.danger }]}>{editTagError}</Text> : null}
-              <Text style={styles.tagCountText}>{`${parseTagInput(editTags).length}/${MAX_ENTRY_TAGS} tags`}</Text>
+              <Text style={styles.tagCountText}>{`${parsedEditTags.length}/${MAX_ENTRY_TAGS} tags`}</Text>
               <View style={styles.tagsRow}>
-                {parseTagInput(editTags).map(tag => (
+                {parsedEditTags.map(tag => (
                   <Pressable key={tag} style={styles.itemTagPill} onPress={() => removeEditTag(tag)}>
                     <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
                   </Pressable>

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   screen: {
@@ -16,13 +17,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 32,
     letterSpacing: -0.4,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
   },
   copy: {
     color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   input: {
     borderWidth: 1,
@@ -32,7 +33,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: theme.colors.textPrimary,
     fontSize: 16,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     backgroundColor: theme.colors.bgSurface,
   },
   placeholder: {
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#7ec8ff',
+    backgroundColor: openBrainStyle.accent,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -52,15 +53,15 @@ const styles = StyleSheet.create({
     opacity: 0.86,
   },
   buttonText: {
-    color: '#0f1115',
+    color: openBrainStyle.accentOnSolid,
     fontSize: 15,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   error: {
-    color: '#ff7b7b',
+    color: openBrainStyle.dangerSoft,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
 });
 

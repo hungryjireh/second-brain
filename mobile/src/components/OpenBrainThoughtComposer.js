@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import styles from './OpenBrainThoughtComposer.styles';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 function normalizeThoughtText(text) {
   if (typeof text !== 'string') return '';
@@ -252,8 +253,8 @@ export default function OpenBrainThoughtComposer({
             onPress={onToggleVisibility}
             disabled={isPosted || !onToggleVisibility}
           >
-            <View style={[styles.toggleTrack, { backgroundColor: trackActive ? 'rgba(29,158,117,0.3)' : 'rgba(255,255,255,0.12)', alignItems: trackActive ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }]}>
-              <View style={[styles.toggleThumb, { backgroundColor: trackActive ? theme.colors.brand : theme.colors.textSecondary }]} />
+            <View style={[styles.toggleTrack, { backgroundColor: trackActive ? openBrainStyle.accentSoft : 'rgba(255,255,255,0.12)', alignItems: trackActive ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }]}>
+              <View style={[styles.toggleThumb, { backgroundColor: trackActive ? openBrainStyle.accentStrong : theme.colors.textSecondary }]} />
             </View>
             <Text style={styles.visibilityText}>{visibility}</Text>
           </Pressable>

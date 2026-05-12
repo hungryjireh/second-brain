@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   outer: {
@@ -26,14 +27,14 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
     letterSpacing: -0.3,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
   },
   logoButton: {
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
   logoAccent: {
-    color: '#7ec8ff',
+    color: openBrainStyle.accent,
   },
   searchButton: {
     minWidth: 36,
@@ -62,19 +63,19 @@ const styles = StyleSheet.create({
     height: 17,
     borderRadius: 8.5,
     paddingHorizontal: 4,
-    backgroundColor: '#ff6b6b',
+    backgroundColor: openBrainStyle.notificationBadgeBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   notificationBadgeText: {
-    color: '#0f1115',
+    color: openBrainStyle.accentOnSolid,
     fontSize: 10,
     lineHeight: 12,
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: openBrainStyle.fontBold,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: openBrainStyle.overlayBackdrop,
     paddingHorizontal: 12,
     paddingTop: 70,
   },
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     color: theme.colors.textPrimary,
     fontSize: 14,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     backgroundColor: theme.colors.bgBase,
   },
   submitButton: {
@@ -113,15 +114,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7ec8ff',
+    backgroundColor: openBrainStyle.accent,
   },
   submitButtonDisabled: {
     opacity: 0.45,
   },
   submitLabel: {
-    color: '#0f1115',
+    color: openBrainStyle.accentOnSolid,
     fontSize: 14,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   resultsWrap: {
     width: '100%',
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     marginBottom: 6,
   },
   resultRow: {
@@ -153,28 +154,28 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   resultSecondary: {
     marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   errorText: {
     width: '100%',
     color: theme.colors.danger,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   emptyText: {
     width: '100%',
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   seeMorePressable: {
     margin: 4,
@@ -183,10 +184,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   seeMoreLabel: {
-    color: '#7ec8ff',
+    color: openBrainStyle.accent,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textTransform: 'uppercase',
   },
   notificationsHeaderCellType: {
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textTransform: 'uppercase',
   },
   notificationsHeaderCellStatus: {
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textTransform: 'uppercase',
     textAlign: 'right',
   },
@@ -240,14 +241,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 13,
     lineHeight: 17,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   notificationsType: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontSize: 13,
     lineHeight: 17,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textTransform: 'capitalize',
   },
   notificationsStatus: {
@@ -255,11 +256,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textAlign: 'right',
   },
   notificationsStatusUnread: {
-    color: '#7ec8ff',
+    color: openBrainStyle.accent,
   },
 });
 

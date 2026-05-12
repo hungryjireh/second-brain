@@ -20,7 +20,7 @@ function AppLogo({ name }) {
   );
 }
 
-export default function AppPickerScreen({ navigation, token }) {
+export default function AppPickerScreen({ navigation, token, onLogout }) {
   useEffect(() => {
     let cancelled = false;
 
@@ -39,6 +39,16 @@ export default function AppPickerScreen({ navigation, token }) {
     };
   }, [token]);
 
+  async function handleLogout() {
+    if (typeof onLogout === 'function') {
+      await onLogout();
+    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Home' }],
+    });
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.panel}>
@@ -49,6 +59,9 @@ export default function AppPickerScreen({ navigation, token }) {
         </Pressable>
         <Pressable style={styles.card} onPress={() => navigation.navigate('OpenBrainFeed')}>
           <AppLogo name="open-brain" />
+        </Pressable>
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
       </View>
     </View>

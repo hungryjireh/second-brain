@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  getStateFromPath as getStateFromPathDefault,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -12,6 +16,7 @@ import {
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import LoginScreen from './src/screens/LoginScreen';
 import AppPickerScreen from './src/screens/AppPickerScreen';
+import HomeScreen from './src/screens/HomeScreen';
 import SecondBrainScreen from './src/screens/SecondBrainScreen';
 import OpenBrainScreen from './src/screens/OpenBrainScreen';
 import OpenBrainFeedScreen from './src/screens/OpenBrainFeedScreen';
@@ -43,7 +48,7 @@ function HeaderLiveStatus() {
 
   return (
     <Text style={styles.headerLiveText}>
-      {dateLabel} <Text style={styles.headerLiveDot}>●</Text> live
+      {dateLabel}
     </Text>
   );
 }
@@ -56,6 +61,29 @@ const navTheme = {
     card: theme.colors.bgBase,
     text: theme.colors.textPrimary,
     border: theme.colors.border,
+  },
+};
+
+const linking = {
+  config: {
+    screens: {
+      Home: '',
+      Login: 'login',
+      Apps: 'apps',
+      OpenBrainFeed: 'open-brain',
+      OpenBrain: 'open-brain/write',
+      CreateOpenBrainProfile: 'open-brain/create-profile',
+      OpenBrainProfile: 'open-brain/profile/:username',
+      UpdateOpenBrainProfile: 'open-brain/update-profile',
+      OpenBrainUserSearch: 'open-brain/user-search',
+      OpenBrainSearch: 'open-brain/search',
+      SharedThought: 'shared-thought/:slug',
+      SecondBrain: 'second-brain',
+    },
+  },
+  getStateFromPath(path, options) {
+    const normalizedPath = String(path || '').replace(/^\/?open-brain\/u\//, '/open-brain/profile/');
+    return getStateFromPathDefault(normalizedPath, options);
   },
 };
 
@@ -95,13 +123,19 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={navTheme}>
-        <Stack.Navigator>
-          {!token ? (
-            <Stack.Screen name="Login" options={{ headerShown: false }}>
-              {() => <LoginScreen onLoggedIn={setToken} />}
-            </Stack.Screen>
-          ) : (
+      <View style={styles.appRoot}>
+        <NavigationContainer theme={navTheme} linking={linking}>
+          <Stack.Navigator
+            initialRouteName="Home"
+            screenOptions={{ contentStyle: { backgroundColor: theme.colors.bgBase } }}
+          >
+          <Stack.Screen name="Home" options={{ headerShown: false }}>
+            {props => <HomeScreen {...props} token={token} />}
+          </Stack.Screen>
+          <Stack.Screen name="Login" options={{ headerShown: false }}>
+            {() => <LoginScreen onLoggedIn={setToken} />}
+          </Stack.Screen>
+          {token ? (
             <>
               <Stack.Screen
                 name="OpenBrainFeed"
@@ -120,13 +154,13 @@ export default function App() {
                   headerShown: false,
                 }}
               >
-                {props => <AppPickerScreen {...props} token={token} />}
+                {props => <AppPickerScreen {...props} token={token} onLogout={logout} />}
               </Stack.Screen>
               <Stack.Screen
                 name="SecondBrain"
                 options={{
                   headerTitle: () => <HeaderBrand />,
-                  headerTitleAlign: 'left',
+                  headerTitleAlign: 'center',
                   headerRight: () => <HeaderLiveStatus />,
                   headerStyle: { backgroundColor: theme.colors.bgBase },
                   headerShadowVisible: false,
@@ -151,14 +185,19 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen name="SharedThought" component={SharedThoughtScreen} options={{ headerShown: false }} />
             </>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
+          ) : null}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </View>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+    backgroundColor: theme.colors.bgBase,
+  },
   headerBrandText: {
     color: theme.colors.textPrimary,
     fontSize: 26,

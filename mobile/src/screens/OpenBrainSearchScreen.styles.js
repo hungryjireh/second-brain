@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 const styles = StyleSheet.create({
   screen: {
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.4,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
     marginBottom: 10,
   },
   searchRow: {
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: theme.colors.textPrimary,
     fontSize: 15,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     backgroundColor: theme.colors.bgSurface,
   },
   submitButton: {
@@ -45,15 +46,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7ec8ff',
+    backgroundColor: openBrainStyle.accent,
   },
   submitButtonDisabled: {
     opacity: 0.45,
   },
   submitLabel: {
-    color: '#0f1115',
+    color: openBrainStyle.accentOnSolid,
     fontSize: 14,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   resultsWrap: {
     flex: 1,
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     marginBottom: 6,
   },
   resultRow: {
@@ -84,27 +85,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   resultSecondary: {
     marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
   },
   errorText: {
     color: theme.colors.danger,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     marginBottom: 6,
   },
   emptyText: {
     color: theme.colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: 'DMSans_400Regular',
+    fontFamily: openBrainStyle.fontRegular,
     marginBottom: 6,
   },
   loading: {

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { apiRequest } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { theme } from '../theme';
+import { initialsFromName, mutedTint } from '../utils/profileAvatar';
 import styles from './UpdateProfileScreenStyles';
 
 const TIMEZONE_OPTIONS = [
@@ -95,16 +96,32 @@ export default function UpdateProfileScreen({ token, navigation }) {
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} token={token} />
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.eyebrow}>Open-brain profile</Text>
-          <Text style={styles.title}>Update your profile</Text>
-          <Text style={styles.copy}>Keep your profile details up to date.</Text>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
+        <View style={styles.headerCard}>
+          <View style={styles.avatarWrap}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarFallback, { backgroundColor: mutedTint(username) }]}>
+                <Text style={styles.avatarFallbackText}>{initialsFromName(username)}</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.eyebrow}>Open-brain profile</Text>
+            <Text style={styles.title}>Profile settings</Text>
+            <Text style={styles.copy}>Edit how people see you on OpenBrain.</Text>
+          </View>
+        </View>
 
-          {loading ? (
+        {loading ? (
+          <View style={styles.sectionCard}>
             <Text style={styles.muted}>Loading profile...</Text>
-          ) : (
-            <>
+          </View>
+        ) : (
+          <>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Identity</Text>
               <Text style={styles.label}>Username</Text>
               <TextInput
                 value={username}
@@ -115,7 +132,11 @@ export default function UpdateProfileScreen({ token, navigation }) {
                 maxLength={24}
                 autoCapitalize="none"
               />
+              <Text style={styles.fieldHint}>Username is fixed for now.</Text>
+            </View>
 
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Profile photo</Text>
               <Text style={styles.label}>Avatar URL (optional)</Text>
               <TextInput
                 value={avatarUrl}
@@ -126,7 +147,10 @@ export default function UpdateProfileScreen({ token, navigation }) {
                 autoCapitalize="none"
                 inputMode="url"
               />
+            </View>
 
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Regional settings</Text>
               <Text style={styles.label}>Timezone</Text>
               <View style={styles.timezoneDropdownWrapper}>
                 <Pressable
@@ -180,26 +204,28 @@ export default function UpdateProfileScreen({ token, navigation }) {
                   </ScrollView>
                 ) : null}
               </View>
+            </View>
 
+            {!!error && <Text style={styles.error}>{error}</Text>}
+            {!!success && <Text style={styles.success}>{success}</Text>}
+
+            <View style={styles.actionsRow}>
               <Pressable
                 style={[styles.primaryButton, (saving || !timezone.trim()) && styles.buttonDisabled]}
                 onPress={handleUpdateProfile}
                 disabled={saving || !timezone.trim()}
               >
                 <Text style={[styles.primaryButtonText, (saving || !timezone.trim()) && styles.buttonDisabledText]}>
-                  {saving ? 'Saving profile...' : 'Update Profile'}
+                  {saving ? 'Saving profile...' : 'Save changes'}
                 </Text>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainFeed')}>
                 <Text style={styles.secondaryButtonText}>Cancel</Text>
               </Pressable>
-            </>
-          )}
-
-          {!!error && <Text style={styles.error}>{error}</Text>}
-          {!!success && <Text style={styles.success}>{success}</Text>}
-        </View>
-      </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
       <OpenBrainBottomNav navigation={navigation} currentRoute="UpdateOpenBrainProfile" />
     </View>
   );

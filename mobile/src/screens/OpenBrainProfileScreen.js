@@ -6,19 +6,8 @@ import { buildSharedThoughtUrl } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
+import { initialsFromName, mutedTint } from '../utils/profileAvatar';
 import styles from './OpenBrainProfileScreen.styles';
-
-function initialsFromName(name) {
-  const cleaned = String(name || '').trim();
-  if (!cleaned) return '?';
-  return cleaned.slice(0, 1).toUpperCase();
-}
-
-function mutedTint(seed = '') {
-  const palette = ['#1ea37d', '#1f9f7a', '#20a784', '#239a76'];
-  const total = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return palette[total % palette.length];
-}
 
 function formatThoughtDate(value) {
   const date = new Date(value);

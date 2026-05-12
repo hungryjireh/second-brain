@@ -31,4 +31,26 @@ describe('AppPickerScreen', () => {
     expect(navigate).toHaveBeenNthCalledWith(1, 'SecondBrain');
     expect(navigate).toHaveBeenNthCalledWith(2, 'OpenBrainFeed');
   });
+
+  it('logs out and redirects to home', async () => {
+    const reset = jest.fn();
+    const onLogout = jest.fn().mockResolvedValueOnce();
+    const { getByText } = render(
+      <AppPickerScreen
+        token="token-123"
+        onLogout={onLogout}
+        navigation={{ navigate: jest.fn(), reset }}
+      />
+    );
+
+    fireEvent.press(getByText('Logout'));
+
+    await waitFor(() => {
+      expect(onLogout).toHaveBeenCalledTimes(1);
+      expect(reset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    });
+  });
 });
