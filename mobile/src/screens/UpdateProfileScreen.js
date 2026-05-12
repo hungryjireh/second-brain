@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { theme } from '../theme';
@@ -50,7 +51,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
     setLoading(true);
     setError('');
     try {
-      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: 60000 } });
+      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
       setUsername(String(data.profile?.username || ''));
       setAvatarUrl(String(data.profile?.avatar_url || ''));
       setTimezone(String(data.profile?.timezone || defaultTimezone));

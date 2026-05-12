@@ -48,6 +48,26 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
+  metricGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metricInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    position: 'relative',
+  },
+  metricCount: {
+    color: 'rgba(244,242,239,0.78)',
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: 14,
+  },
+  metricIconHoverTarget: {
+    paddingVertical: 2,
+    paddingHorizontal: 1,
+  },
   username: {
     color: theme.colors.textPrimary,
     fontFamily: 'DMSans_600SemiBold',
@@ -219,6 +239,19 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_400Regular',
     fontSize: 12,
     lineHeight: 14,
+  },
+  metricTooltip: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    marginBottom: 8,
+    backgroundColor: '#111',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    zIndex: 20,
   },
 });
 

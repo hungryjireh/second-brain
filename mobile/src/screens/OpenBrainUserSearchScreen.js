@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import styles from './OpenBrainUserSearchScreen.styles';
 
 export default function OpenBrainUserSearchScreen({ token, navigation }) {
@@ -18,7 +19,7 @@ export default function OpenBrainUserSearchScreen({ token, navigation }) {
     try {
       const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(username)}`, {
         token,
-        cache: { ttlMs: 60000 },
+        cache: { ttlMs: CACHE_TTL_MS.PROFILE },
       });
       const targetUsername = response?.profile?.username || username;
       navigation.navigate('OpenBrainProfile', { username: targetUsername });

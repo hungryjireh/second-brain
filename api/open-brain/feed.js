@@ -12,6 +12,7 @@ function mapThoughtRows(rows, profileMap) {
     created_at: row.created_at,
     visibility: row.visibility,
     share_slug: row.share_slug || null,
+    viewer_has_added_to_second_brain: false,
     profile: profileMap.get(row.user_id) || null,
   }));
 }
@@ -72,6 +73,13 @@ function appendReactionData(thoughts, reactionSummary) {
         made_me_think: false,
       },
     },
+  }));
+}
+
+function appendSecondBrainSaveData(thoughts, savedThoughtIds) {
+  return thoughts.map(thought => ({
+    ...thought,
+    viewer_has_added_to_second_brain: savedThoughtIds?.has(thought.id) || false,
   }));
 }
 
@@ -227,13 +235,27 @@ export default async function handler(req, res) {
       ...followingThoughts,
     ]);
     const reactionSummary = await loadReactionSummary({ token, thoughtIds: reactionTargets, viewerId: userId });
+    const savedRows = reactionTargets.length
+      ? await supabaseRequest('/rest/v1/thought_second_brain_saves', {
+          method: 'GET',
+          query: {
+            select: 'thought_id',
+            user_id: `eq.${userId}`,
+            thought_id: `in.(${reactionTargets.join(',')})`,
+          },
+          authToken: token,
+        })
+      : [];
+    const savedThoughtIds = new Set((savedRows || []).map(row => row.thought_id).filter(Boolean));
 
     const everyoneWithReactions = appendReactionData(everyoneThoughts, reactionSummary);
     const followingWithReactions = appendReactionData(followingThoughts, reactionSummary);
+    const everyoneWithSaves = appendSecondBrainSaveData(everyoneWithReactions, savedThoughtIds);
+    const followingWithSaves = appendSecondBrainSaveData(followingWithReactions, savedThoughtIds);
 
     return json(res, 200, {
-      following: followingWithReactions,
-      everyone: everyoneWithReactions,
+      following: followingWithSaves,
+      everyone: everyoneWithSaves,
       has_posted_today: hasPostedToday,
     });
   } catch (err) {

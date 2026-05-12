@@ -76,6 +76,14 @@ create table if not exists public.notifications (
   check (user_id <> actor_id)
 );
 
+-- 6) Per-user thought saves to SecondBrain
+create table if not exists public.thought_second_brain_saves (
+  thought_id uuid not null references public.thoughts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (thought_id, user_id)
+);
+
 -- Helpful indexes
 create index if not exists idx_thoughts_created_at on public.thoughts (created_at desc);
 create index if not exists idx_thoughts_user_id_created_at on public.thoughts (user_id, created_at desc);
@@ -85,6 +93,7 @@ create index if not exists idx_reactions_thought_id on public.reactions (thought
 create index if not exists idx_reactions_user_id on public.reactions (user_id);
 create index if not exists idx_notifications_user_id_created_at on public.notifications (user_id, created_at desc);
 create index if not exists idx_notifications_actor_id on public.notifications (actor_id);
+create index if not exists idx_thought_second_brain_saves_user_id on public.thought_second_brain_saves (user_id);
 
 -- Auto-create profile when auth user is created
 create or replace function public.handle_new_user()
@@ -132,6 +141,7 @@ alter table public.thoughts enable row level security;
 alter table public.follows enable row level security;
 alter table public.reactions enable row level security;
 alter table public.notifications enable row level security;
+alter table public.thought_second_brain_saves enable row level security;
 
 -- profiles: anyone can read, user can update only own profile
 drop policy if exists "profiles_select_all" on public.profiles;
@@ -204,6 +214,17 @@ drop policy if exists "notifications_update_own" on public.notifications;
 create policy "notifications_update_own"
 on public.notifications for update
 using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+-- thought_second_brain_saves: users can read and create only their own save rows
+drop policy if exists "thought_second_brain_saves_select_own" on public.thought_second_brain_saves;
+create policy "thought_second_brain_saves_select_own"
+on public.thought_second_brain_saves for select
+using (auth.uid() = user_id);
+
+drop policy if exists "thought_second_brain_saves_insert_own" on public.thought_second_brain_saves;
+create policy "thought_second_brain_saves_insert_own"
+on public.thought_second_brain_saves for insert
 with check (auth.uid() = user_id);
 
 commit;

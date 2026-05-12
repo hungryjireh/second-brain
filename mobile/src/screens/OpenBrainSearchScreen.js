@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import styles from './OpenBrainSearchScreen.styles';
 
 function fuzzyScoreUsername(username, query) {
@@ -52,7 +53,7 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
     try {
       const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, {
         token,
-        cache: { ttlMs: 15000 },
+        cache: { ttlMs: CACHE_TTL_MS.SEARCH },
       });
       setDidSearch(true);
       const rawUsers = Array.isArray(data?.users) ? data.users : [];

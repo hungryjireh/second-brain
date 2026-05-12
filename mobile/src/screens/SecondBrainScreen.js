@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { apiRequest, getApiBase } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
@@ -249,8 +250,8 @@ export default function SecondBrainScreen({ token }) {
     try {
       setError('');
       const [data, tagsData] = await Promise.all([
-        apiRequest('/entries?limit=60', { token, cache: { ttlMs: 30000 } }),
-        apiRequest('/tags', { token, cache: { ttlMs: 120000 } }),
+        apiRequest('/entries?limit=60', { token, cache: { ttlMs: CACHE_TTL_MS.FEED } }),
+        apiRequest('/tags', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } }),
       ]);
       const list = Array.isArray(data.entries) ? data.entries : Array.isArray(data) ? data : [];
       setEntries(list);
@@ -272,7 +273,7 @@ export default function SecondBrainScreen({ token }) {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await apiRequest('/settings', { token, cache: { ttlMs: 120000 } });
+        const data = await apiRequest('/settings', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } });
         if (data?.timezone) {
           setTimezone(data.timezone);
           setTimezoneDraft(data.timezone);

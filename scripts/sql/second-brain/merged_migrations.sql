@@ -78,6 +78,33 @@ alter table public.settings
 
 commit;
 
+-- ===== add_open_brain_user_thought_second_brain_saves.sql =====
+begin;
+
+create table if not exists public.thought_second_brain_saves (
+  thought_id uuid not null references public.thoughts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (thought_id, user_id)
+);
+
+create index if not exists idx_thought_second_brain_saves_user_id
+  on public.thought_second_brain_saves (user_id);
+
+alter table public.thought_second_brain_saves enable row level security;
+
+drop policy if exists "thought_second_brain_saves_select_own" on public.thought_second_brain_saves;
+create policy "thought_second_brain_saves_select_own"
+on public.thought_second_brain_saves for select
+using (auth.uid() = user_id);
+
+drop policy if exists "thought_second_brain_saves_insert_own" on public.thought_second_brain_saves;
+create policy "thought_second_brain_saves_insert_own"
+on public.thought_second_brain_saves for insert
+with check (auth.uid() = user_id);
+
+commit;
+
 -- ===== enable_rls_entries.sql =====
 begin;
 

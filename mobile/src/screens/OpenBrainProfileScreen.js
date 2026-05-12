@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, Share, Text, View } from 'react-native';
-import { apiRequest, sendFollowNotification } from '../api';
+import { apiRequest, invalidateApiCache, sendFollowNotification } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import { buildSharedThoughtUrl } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
@@ -99,13 +100,13 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
     setError('');
     try {
       const query = username ? `?username=${encodeURIComponent(username)}` : '';
-      const profileRes = await apiRequest(`/open-brain/profile${query}`, { token, cache: { ttlMs: 60000 } });
+      const profileRes = await apiRequest(`/open-brain/profile${query}`, { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
       const loadedProfile = profileRes.profile;
       setProfile(loadedProfile);
 
       const thoughtRes = await apiRequest(`/open-brain/public-thoughts?user_id=${encodeURIComponent(loadedProfile.id)}`, {
         token,
-        cache: { ttlMs: 30000 },
+        cache: { ttlMs: CACHE_TTL_MS.FEED },
       });
       setThoughts(Array.isArray(thoughtRes.thoughts) ? thoughtRes.thoughts : []);
     } catch (err) {
@@ -143,6 +144,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const addToSecondBrain = useCallback(async thought => {
     const thoughtText = String(thought?.text || '').trim();
     if (!thoughtText) return;
+    const thoughtId = thought?.id;
     const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
     const description = `Thought taken from @${username}:\n\n${thoughtText}`;
     try {
@@ -150,6 +152,23 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         method: 'POST',
         token,
         body: { description, category: 'thought', tags: ['openbrain'] },
+      });
+      if (thoughtId) {
+        await apiRequest('/open-brain/add-to-second-brain-click', {
+          method: 'POST',
+          token,
+          body: { thought_id: thoughtId },
+        });
+        setThoughts(current => current.map(item => (
+          item?.id === thoughtId
+            ? { ...item, viewer_has_added_to_second_brain: true }
+            : item
+        )));
+      }
+      await invalidateApiCache({
+        token,
+        exactPaths: profile?.id ? [`/open-brain/public-thoughts?user_id=${encodeURIComponent(profile.id)}`] : [],
+        pathPrefixes: ['/open-brain/feed'],
       });
       Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
     } catch (err) {
@@ -174,6 +193,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         date={item.dateLabel}
         feedBody
         transparentCard
+        addToSecondBrainPayload={item.thought}
         onShare={() => shareThought(item.thought, profile?.username)}
         onAddToSecondBrain={addToSecondBrain}
       />

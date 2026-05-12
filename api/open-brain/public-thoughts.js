@@ -40,6 +40,7 @@ export default async function handler(req, res) {
       },
       authToken,
     });
+    const thoughtIds = (rows || []).map(row => row.id).filter(Boolean);
 
     const thoughts = (rows || []).map(row => ({
       id: row.id,
@@ -47,7 +48,24 @@ export default async function handler(req, res) {
       created_at: row.created_at,
       visibility: row.visibility,
       share_slug: row.share_slug || null,
+      viewer_has_added_to_second_brain: false,
     }));
+
+    if (authUserId && thoughts.length) {
+      const savedRows = await supabaseRequest('/rest/v1/thought_second_brain_saves', {
+        method: 'GET',
+        query: {
+          select: 'thought_id',
+          user_id: `eq.${authUserId}`,
+          thought_id: `in.(${thoughtIds.join(',')})`,
+        },
+        authToken,
+      });
+      const savedThoughtIds = new Set((savedRows || []).map(row => row.thought_id).filter(Boolean));
+      thoughts.forEach(thought => {
+        thought.viewer_has_added_to_second_brain = savedThoughtIds.has(thought.id);
+      });
+    }
 
     return json(res, 200, { thoughts });
   } catch (err) {

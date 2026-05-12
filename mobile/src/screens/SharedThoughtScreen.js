@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text } from 'react-native';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
@@ -32,7 +33,7 @@ export default function SharedThoughtScreen({ navigation }) {
     setPayload(null);
     try {
       const data = await apiRequest(`/open-brain/shared-thought?slug=${encodeURIComponent(slug.trim())}`, {
-        cache: { ttlMs: 30000 },
+        cache: { ttlMs: CACHE_TTL_MS.SHARED_THOUGHT },
       });
       setPayload(data);
     } catch (err) {

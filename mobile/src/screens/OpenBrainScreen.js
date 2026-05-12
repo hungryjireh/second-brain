@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
@@ -56,7 +57,7 @@ export default function OpenBrainScreen({ token, navigation }) {
 
   const ensureProfile = useCallback(async () => {
     try {
-      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: 60000 } });
+      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
       setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : 0);
       return true;
     } catch (err) {
@@ -76,7 +77,7 @@ export default function OpenBrainScreen({ token, navigation }) {
     let cancelled = false;
     async function loadTodaysThought() {
       try {
-        const data = await apiRequest('/open-brain/thoughts', { token, cache: { ttlMs: 30000 } });
+        const data = await apiRequest('/open-brain/thoughts', { token, cache: { ttlMs: CACHE_TTL_MS.THOUGHTS } });
         if (cancelled || !data?.has_posted_today || !data?.thought) return;
         const postedText = typeof data.thought?.content?.text === 'string' ? data.thought.content.text : '';
         setDraft(postedText);

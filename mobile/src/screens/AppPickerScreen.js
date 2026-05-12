@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import styles from './AppPickerScreenStyles';
 
 function AppLogo({ name }) {
@@ -25,7 +26,7 @@ export default function AppPickerScreen({ navigation, token }) {
 
     async function verifySession() {
       try {
-        await apiRequest('/settings', { token, cache: { ttlMs: 120000 } });
+        await apiRequest('/settings', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } });
       } catch {
         // Expired/invalid auth is handled globally by apiRequest via authExpiredHandler.
         if (cancelled) return;

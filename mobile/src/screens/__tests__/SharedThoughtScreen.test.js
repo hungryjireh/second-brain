@@ -1,9 +1,16 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import SharedThoughtScreen from '../SharedThoughtScreen';
 import { apiRequest } from '../../api';
+import { CACHE_TTL_MS } from '../../constants/cache';
 
 jest.mock('../../api', () => ({
   apiRequest: jest.fn(),
+}));
+
+jest.mock('../../constants/cache', () => ({
+  CACHE_TTL_MS: {
+    SHARED_THOUGHT: 30000,
+  },
 }));
 
 describe('SharedThoughtScreen', () => {
@@ -26,7 +33,7 @@ describe('SharedThoughtScreen', () => {
       expect(apiRequest).toHaveBeenCalledWith(
         '/open-brain/shared-thought?slug=my-shared-slug',
         expect.objectContaining({
-          cache: expect.objectContaining({ ttlMs: 30000 }),
+          cache: expect.objectContaining({ ttlMs: CACHE_TTL_MS.SHARED_THOUGHT }),
         })
       );
       expect(getByText('A shared idea')).toBeTruthy();

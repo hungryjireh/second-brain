@@ -73,4 +73,41 @@ describe('OpenBrainThoughtCard', () => {
     fireEvent.press(getByLabelText('Added to SecondBrain'));
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
   });
+
+  it('shows streak metric in feed metadata', () => {
+    const item = {
+      id: 2,
+      text: 'Another thought',
+      profile: { username: 'jireh', streak_count: 3, is_self: true },
+    };
+    const { getByLabelText, getByText, queryByLabelText } = render(
+      <OpenBrainThoughtCard
+        item={item}
+      />
+    );
+
+    expect(getByLabelText('Streak')).toBeTruthy();
+    expect(queryByLabelText('Saved to SecondBrain')).toBeNull();
+    expect(getByText('3')).toBeTruthy();
+  });
+
+  it('starts as added when viewer has already saved the thought', () => {
+    const onAddToSecondBrain = jest.fn();
+    const item = {
+      id: 3,
+      text: 'Already saved thought',
+      profile: { username: 'jireh', streak_count: 2, is_self: false },
+      viewer_has_added_to_second_brain: true,
+    };
+    const { getByLabelText } = render(
+      <OpenBrainThoughtCard
+        item={item}
+        onShare={jest.fn()}
+        onAddToSecondBrain={onAddToSecondBrain}
+      />
+    );
+
+    fireEvent.press(getByLabelText('Added to SecondBrain'));
+    expect(onAddToSecondBrain).not.toHaveBeenCalled();
+  });
 });

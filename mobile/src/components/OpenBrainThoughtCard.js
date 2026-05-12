@@ -89,6 +89,7 @@ function OpenBrainThoughtCard({
   onReact,
   onShare,
   onAddToSecondBrain,
+  addToSecondBrainPayload = null,
   reactingKey = '',
   followBusyUserId = '',
   largeBody = false,
@@ -98,13 +99,17 @@ function OpenBrainThoughtCard({
   const { width } = useWindowDimensions();
   const iconOnlyActions = Platform.OS !== 'web' || width <= ACTION_ICON_ONLY_MAX_WIDTH;
   const [hoveredAction, setHoveredAction] = useState('');
+  const [hoveredMetric, setHoveredMetric] = useState('');
   const sourceText = item ? item.text : text;
   const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
   const [expanded, setExpanded] = useState(false);
   const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
   const parsedThought = useMemo(() => parseThoughtForCard(displayedText), [displayedText]);
   const [isAddingToSecondBrain, setIsAddingToSecondBrain] = useState(false);
-  const [addedToSecondBrain, setAddedToSecondBrain] = useState(false);
+  const initialAddedToSecondBrain = Boolean(
+    item?.viewer_has_added_to_second_brain || addToSecondBrainPayload?.viewer_has_added_to_second_brain
+  );
+  const [addedToSecondBrain, setAddedToSecondBrain] = useState(initialAddedToSecondBrain);
 
   useEffect(() => {
     setExpanded(false);
@@ -112,8 +117,8 @@ function OpenBrainThoughtCard({
 
   useEffect(() => {
     setIsAddingToSecondBrain(false);
-    setAddedToSecondBrain(false);
-  }, [item?.id, sourceText]);
+    setAddedToSecondBrain(initialAddedToSecondBrain);
+  }, [item?.id, sourceText, initialAddedToSecondBrain]);
 
   async function handleAddToSecondBrain(payload) {
     if (isAddingToSecondBrain || addedToSecondBrain) return;
@@ -133,7 +138,29 @@ function OpenBrainThoughtCard({
     const streak = Number.isInteger(item.profile?.streak_count) ? item.profile.streak_count : 0;
     return (
       <View style={[styles.card, { borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10 }]}>
-        <Text style={styles.username}>@{name} <Text style={styles.streak}>· 🔥 {streak}</Text></Text>
+        <View style={styles.metaLine}>
+          <Text style={styles.username}>@{name}</Text>
+          <Text style={styles.metaDot}>·</Text>
+          <View style={styles.metricGroup}>
+            <View style={styles.metricInline}>
+              <Pressable
+                accessibilityRole="image"
+                accessibilityLabel="Streak"
+                style={styles.metricIconHoverTarget}
+                onHoverIn={Platform.OS === 'web' ? () => setHoveredMetric(`streak-missing-${name}`) : undefined}
+                onHoverOut={Platform.OS === 'web' ? () => setHoveredMetric('') : undefined}
+              >
+                <Feather name="zap" size={12} color={theme.colors.textSecondary} />
+              </Pressable>
+              <Text style={styles.metricCount}>{streak}</Text>
+              {Platform.OS === 'web' && hoveredMetric === `streak-missing-${name}` ? (
+                <View pointerEvents="none" style={styles.metricTooltip}>
+                  <Text style={styles.actionTooltipText}>Streak</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </View>
         <Text style={[styles.meta, { fontStyle: 'italic', marginTop: 4 }]}>no thought today</Text>
       </View>
     );
@@ -166,7 +193,25 @@ function OpenBrainThoughtCard({
                 <Text style={styles.username}>@{name}</Text>
               </Pressable>
               <Text style={styles.metaDot}>·</Text>
-              <Text style={styles.streak}>🔥 {streak}</Text>
+              <View style={styles.metricGroup}>
+                <View style={styles.metricInline}>
+                  <Pressable
+                    accessibilityRole="image"
+                    accessibilityLabel="Streak"
+                    style={styles.metricIconHoverTarget}
+                    onHoverIn={Platform.OS === 'web' ? () => setHoveredMetric(`streak-${item.id}`) : undefined}
+                    onHoverOut={Platform.OS === 'web' ? () => setHoveredMetric('') : undefined}
+                  >
+                    <Feather name="zap" size={12} color={theme.colors.textSecondary} />
+                  </Pressable>
+                  <Text style={styles.metricCount}>{streak}</Text>
+                  {Platform.OS === 'web' && hoveredMetric === `streak-${item.id}` ? (
+                    <View pointerEvents="none" style={styles.metricTooltip}>
+                      <Text style={styles.actionTooltipText}>Streak</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
             </View>
             {!!formattedTime && <Text style={styles.time}>{formattedTime}</Text>}
           </View>
@@ -298,7 +343,7 @@ function OpenBrainThoughtCard({
         <View style={styles.reactions}>
           <View style={styles.actionsGroup}>
             <Pressable
-              onPress={() => handleAddToSecondBrain({ text: sourceText })}
+              onPress={() => handleAddToSecondBrain(addToSecondBrainPayload || { text: sourceText })}
               disabled={isAddingToSecondBrain || addedToSecondBrain}
               style={[styles.secondaryActionButton, addedToSecondBrain && styles.secondaryActionButtonAdded]}
               accessibilityRole="button"

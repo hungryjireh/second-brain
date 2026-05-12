@@ -20,6 +20,14 @@ function buildCacheKey(path, token, cacheKey) {
   return `${CACHE_PREFIX}${path}::${stableSerialize({ token: token || '' })}`;
 }
 
+function parseCachePathFromKey(cacheKey) {
+  if (!cacheKey.startsWith(CACHE_PREFIX)) return '';
+  const payload = cacheKey.slice(CACHE_PREFIX.length);
+  const separatorIndex = payload.indexOf('::');
+  if (separatorIndex < 0) return '';
+  return payload.slice(0, separatorIndex);
+}
+
 async function readCache(cacheKey) {
   try {
     const raw = await AsyncStorage.getItem(cacheKey);
@@ -54,6 +62,41 @@ export async function setToken(token) {
 
 export async function clearToken() {
   return AsyncStorage.removeItem(TOKEN_KEY);
+}
+
+export async function invalidateApiCache({
+  token,
+  exactPaths = [],
+  pathPrefixes = [],
+} = {}) {
+  try {
+    const targetPaths = new Set(
+      exactPaths
+        .map(path => String(path || '').trim())
+        .filter(Boolean)
+    );
+    const targetPrefixes = pathPrefixes
+      .map(prefix => String(prefix || '').trim())
+      .filter(Boolean);
+    const keys = await AsyncStorage.getAllKeys();
+    if (!keys?.length) return;
+
+    const removeKeys = keys.filter(key => {
+      if (!key.startsWith(CACHE_PREFIX)) return false;
+      const cachePath = parseCachePathFromKey(key);
+      if (!cachePath) return false;
+      const cacheTokenSuffix = `::${stableSerialize({ token: token || '' })}`;
+      if (!key.endsWith(cacheTokenSuffix)) return false;
+      if (targetPaths.has(cachePath)) return true;
+      return targetPrefixes.some(prefix => cachePath.startsWith(prefix));
+    });
+
+    if (removeKeys.length) {
+      await AsyncStorage.multiRemove(removeKeys);
+    }
+  } catch {
+    // Cache invalidation is best-effort.
+  }
 }
 
 export async function apiRequest(path, {

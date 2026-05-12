@@ -3,6 +3,7 @@ import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'r
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest } from '../api';
+import { CACHE_TTL_MS } from '../constants/cache';
 import { theme } from '../theme';
 
 function fuzzyScoreUsername(username, query) {
@@ -57,7 +58,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     try {
       const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, {
         token,
-        cache: { ttlMs: 15000 },
+        cache: { ttlMs: CACHE_TTL_MS.SEARCH },
       });
       setDidSearch(true);
       const rawUsers = Array.isArray(data?.users) ? data.users : [];
@@ -90,7 +91,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     setNotificationsLoading(true);
     setNotificationsError('');
     try {
-      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: 10000 } });
+      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS } });
       setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
     } catch (err) {
       setNotificationsError(err.message || 'Failed to load notifications.');
