@@ -89,21 +89,25 @@ const styles = StyleSheet.create({
   followButton: {
     alignSelf: 'center',
     borderRadius: 999,
-    borderColor: theme.colors.border,
+    borderColor: 'transparent',
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   followActiveButton: {
-    backgroundColor: openBrainStyle.accentStrong,
+    backgroundColor: openBrainStyle.white09,
   },
   followingButton: {
-    backgroundColor: theme.colors.bgHover,
+    backgroundColor: openBrainStyle.accentSoft,
+    borderColor: openBrainStyle.accentBorder,
   },
   followButtonText: {
-    color: openBrainStyle.accentOnSolid,
+    color: openBrainStyle.textWarm80,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
+  },
+  followButtonTextFollowing: {
+    color: openBrainStyle.accentText,
   },
   muted: {
     color: theme.colors.textSecondary,

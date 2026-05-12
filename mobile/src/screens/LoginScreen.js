@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login, setToken } from '../api';
@@ -9,14 +9,20 @@ export default function LoginScreen({ onLoggedIn }) {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const emailRef = useRef('');
+  const passwordRef = useRef('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
+    const normalizedEmail = emailRef.current.trim();
+    const normalizedPassword = passwordRef.current;
+    if (!normalizedEmail || !normalizedPassword || loading) return;
+
     setLoading(true);
     setError('');
     try {
-      const data = await login(email.trim(), password);
+      const data = await login(normalizedEmail, normalizedPassword);
       await setToken(data.token);
       onLoggedIn(data.token);
       navigation.replace('Apps');
@@ -44,7 +50,10 @@ export default function LoginScreen({ onLoggedIn }) {
             autoCorrect={false}
             keyboardType="email-address"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={value => {
+              emailRef.current = value;
+              setEmail(value);
+            }}
             style={styles.input}
           />
           <TextInput
@@ -53,11 +62,14 @@ export default function LoginScreen({ onLoggedIn }) {
             secureTextEntry
             autoCapitalize="none"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={value => {
+              passwordRef.current = value;
+              setPassword(value);
+            }}
             style={styles.input}
           />
-          <Pressable style={[styles.button, (loading || !email.trim() || !password) && styles.buttonDisabled]} onPress={handleLogin} disabled={loading || !email.trim() || !password}>
-            <Text style={[styles.buttonText, (loading || !email.trim() || !password) && styles.buttonTextDisabled]}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+          <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
+            <Text style={[styles.buttonText, loading && styles.buttonTextDisabled]}>{loading ? 'Signing in...' : 'Sign In'}</Text>
           </Pressable>
         </View>
 

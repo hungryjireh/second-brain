@@ -32,7 +32,7 @@ describe('AppPickerScreen', () => {
     expect(navigate).toHaveBeenNthCalledWith(2, 'OpenBrainFeed');
   });
 
-  it('logs out and redirects to home', async () => {
+  it('logs out and redirects to login on native', async () => {
     const reset = jest.fn();
     const onLogout = jest.fn().mockResolvedValueOnce();
     const { getByText } = render(
@@ -49,8 +49,21 @@ describe('AppPickerScreen', () => {
       expect(onLogout).toHaveBeenCalledTimes(1);
       expect(reset).toHaveBeenCalledWith({
         index: 0,
-        routes: [{ name: 'Home' }],
+        routes: [{ name: 'Login' }],
       });
     });
+  });
+
+  it('redirects unauthenticated users away from apps', async () => {
+    const reset = jest.fn();
+    render(<AppPickerScreen token={null} navigation={{ navigate: jest.fn(), reset }} />);
+
+    await waitFor(() => {
+      expect(reset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    });
+    expect(apiRequest).not.toHaveBeenCalled();
   });
 });

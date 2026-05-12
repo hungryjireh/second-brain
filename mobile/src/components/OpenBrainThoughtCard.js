@@ -263,7 +263,9 @@ function OpenBrainThoughtCard({
                 followBusy && { opacity: 0.55 },
               ]}
             >
-              <Text style={styles.followButtonText}>{isFollowing ? 'unfollow' : 'follow'}</Text>
+              <Text style={[styles.followButtonText, isFollowing && styles.followButtonTextFollowing]}>
+                {isFollowing ? 'Unfollow' : 'Follow'}
+              </Text>
             </Pressable>
           ) : null}
         </View>

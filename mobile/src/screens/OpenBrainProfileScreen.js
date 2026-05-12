@@ -232,7 +232,9 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                       onPress={toggleFollow}
                       disabled={followBusy}
                     >
-                      <Text style={styles.followButtonText}>{profile.is_following ? 'unfollow' : 'follow'}</Text>
+                      <Text style={[styles.followButtonText, profile.is_following && styles.followButtonTextFollowing]}>
+                        {profile.is_following ? 'unfollow' : 'follow'}
+                      </Text>
                     </Pressable>
                   ) : null}
                 </View>

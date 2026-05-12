@@ -65,8 +65,14 @@ const styles = StyleSheet.create({
   eyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 26,
+  },
+  eyebrowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexShrink: 1,
   },
   eyebrowLine: {
     width: 54,
@@ -77,6 +83,20 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     letterSpacing: 3,
+    textTransform: 'uppercase',
+    fontFamily: openBrainStyle.fontSemiBold,
+  },
+  eyebrowLoginButton: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginLeft: 12,
+    backgroundColor: 'transparent',
+  },
+  eyebrowLoginText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     fontFamily: openBrainStyle.fontSemiBold,
   },
@@ -118,6 +138,9 @@ const styles = StyleSheet.create({
   },
   heroButton: {
     ...HOME_BUTTON_BASE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   openButton: {
     flex: 0.33,
@@ -244,6 +267,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     fontFamily: openBrainStyle.fontSerif,
     fontStyle: 'italic',
+  },
+  productLogoText: {
+    fontSize: 66,
+    lineHeight: 72,
+    letterSpacing: -0.8,
+    fontFamily: openBrainStyle.fontSerif,
+  },
+  productLogoAccent: {
+    color: openBrainStyle.accent,
   },
   productTagline: {
     color: theme.colors.textPrimary,
@@ -476,6 +508,73 @@ const styles = StyleSheet.create({
   },
   secondAccentBorder: {
     borderColor: openBrainStyle.second,
+  },
+  openBrainLogoText: {
+    color: theme.colors.textPrimary,
+    fontSize: 25,
+    lineHeight: 30,
+    letterSpacing: -0.3,
+    fontFamily: openBrainStyle.fontSerif,
+  },
+  openBrainLogoAccent: {
+    color: openBrainStyle.accent,
+  },
+  heroLogoInline: {
+    fontSize: 18,
+    lineHeight: 28,
+    letterSpacing: -0.2,
+  },
+  buttonLogoText: {
+    fontSize: 12,
+    lineHeight: 15,
+    letterSpacing: 0.1,
+    color: openBrainStyle.textLight,
+  },
+  buttonLogoAccent: {
+    color: openBrainStyle.textLight,
+  },
+  badgeLogoText: {
+    fontSize: 10,
+    lineHeight: 14,
+    letterSpacing: 0.1,
+    color: theme.colors.textPrimary,
+  },
+  badgeLogoAccent: {
+    color: theme.colors.textPrimary,
+  },
+  badgeSecondLogoAccent: {
+    color: theme.colors.textPrimary,
+  },
+  ctaLogoInline: {
+    fontSize: 16,
+    lineHeight: 26,
+    letterSpacing: -0.2,
+  },
+  footerLogoInline: {
+    fontSize: 16,
+    lineHeight: 24,
+    letterSpacing: -0.2,
+  },
+  stepLogoInline: {
+    fontSize: 13,
+    lineHeight: 19,
+    letterSpacing: -0.1,
+  },
+  stepLogoAccent: {
+    color: theme.colors.brand,
+  },
+  secondBrainLogoText: {
+    color: theme.colors.textPrimary,
+    fontSize: 25,
+    lineHeight: 30,
+    letterSpacing: -0.3,
+    fontFamily: openBrainStyle.fontSerif,
+  },
+  secondBrainLogoAccent: {
+    color: theme.colors.brand,
+  },
+  productSecondLogoAccent: {
+    color: theme.colors.brand,
   },
 });
 

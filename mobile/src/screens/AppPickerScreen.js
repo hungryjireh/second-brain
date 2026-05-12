@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { Platform, View, Text, Pressable } from 'react-native';
 import { apiRequest } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import styles from './AppPickerScreenStyles';
@@ -22,6 +22,15 @@ function AppLogo({ name }) {
 
 export default function AppPickerScreen({ navigation, token, onLogout }) {
   useEffect(() => {
+    if (!token) {
+      const loggedOutRoute = Platform.OS === 'web' ? 'Home' : 'Login';
+      navigation.reset({
+        index: 0,
+        routes: [{ name: loggedOutRoute }],
+      });
+      return;
+    }
+
     let cancelled = false;
 
     async function verifySession() {
@@ -37,15 +46,16 @@ export default function AppPickerScreen({ navigation, token, onLogout }) {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [navigation, token]);
 
   async function handleLogout() {
     if (typeof onLogout === 'function') {
       await onLogout();
     }
+    const loggedOutRoute = Platform.OS === 'web' ? 'Home' : 'Login';
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Home' }],
+      routes: [{ name: loggedOutRoute }],
     });
   }
 

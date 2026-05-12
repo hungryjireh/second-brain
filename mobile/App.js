@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -67,7 +67,7 @@ const navTheme = {
 const linking = {
   config: {
     screens: {
-      Home: '',
+      ...(Platform.OS === 'web' ? { Home: '' } : {}),
       Login: 'login',
       Apps: 'apps',
       OpenBrainFeed: 'open-brain',
@@ -121,19 +121,33 @@ export default function App() {
 
   if (loading || !fontsLoaded) return <ActivityIndicator style={{ flex: 1 }} color={theme.colors.brand} />;
 
+  const initialRouteName = Platform.OS === 'web'
+    ? 'Home'
+    : (token ? 'Apps' : 'Login');
+
   return (
     <SafeAreaProvider>
       <View style={styles.appRoot}>
         <NavigationContainer theme={navTheme} linking={linking}>
           <Stack.Navigator
-            initialRouteName="Home"
+            initialRouteName={initialRouteName}
             screenOptions={{ contentStyle: { backgroundColor: theme.colors.bgBase } }}
           >
-          <Stack.Screen name="Home" options={{ headerShown: false }}>
-            {props => <HomeScreen {...props} token={token} />}
-          </Stack.Screen>
+          {Platform.OS === 'web' ? (
+            <Stack.Screen name="Home" options={{ headerShown: false }}>
+              {props => <HomeScreen {...props} token={token} />}
+            </Stack.Screen>
+          ) : null}
           <Stack.Screen name="Login" options={{ headerShown: false }}>
             {() => <LoginScreen onLoggedIn={setToken} />}
+          </Stack.Screen>
+          <Stack.Screen
+            name="Apps"
+            options={{
+              headerShown: false,
+            }}
+          >
+            {props => <AppPickerScreen {...props} token={token} onLogout={logout} />}
           </Stack.Screen>
           {token ? (
             <>
@@ -147,14 +161,6 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen name="OpenBrain" options={{ headerShown: false }}>
                 {props => <OpenBrainScreen {...props} token={token} />}
-              </Stack.Screen>
-              <Stack.Screen
-                name="Apps"
-                options={{
-                  headerShown: false,
-                }}
-              >
-                {props => <AppPickerScreen {...props} token={token} onLogout={logout} />}
               </Stack.Screen>
               <Stack.Screen
                 name="SecondBrain"

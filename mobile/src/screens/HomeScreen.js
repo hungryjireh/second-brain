@@ -21,7 +21,7 @@ const workflowSteps = [
   {
     num: 'STEP 01',
     title: 'Spark a thought',
-    desc: 'Post a rough idea on OpenBrain while it is still fresh.',
+    desc: 'Post a rough idea while it is still fresh.',
     icon: '💡',
   },
   {
@@ -33,7 +33,8 @@ const workflowSteps = [
   {
     num: 'STEP 03',
     title: 'Save what matters',
-    desc: 'Move the best ideas into SecondBrain with context attached.',
+    desc: 'Move the best ideas into ',
+    descSuffix: ' with context attached.',
     icon: '📥',
   },
   {
@@ -71,7 +72,7 @@ const sampleSecondBrainEntry = {
   id: 'home-preview-secondbrain-entry',
   category: 'thought',
   priority: 6,
-  title: 'Saved from OpenBrain',
+  title: 'Saved from feed',
   summary: 'Inverted onboarding: map outcomes first, then guide user setup by intent.',
   raw_text: 'Inverted onboarding: map outcomes first, then guide user setup by intent.',
   is_archived: false,
@@ -79,15 +80,16 @@ const sampleSecondBrainEntry = {
   tags: ['product', 'decisionlog'],
 };
 
-function ProductCard({ number, title, tagline, description, features, buttonLabel, onPress, isOpenBrain }) {
-  const [firstWord, secondWord] = title.split(' ');
-
+function ProductCard({ number, tagline, description, features, buttonLabel, onPress, isOpenBrain }) {
   return (
     <View style={styles.productCard}>
       <Text style={styles.productNumber}>{number}</Text>
       <View style={styles.productTitleWrap}>
-        <Text style={[styles.productTitleScript, isOpenBrain ? styles.openAccentText : styles.secondAccentText]}>{firstWord}</Text>
-        <Text style={[styles.productTitleScript, isOpenBrain ? styles.openAccentText : styles.secondAccentText]}>{secondWord}</Text>
+        {isOpenBrain ? (
+          <OpenBrainLogo style={styles.productLogoText} accentStyle={styles.productLogoAccent} />
+        ) : (
+          <SecondBrainLogo style={styles.productLogoText} accentStyle={styles.productSecondLogoAccent} />
+        )}
       </View>
       <Text style={styles.productTagline}>{tagline}</Text>
       <Text style={styles.productDescription}>{description}</Text>
@@ -108,6 +110,22 @@ function ProductCard({ number, title, tagline, description, features, buttonLabe
   );
 }
 
+function OpenBrainLogo({ style, accentStyle }) {
+  return (
+    <Text style={[styles.openBrainLogoText, style]}>
+      open<Text style={[styles.openBrainLogoAccent, accentStyle]}>brain</Text>
+    </Text>
+  );
+}
+
+function SecondBrainLogo({ style, accentStyle }) {
+  return (
+    <Text style={[styles.secondBrainLogoText, style]}>
+      second<Text style={[styles.secondBrainLogoAccent, accentStyle]}>brain</Text>
+    </Text>
+  );
+}
+
 export default function HomeScreen({ navigation, token }) {
   const primaryAction = token ? () => navigation.navigate('Apps') : () => navigation.navigate('Login');
   const currentYear = new Date().getFullYear();
@@ -116,8 +134,15 @@ export default function HomeScreen({ navigation, token }) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.eyebrowRow}>
-          <View style={styles.eyebrowLine} />
-          <Text style={styles.eyebrow}>Think faster. Build better.</Text>
+          <View style={styles.eyebrowLeft}>
+            <View style={styles.eyebrowLine} />
+            <Text style={styles.eyebrow}>Think faster. Build better.</Text>
+          </View>
+          {!token ? (
+            <Pressable style={styles.eyebrowLoginButton} onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.eyebrowLoginText}>Login</Text>
+            </Pressable>
+          ) : null}
         </View>
         <View style={styles.heroTitleWrap}>
           <Text style={styles.heroTitleScript}>Ideas that</Text>
@@ -128,11 +153,13 @@ export default function HomeScreen({ navigation, token }) {
           <Text style={styles.heroTitleScript}>your pace</Text>
         </View>
         <Text style={styles.heroSubcopy}>
-          OpenBrain lets you share thoughts in real time. SecondBrain turns them into lasting knowledge. Together, they close the loop between inspiration and clarity.
+          <OpenBrainLogo style={styles.heroLogoInline} /> lets you share thoughts in real time. <SecondBrainLogo style={styles.heroLogoInline} /> turns
+          them into lasting
+          knowledge. Together, they close the loop between inspiration and clarity.
         </Text>
         <View style={styles.heroActions}>
           <Pressable style={[styles.heroButton, styles.openButton]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
-            <Text style={styles.buttonLabelText}>Try OpenBrain</Text>
+            <Text style={styles.buttonLabelText}>Try Openbrain</Text>
           </Pressable>
           <Pressable style={[styles.heroButton, styles.secondButton]} onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}>
             <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
@@ -142,7 +169,9 @@ export default function HomeScreen({ navigation, token }) {
 
       <View style={styles.previewWrap}>
         <View style={styles.previewPanelTop}>
-          <Text style={styles.previewBadgeOpen}>OpenBrain live feed</Text>
+          <Text style={styles.previewBadgeOpen}>
+            <OpenBrainLogo style={styles.badgeLogoText} accentStyle={styles.badgeLogoAccent} /> live feed
+          </Text>
           <View style={styles.previewCardOpen}>
             <OpenBrainThoughtCard
               item={{
@@ -165,7 +194,9 @@ export default function HomeScreen({ navigation, token }) {
           </View>
         </View>
         <View style={styles.previewPanelBottom}>
-          <Text style={styles.previewBadgeSecond}>SecondBrain archive</Text>
+          <Text style={styles.previewBadgeSecond}>
+            <SecondBrainLogo style={styles.badgeLogoText} accentStyle={styles.badgeSecondLogoAccent} /> archive
+          </Text>
           <View style={styles.previewCardSecond}>
             <SecondBrainEntryCard
               entry={sampleSecondBrainEntry}
@@ -190,7 +221,6 @@ export default function HomeScreen({ navigation, token }) {
       <View style={styles.productsSection}>
         <ProductCard
           number="01 / 02"
-          title="OpenBrain"
           tagline="Social thinking for fast feedback"
           description="Capture the half-formed idea before it escapes. Share it with a community of builders and thinkers who will push it further."
           features={openBrainFeatures}
@@ -200,7 +230,6 @@ export default function HomeScreen({ navigation, token }) {
         />
         <ProductCard
           number="02 / 02"
-          title="SecondBrain"
           tagline="Private workspace for long-term clarity"
           description="Your personal knowledge system. Everything you've learned, decided, and built - organized so you can actually find it later."
           features={secondBrainFeatures}
@@ -218,7 +247,11 @@ export default function HomeScreen({ navigation, token }) {
               <Text style={styles.stepNum}>{step.num}</Text>
               <Text style={styles.stepIcon}>{step.icon}</Text>
               <Text style={styles.stepTitle}>{step.title}</Text>
-              <Text style={styles.stepDesc}>{step.desc}</Text>
+              <Text style={styles.stepDesc}>
+                {step.desc}
+                {step.descSuffix ? <SecondBrainLogo style={styles.stepLogoInline} accentStyle={styles.stepLogoAccent} /> : null}
+                {step.descSuffix || ''}
+              </Text>
             </View>
           ))}
         </View>
@@ -227,15 +260,19 @@ export default function HomeScreen({ navigation, token }) {
       <View style={styles.ctaSection}>
         <View style={[styles.ctaBlock, styles.openCta]}>
           <Text style={styles.ctaTitle}>Think out loud with the world</Text>
-          <Text style={styles.ctaBody}>Join thousands of builders sharing their best half-baked ideas every day on OpenBrain.</Text>
+          <Text style={styles.ctaBody}>
+            Join thousands of builders sharing their best half-baked ideas every day on <OpenBrainLogo style={styles.ctaLogoInline} />.
+          </Text>
           <Pressable style={[styles.ctaButtonLight, styles.openAccentBg]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
-            <Text style={styles.buttonLabelText}>Try OpenBrain</Text>
+            <Text style={styles.buttonLabelText}>Try Openbrain</Text>
           </Pressable>
         </View>
 
         <View style={[styles.ctaBlock, styles.secondCta]}>
           <Text style={styles.ctaTitle}>Build the brain you always wanted</Text>
-          <Text style={styles.ctaBody}>Your notes, your insights, your decisions - all in one searchable, enduring archive with SecondBrain.</Text>
+          <Text style={styles.ctaBody}>
+            Your notes, your insights, your decisions - all in one searchable, enduring archive with <SecondBrainLogo style={styles.ctaLogoInline} />.
+          </Text>
           <Pressable style={[styles.ctaButtonLight, styles.secondAccentBg]} onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}>
             <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
           </Pressable>
@@ -243,7 +280,9 @@ export default function HomeScreen({ navigation, token }) {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© {currentYear} OpenBrain & SecondBrain</Text>
+        <Text style={styles.footerText}>
+          © {currentYear} <OpenBrainLogo style={styles.footerLogoInline} /> & <SecondBrainLogo style={styles.footerLogoInline} />
+        </Text>
       </View>
     </ScrollView>
   );
