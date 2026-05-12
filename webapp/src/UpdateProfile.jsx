@@ -144,7 +144,7 @@ export default function UpdateProfile({ embedded = false }) {
       <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
         Open-brain profile
       </p>
-      <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, serif', fontSize: 34, lineHeight: 1.1 }}>
+      <h1 style={{ margin: 0, fontFamily: openBrainStyle.serifFamily, fontSize: 34, lineHeight: 1.1 }}>
         Update your profile
       </h1>
       <p style={{ marginTop: 0, marginBottom: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
@@ -306,7 +306,7 @@ export default function UpdateProfile({ embedded = false }) {
       <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
         Open-brain profile
       </p>
-      <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, serif', fontSize: 34, lineHeight: 1.1 }}>
+      <h1 style={{ margin: 0, fontFamily: openBrainStyle.serifFamily, fontSize: 34, lineHeight: 1.1 }}>
         Update your profile
       </h1>
       <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>Loading profile…</p>

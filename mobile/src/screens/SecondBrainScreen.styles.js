@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { openBrainStyle } from '../constants/openbrainStyle';
 
 export const SWIPE_ACTION_WIDTH = 88;
 
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
   markdownLink: { color: '#86b7ff', textDecorationLine: 'underline' },
   markdownCodeBlock: { borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.25)', padding: 10, minWidth: 0 },
   markdownCodeScrollContent: { minWidth: '100%' },
-  markdownCodeBlockText: { color: theme.colors.textPrimary, fontSize: 12, lineHeight: 18, fontFamily: 'Courier', flexShrink: 1 },
+  markdownCodeBlockText: { color: theme.colors.textPrimary, fontSize: 12, lineHeight: 18, fontFamily: openBrainStyle.fontMono, flexShrink: 1 },
   markdownList: { gap: 4 },
   markdownListItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   markdownListBullet: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 20, minWidth: 14 },

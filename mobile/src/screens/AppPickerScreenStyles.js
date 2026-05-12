@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: theme.colors.brandText,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
   },
   title: {
     marginTop: 4,
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.4,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
   },
   card: {
     backgroundColor: theme.colors.bgRaised,
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     letterSpacing: -0.3,
     lineHeight: 30,
-    fontFamily: 'DMSerifDisplay_400Regular',
+    fontFamily: openBrainStyle.fontSerif,
   },
   logoBrand: { color: theme.colors.brand },
   logoBlue: { color: openBrainStyle.accent },
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     letterSpacing: 0.2,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: openBrainStyle.fontSemiBold,
     textTransform: 'uppercase',
   },
 });

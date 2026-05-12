@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -8,12 +8,6 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
-import {
-  DMSans_300Light,
-  DMSans_400Regular,
-  DMSans_600SemiBold,
-} from '@expo-google-fonts/dm-sans';
-import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import LoginScreen from './src/screens/LoginScreen';
 import AppPickerScreen from './src/screens/AppPickerScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -27,7 +21,9 @@ import OpenBrainUserSearchScreen from './src/screens/OpenBrainUserSearchScreen';
 import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
+import { openBrainFontLoadMap } from './src/constants/openbrainFonts';
 import { theme } from './src/theme';
+import styles from './App.styles';
 
 const Stack = createNativeStackNavigator();
 
@@ -90,12 +86,7 @@ const linking = {
 export default function App() {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fontsLoaded] = useFonts({
-    DMSans_300Light,
-    DMSans_400Regular,
-    DMSans_600SemiBold,
-    DMSerifDisplay_400Regular,
-  });
+  const [fontsLoaded] = useFonts(openBrainFontLoadMap);
 
   useEffect(() => {
     (async () => {
@@ -119,7 +110,7 @@ export default function App() {
     setToken(null);
   }
 
-  if (loading || !fontsLoaded) return <ActivityIndicator style={{ flex: 1 }} color={theme.colors.brand} />;
+  if (loading || !fontsLoaded) return <ActivityIndicator style={styles.loadingIndicator} color={theme.colors.brand} />;
 
   const initialRouteName = Platform.OS === 'web'
     ? 'Home'
@@ -198,31 +189,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  appRoot: {
-    flex: 1,
-    backgroundColor: theme.colors.bgBase,
-  },
-  headerBrandText: {
-    color: theme.colors.textPrimary,
-    fontSize: 26,
-    lineHeight: 30,
-    letterSpacing: -0.5,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  headerBrandAccent: {
-    color: theme.colors.brand,
-  },
-  headerLiveText: {
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 18,
-    fontFamily: 'DMSans_300Light',
-    paddingRight: 12,
-  },
-  headerLiveDot: {
-    color: theme.colors.brand,
-    fontSize: 12,
-  },
-});

@@ -75,7 +75,7 @@ export default function CreateProfile() {
         <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
           Open-brain setup
         </p>
-        <h1 style={{ margin: 0, fontFamily: 'DM Serif Display, serif', fontSize: 34, lineHeight: 1.1 }}>
+        <h1 style={{ margin: 0, fontFamily: openBrainStyle.serifFamily, fontSize: 34, lineHeight: 1.1 }}>
           Create your profile
         </h1>
         <p style={{ marginTop: 0, marginBottom: 8, fontSize: 13, color: 'var(--text-secondary)' }}>

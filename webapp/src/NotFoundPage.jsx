@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 export default function NotFoundPage() {
   return (
@@ -42,7 +43,7 @@ export default function NotFoundPage() {
         <h1
           style={{
             margin: 0,
-            fontFamily: 'DM Serif Display, serif',
+            fontFamily: openBrainStyle.serifFamily,
             fontSize: 34,
             lineHeight: 1.1,
             letterSpacing: '-0.4px',

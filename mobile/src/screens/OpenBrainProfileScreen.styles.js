@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   },
   avatarFallbackText: {
     color: theme.colors.textPrimary,
-    fontFamily: 'sans-serif',
+    fontFamily: openBrainStyle.fontBold,
     fontSize: 24,
     fontWeight: '700',
   },

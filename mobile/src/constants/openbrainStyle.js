@@ -54,4 +54,5 @@ export const openBrainStyle = {
   fontSemiBold: 'DMSans_600SemiBold',
   fontBold: 'DMSans_700Bold',
   fontSerif: 'DMSerifDisplay_400Regular',
+  fontMono: 'Courier',
 };

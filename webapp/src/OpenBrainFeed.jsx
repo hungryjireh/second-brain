@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import OpenBrainProfile from './OpenBrainProfile.jsx';
 import OpenBrainWrite from './OpenBrainWrite.jsx';
 import UpdateProfile from './UpdateProfile.jsx';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const FEED_PROMPT_ENDPOINTS = ['/api/feed-prompts', '/api/static/feed-prompts.json', '/feed-prompts.json'];
@@ -158,7 +159,7 @@ function ThoughtCard({ item, onReact, reactingKey, onToggleFollow, followBusyUse
       <p
         style={{
           margin: 0,
-          fontFamily: 'DM Serif Display, serif',
+          fontFamily: openBrainStyle.serifFamily,
           fontSize: 'clamp(20px, 1.7vw, 28px)',
           lineHeight: 2,
           fontWeight: 400,
@@ -634,7 +635,7 @@ export default function OpenBrainFeed() {
       >
         <header style={{ borderBottom: '0.5px solid var(--border)', padding: '14px 14px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontFamily: 'DM Sans, sans-serif' }}>{title}</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontFamily: openBrainStyle.sansFamily }}>{title}</h1>
             {!hasPostedToday ? (
               <button
                 type="button"

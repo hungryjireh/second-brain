@@ -1,14 +1,14 @@
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+import { indexStyles } from './index.styles';
 
 if (typeof document !== 'undefined') {
-  const baseColor = '#0d0d0d';
-  document.documentElement.style.backgroundColor = baseColor;
-  document.body.style.backgroundColor = baseColor;
-  document.body.style.margin = '0';
+  document.documentElement.style.backgroundColor = indexStyles.baseColor;
+  document.body.style.backgroundColor = indexStyles.baseColor;
+  document.body.style.margin = indexStyles.body.margin;
   const root = document.getElementById('root');
-  if (root) root.style.backgroundColor = baseColor;
+  if (root) root.style.backgroundColor = indexStyles.baseColor;
 }
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

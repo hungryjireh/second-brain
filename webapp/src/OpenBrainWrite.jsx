@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const MAX_CHARS = 5000;
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -379,7 +380,7 @@ export default function OpenBrainWrite({ embedded = false }) {
           <h1
             style={{
               margin: '12px 0 0',
-              fontFamily: 'DM Serif Display, serif',
+              fontFamily: openBrainStyle.serifFamily,
               fontSize: 'clamp(24px, 2.4vw, 30px)',
               lineHeight: 1.12,
               letterSpacing: '-0.01em',
@@ -443,7 +444,7 @@ export default function OpenBrainWrite({ embedded = false }) {
                     border: '0.5px solid var(--border)',
                     background: 'var(--bg-raised)',
                     padding: '12px 14px',
-                    fontFamily: 'DM Serif Display, serif',
+                    fontFamily: openBrainStyle.serifFamily,
                     fontSize: 'clamp(16px, 1.5vw, 19px)',
                     lineHeight: 1.5,
                     color: 'var(--text-primary)',
@@ -489,7 +490,7 @@ export default function OpenBrainWrite({ embedded = false }) {
                   border: '0.5px solid var(--border)',
                   background: 'var(--bg-raised)',
                   color: 'var(--text-primary)',
-                  fontFamily: 'DM Serif Display, serif',
+                  fontFamily: openBrainStyle.serifFamily,
                   fontSize: 'clamp(16px, 1.5vw, 19px)',
                   lineHeight: 1.5,
                   padding: '12px 14px',
@@ -573,7 +574,7 @@ export default function OpenBrainWrite({ embedded = false }) {
               fontSize: 14,
               fontWeight: 600,
               lineHeight: 1,
-              fontFamily: 'DM Sans, sans-serif',
+              fontFamily: openBrainStyle.sansFamily,
               cursor: isPosted || isSaving || !thought.trim() ? 'not-allowed' : 'pointer',
             }}
           >

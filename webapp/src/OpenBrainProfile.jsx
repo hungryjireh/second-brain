@@ -369,7 +369,7 @@ export default function OpenBrainProfile() {
                     <p
                       style={{
                         margin: 0,
-                        fontFamily: 'DM Serif Display, serif',
+                        fontFamily: openBrainStyle.serifFamily,
                         fontSize: 'clamp(18px, 1.5vw, 24px)',
                         lineHeight: 1.8,
                         color: 'var(--text-primary)',

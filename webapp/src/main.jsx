@@ -18,7 +18,7 @@ function AppLogo({ name }) {
     return (
       <span
         style={{
-          fontFamily: 'DM Serif Display, serif',
+          fontFamily: openBrainStyle.serifFamily,
           fontSize: 25,
           letterSpacing: '-0.3px',
           color: 'var(--text-primary)',
@@ -32,7 +32,7 @@ function AppLogo({ name }) {
   return (
     <span
       style={{
-        fontFamily: 'DM Serif Display, serif',
+        fontFamily: openBrainStyle.serifFamily,
         fontSize: 25,
         letterSpacing: '-0.3px',
         color: 'var(--text-primary)',
@@ -88,7 +88,7 @@ function AppHome() {
           style={{
             marginTop: 4,
             marginBottom: 8,
-            fontFamily: 'DM Serif Display, serif',
+            fontFamily: openBrainStyle.serifFamily,
             fontSize: 34,
             letterSpacing: '-0.4px',
             lineHeight: 1.1,

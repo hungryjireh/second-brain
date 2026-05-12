@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import NotFoundPage from './NotFoundPage.jsx';
+import { openBrainStyle } from './constants/openbrainStyle';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const SHARE_PROMPT_ENDPOINTS = [`${API}/share-prompts`, '/api/static/share-prompts.json', '/share-prompts.json'];
@@ -178,7 +179,7 @@ export default function SharedThoughtPage() {
             aria-label="openbrain"
             style={{
               margin: 0,
-              fontFamily: 'DM Serif Display, serif',
+              fontFamily: openBrainStyle.serifFamily,
               fontSize: 40,
               lineHeight: 1,
               letterSpacing: '-0.02em',
@@ -193,7 +194,7 @@ export default function SharedThoughtPage() {
         <h1
           style={{
             margin: 0,
-            fontFamily: 'DM Serif Display, serif',
+            fontFamily: openBrainStyle.serifFamily,
             fontSize: 34,
             lineHeight: 1.1,
             letterSpacing: '-0.4px',

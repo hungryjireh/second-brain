@@ -26,5 +26,6 @@ export const openBrainStyle = {
   dangerBorder: 'rgba(220,60,60,0.28)',
   shadowStrong: 'rgba(0,0,0,0.35)',
   brandGlow: 'radial-gradient(circle at 15% 15%, rgba(29,158,117,0.13), transparent 38%), var(--bg-base)',
+  sansFamily: 'DM Sans, sans-serif',
   serifFamily: 'DM Serif Display, serif',
 };
