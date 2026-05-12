@@ -94,6 +94,7 @@ export default function OpenBrainThoughtComposer({
   dateLabel,
   timeLabel,
   streakCount = 0,
+  saveCount = 0,
   heading = "What's on your mind?",
   prompt,
   onRefreshPrompt,
@@ -140,7 +141,10 @@ export default function OpenBrainThoughtComposer({
         {!!dateLabel && (
           <View style={styles.eyebrowRow}>
             <Text style={styles.eyebrow}>{dateLabel}{timeLabel ? ` • ${timeLabel}` : ''}</Text>
-            <Text style={styles.streak}>🔥 {streakCount}</Text>
+            <View style={styles.metricsRow}>
+              <Text style={styles.metric}>🔥 {streakCount}</Text>
+              <Text style={styles.metric}>🔖 {saveCount}</Text>
+            </View>
           </View>
         )}
         <Text style={styles.heading}>{heading}</Text>

@@ -36,7 +36,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
   },
-  streak: {
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  metric: {
     color: theme.colors.textSecondary,
     fontFamily: 'DMSans_600SemiBold',
     fontSize: 11,

@@ -3,6 +3,8 @@ import { json, supabaseRequest, getEpochDayInTimezone } from './helpers.js';
 
 const REACTION_TYPES = new Set(['felt_this', 'me_too', 'made_me_think']);
 const EVERYONE_LIMIT = 60;
+const PAGE_SIZE = 1000;
+const THOUGHT_ID_CHUNK_SIZE = 200;
 
 function mapThoughtRows(rows, profileMap) {
   return (rows || []).map(row => ({
@@ -81,6 +83,114 @@ function appendSecondBrainSaveData(thoughts, savedThoughtIds) {
     ...thought,
     viewer_has_added_to_second_brain: savedThoughtIds?.has(thought.id) || false,
   }));
+}
+
+async function loadSaveCountByThought({ token, thoughtIds }) {
+  if (!thoughtIds.length) return new Map();
+
+  const saveCountByThoughtId = new Map();
+  for (let i = 0; i < thoughtIds.length; i += THOUGHT_ID_CHUNK_SIZE) {
+    const chunk = thoughtIds.slice(i, i + THOUGHT_ID_CHUNK_SIZE);
+    let offset = 0;
+
+    while (true) {
+      const saveRows = await supabaseRequest('/rest/v1/thought_second_brain_saves', {
+        method: 'GET',
+        query: {
+          select: 'thought_id',
+          thought_id: `in.(${chunk.join(',')})`,
+          limit: PAGE_SIZE,
+          offset,
+        },
+        authToken: token,
+      });
+
+      if (!Array.isArray(saveRows) || saveRows.length === 0) break;
+
+      for (const row of saveRows) {
+        const thoughtId = row?.thought_id;
+        if (!thoughtId) continue;
+        saveCountByThoughtId.set(thoughtId, Number(saveCountByThoughtId.get(thoughtId) || 0) + 1);
+      }
+
+      if (saveRows.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+  }
+
+  return saveCountByThoughtId;
+}
+
+function appendThoughtSaveCounts(thoughts, saveCountByThoughtId) {
+  return thoughts.map(thought => ({
+    ...thought,
+    save_count: Number(saveCountByThoughtId.get(thought.id) || 0),
+  }));
+}
+
+async function loadSaveCountByAuthor({ token, authorIds }) {
+  if (!authorIds.length) return new Map();
+
+  const authorThoughtRows = [];
+  let thoughtOffset = 0;
+  while (true) {
+    const page = await supabaseRequest('/rest/v1/thoughts', {
+      method: 'GET',
+      query: {
+        select: 'id,user_id',
+        user_id: `in.(${authorIds.join(',')})`,
+        visibility: 'eq.public',
+        limit: PAGE_SIZE,
+        offset: thoughtOffset,
+      },
+      authToken: token,
+    });
+    if (!Array.isArray(page) || page.length === 0) break;
+    authorThoughtRows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    thoughtOffset += PAGE_SIZE;
+  }
+
+  const thoughtOwnerById = new Map();
+  for (const row of authorThoughtRows) {
+    if (!row?.id || !row?.user_id) continue;
+    thoughtOwnerById.set(row.id, row.user_id);
+  }
+
+  const thoughtIds = Array.from(thoughtOwnerById.keys());
+  if (!thoughtIds.length) return new Map();
+
+  const saveCountByAuthorId = new Map();
+  for (let i = 0; i < thoughtIds.length; i += THOUGHT_ID_CHUNK_SIZE) {
+    const chunk = thoughtIds.slice(i, i + THOUGHT_ID_CHUNK_SIZE);
+    let saveOffset = 0;
+
+    while (true) {
+      const saveRows = await supabaseRequest('/rest/v1/thought_second_brain_saves', {
+        method: 'GET',
+        query: {
+          select: 'thought_id',
+          thought_id: `in.(${chunk.join(',')})`,
+          limit: PAGE_SIZE,
+          offset: saveOffset,
+        },
+        authToken: token,
+      });
+
+      if (!Array.isArray(saveRows) || saveRows.length === 0) break;
+
+      for (const row of saveRows) {
+        const ownerId = thoughtOwnerById.get(row?.thought_id);
+        if (!ownerId) continue;
+        saveCountByAuthorId.set(ownerId, Number(saveCountByAuthorId.get(ownerId) || 0) + 1);
+      }
+
+      if (saveRows.length < PAGE_SIZE) break;
+      saveOffset += PAGE_SIZE;
+    }
+  }
+
+  return saveCountByAuthorId;
 }
 
 export default async function handler(req, res) {
@@ -220,9 +330,11 @@ export default async function handler(req, res) {
           authToken: token,
         })
       : [];
+    const saveCountByAuthorId = await loadSaveCountByAuthor({ token, authorIds: allProfileIds });
 
     const profileMap = new Map((profiles || []).map(profile => [profile.id, {
       ...profile,
+      save_count: Number(saveCountByAuthorId.get(profile.id) || 0),
       is_self: profile.id === userId,
       is_following: followingIds.includes(profile.id),
     }]));
@@ -235,6 +347,7 @@ export default async function handler(req, res) {
       ...followingThoughts,
     ]);
     const reactionSummary = await loadReactionSummary({ token, thoughtIds: reactionTargets, viewerId: userId });
+    const saveCountByThoughtId = await loadSaveCountByThought({ token, thoughtIds: reactionTargets });
     const savedRows = reactionTargets.length
       ? await supabaseRequest('/rest/v1/thought_second_brain_saves', {
           method: 'GET',
@@ -250,8 +363,10 @@ export default async function handler(req, res) {
 
     const everyoneWithReactions = appendReactionData(everyoneThoughts, reactionSummary);
     const followingWithReactions = appendReactionData(followingThoughts, reactionSummary);
-    const everyoneWithSaves = appendSecondBrainSaveData(everyoneWithReactions, savedThoughtIds);
-    const followingWithSaves = appendSecondBrainSaveData(followingWithReactions, savedThoughtIds);
+    const everyoneWithSaveCounts = appendThoughtSaveCounts(everyoneWithReactions, saveCountByThoughtId);
+    const followingWithSaveCounts = appendThoughtSaveCounts(followingWithReactions, saveCountByThoughtId);
+    const everyoneWithSaves = appendSecondBrainSaveData(everyoneWithSaveCounts, savedThoughtIds);
+    const followingWithSaves = appendSecondBrainSaveData(followingWithSaveCounts, savedThoughtIds);
 
     return json(res, 200, {
       following: followingWithSaves,

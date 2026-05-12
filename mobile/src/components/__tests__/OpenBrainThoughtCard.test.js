@@ -51,14 +51,14 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText('"Lord, we do not want better seeds, we want softer hearts."')).toBeTruthy();
   });
 
-  it('calls add to second brain handler from action button and disables after add', async () => {
+  it('shows add response and still allows another add click', async () => {
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 1,
       text: 'A thought to save',
       profile: { username: 'jireh', streak_count: 1, is_self: true },
     };
-    const { getByLabelText } = render(
+    const { getByLabelText, getByText } = render(
       <OpenBrainThoughtCard
         item={item}
         onShare={jest.fn()}
@@ -70,15 +70,17 @@ describe('OpenBrainThoughtCard', () => {
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
 
     await waitFor(() => expect(getByLabelText('Added to SecondBrain')).toBeTruthy());
+    expect(getByText('Added to SecondBrain.')).toBeTruthy();
     fireEvent.press(getByLabelText('Added to SecondBrain'));
-    expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
+    expect(onAddToSecondBrain).toHaveBeenCalledTimes(2);
   });
 
-  it('shows streak metric in feed metadata', () => {
+  it('shows streak metric in feed metadata and uses thought-level save count', () => {
     const item = {
       id: 2,
       text: 'Another thought',
-      profile: { username: 'jireh', streak_count: 3, is_self: true },
+      save_count: 7,
+      profile: { username: 'jireh', streak_count: 3, save_count: 5, is_self: true },
     };
     const { getByLabelText, getByText, queryByLabelText } = render(
       <OpenBrainThoughtCard
@@ -87,11 +89,29 @@ describe('OpenBrainThoughtCard', () => {
     );
 
     expect(getByLabelText('Streak')).toBeTruthy();
+    expect(getByLabelText('Saves')).toBeTruthy();
     expect(queryByLabelText('Saved to SecondBrain')).toBeNull();
     expect(getByText('3')).toBeTruthy();
+    expect(getByText('7')).toBeTruthy();
   });
 
-  it('starts as added when viewer has already saved the thought', () => {
+  it('does not use profile save count when thought-level save count is missing', () => {
+    const item = {
+      id: 4,
+      text: 'No thought-level save count',
+      profile: { username: 'jireh', streak_count: 4, save_count: 9, is_self: true },
+    };
+    const { getByText } = render(
+      <OpenBrainThoughtCard
+        item={item}
+      />
+    );
+
+    expect(getByText('4')).toBeTruthy();
+    expect(getByText('0')).toBeTruthy();
+  });
+
+  it('still allows add when viewer has already saved the thought', () => {
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 3,
@@ -108,6 +128,6 @@ describe('OpenBrainThoughtCard', () => {
     );
 
     fireEvent.press(getByLabelText('Added to SecondBrain'));
-    expect(onAddToSecondBrain).not.toHaveBeenCalled();
+    expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
   });
 });

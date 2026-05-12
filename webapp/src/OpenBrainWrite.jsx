@@ -87,6 +87,7 @@ export default function OpenBrainWrite({ embedded = false }) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [streakCount, setStreakCount] = useState(0);
+  const [saveCount, setSaveCount] = useState(0);
   const [showStreakLabel, setShowStreakLabel] = useState(false);
   const [headingText, setHeadingText] = useState("What's on your mind?");
   const [isHeadingFadingOut, setIsHeadingFadingOut] = useState(false);
@@ -161,6 +162,7 @@ export default function OpenBrainWrite({ embedded = false }) {
         const data = await res.json();
         if (!isMounted) return;
         setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : 0);
+        setSaveCount(Number.isInteger(data?.profile?.save_count) ? data.profile.save_count : 0);
       } catch {
         // noop
       }
@@ -334,29 +336,44 @@ export default function OpenBrainWrite({ embedded = false }) {
           >
             {todayLabel} • {timeLabel}
           </p>
-          <button
-            type="button"
-            aria-label={`Streak: ${streakCount}`}
-            title={`Streak: ${streakCount}`}
-            onMouseEnter={() => setShowStreakLabel(true)}
-            onMouseLeave={() => setShowStreakLabel(false)}
-            onFocus={() => setShowStreakLabel(true)}
-            onBlur={() => setShowStreakLabel(false)}
-            onClick={() => setShowStreakLabel(current => !current)}
-            style={{
-              margin: 0,
-              color: 'var(--text-secondary)',
-              fontSize: 11,
-              fontWeight: 600,
-              background: 'transparent',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            {showStreakLabel ? `Streak: ${streakCount}` : `🔥︎ ${streakCount}`}
-          </button>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              aria-label={`Streak: ${streakCount}`}
+              title={`Streak: ${streakCount}`}
+              onMouseEnter={() => setShowStreakLabel(true)}
+              onMouseLeave={() => setShowStreakLabel(false)}
+              onFocus={() => setShowStreakLabel(true)}
+              onBlur={() => setShowStreakLabel(false)}
+              onClick={() => setShowStreakLabel(current => !current)}
+              style={{
+                margin: 0,
+                color: 'var(--text-secondary)',
+                fontSize: 11,
+                fontWeight: 600,
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {showStreakLabel ? `Streak: ${streakCount}` : `🔥︎ ${streakCount}`}
+            </button>
+            <span
+              aria-label={`Saves: ${saveCount}`}
+              title={`Saves: ${saveCount}`}
+              style={{
+                margin: 0,
+                color: 'var(--text-secondary)',
+                fontSize: 11,
+                fontWeight: 600,
+                fontFamily: 'inherit',
+              }}
+            >
+              🔖 {saveCount}
+            </span>
+          </div>
         </div>
 
           <h1

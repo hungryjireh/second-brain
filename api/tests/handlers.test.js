@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'crypto';
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://example.supabase.co';
+process.env.SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'anon-key';
 
 function createReq({ method = 'GET', body = {}, headers = {}, query = {} } = {}) {
   return { method, body, headers, query };
@@ -36,6 +41,16 @@ function createRes() {
 
 function jsonBody(res) {
   return res.body ? JSON.parse(res.body) : null;
+}
+
+function createTestJwt(payload) {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(`${header}.${body}`)
+    .digest('base64url');
+  return `${header}.${body}.${signature}`;
 }
 
 async function importFresh(path, tag) {
@@ -257,6 +272,23 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
         }]),
       };
     }
+    if (parsed.pathname.endsWith('/rest/v1/thoughts')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([
+          { id: '22222222-2222-4222-8222-222222222222' },
+          { id: '33333333-3333-4333-8333-333333333333' },
+        ]),
+      };
+    }
+    if (parsed.pathname.endsWith('/rest/v1/thought_second_brain_saves')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ id: 'save-1' }, { id: 'save-2' }]),
+      };
+    }
 
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
@@ -275,6 +307,7 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
 
   assert.equal(res.statusCode, 200);
   assert.equal(jsonBody(res)?.profile?.username, 'alice');
+  assert.equal(jsonBody(res)?.profile?.save_count, 2);
   assert.equal(jsonBody(res)?.profile?.is_self, false);
   assert.equal(jsonBody(res)?.profile?.is_following, false);
 });
@@ -319,6 +352,138 @@ test('open-brain public-thoughts handler allows anonymous lookup by user_id', as
   assert.equal(res.statusCode, 200);
   assert.equal(Array.isArray(jsonBody(res)?.thoughts), true);
   assert.equal(jsonBody(res)?.thoughts?.[0]?.text, 'hello world');
+});
+
+test('open-brain feed handler returns per-thought save_count from thought_second_brain_saves', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  const viewerId = '11111111-1111-4111-8111-111111111111';
+  const authorId = '22222222-2222-4222-8222-222222222222';
+  const thoughtId = '33333333-3333-4333-8333-333333333333';
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith('/auth/v1/user')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/follows')) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/reactions')) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/profiles')) {
+      const idEq = parsed.searchParams.get('id');
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: 'UTC' }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: authorId,
+          username: 'alice',
+          avatar_url: null,
+          streak_count: 4,
+        }]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thoughts')) {
+      const selected = parsed.searchParams.get('select');
+      const userEq = parsed.searchParams.get('user_id');
+      const visibility = parsed.searchParams.get('visibility');
+
+      if (selected === 'created_at' && userEq === `eq.${viewerId}`) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+
+      if (selected === 'id,user_id,content,created_at,visibility,share_slug' && visibility === 'eq.public') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{
+            id: thoughtId,
+            user_id: authorId,
+            content: { text: 'A thought' },
+            created_at: '2026-01-01T00:00:00.000Z',
+            visibility: 'public',
+            share_slug: null,
+          }]),
+        };
+      }
+
+      if (selected === 'id,user_id' && visibility === 'eq.public') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: thoughtId, user_id: authorId }]),
+        };
+      }
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thought_second_brain_saves')) {
+      const userEq = parsed.searchParams.get('user_id');
+      if (userEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ thought_id: thoughtId }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([
+          { thought_id: thoughtId },
+          { thought_id: thoughtId },
+          { thought_id: thoughtId },
+        ]),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh('../open-brain/feed.js', 'open-brain-feed-save-count');
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: 'GET',
+    headers: { authorization: `Bearer ${authToken}` },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.id, thoughtId);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.save_count, 3);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.viewer_has_added_to_second_brain, true);
 });
 
 test('open-brain notifications handler: OPTIONS, method, auth, and payload guards', async () => {

@@ -168,7 +168,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       await invalidateApiCache({
         token,
         exactPaths: profile?.id ? [`/open-brain/public-thoughts?user_id=${encodeURIComponent(profile.id)}`] : [],
-        pathPrefixes: ['/open-brain/feed'],
+        pathPrefixes: ['/open-brain/feed', '/open-brain/profile', '/entries'],
       });
       Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
     } catch (err) {

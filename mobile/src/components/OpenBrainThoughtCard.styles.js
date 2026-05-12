@@ -166,6 +166,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  actionsBlock: {
+    marginLeft: 'auto',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
   reactionChip: {
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.09)',
@@ -210,6 +215,12 @@ const styles = StyleSheet.create({
   },
   secondaryActionButtonTextAdded: {
     color: '#8ef1cf',
+  },
+  secondaryActionResponse: {
+    color: 'rgba(243,241,236,0.72)',
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    lineHeight: 16,
   },
   actionButtonContent: {
     flexDirection: 'row',

@@ -5,6 +5,57 @@ function isValidUsername(value) {
   return /^[a-z0-9_]{3,24}$/i.test(value);
 }
 
+const PAGE_SIZE = 1000;
+const THOUGHT_ID_CHUNK_SIZE = 200;
+
+async function countSavesForUserThoughts({ profileId, authToken }) {
+  const thoughtIds = [];
+  let thoughtOffset = 0;
+  while (true) {
+    const page = await supabaseRequest('/rest/v1/thoughts', {
+      method: 'GET',
+      query: {
+        select: 'id',
+        user_id: `eq.${profileId}`,
+        visibility: 'eq.public',
+        limit: PAGE_SIZE,
+        offset: thoughtOffset,
+      },
+      authToken,
+    });
+    if (!Array.isArray(page) || page.length === 0) break;
+    thoughtIds.push(...page.map(row => row?.id).filter(Boolean));
+    if (page.length < PAGE_SIZE) break;
+    thoughtOffset += PAGE_SIZE;
+  }
+
+  if (!thoughtIds.length) return 0;
+
+  let totalSaves = 0;
+  for (let i = 0; i < thoughtIds.length; i += THOUGHT_ID_CHUNK_SIZE) {
+    const chunk = thoughtIds.slice(i, i + THOUGHT_ID_CHUNK_SIZE);
+    let saveOffset = 0;
+    while (true) {
+      const saveRows = await supabaseRequest('/rest/v1/thought_second_brain_saves', {
+        method: 'GET',
+        query: {
+          select: 'thought_id',
+          thought_id: `in.(${chunk.join(',')})`,
+          limit: PAGE_SIZE,
+          offset: saveOffset,
+        },
+        authToken,
+      });
+      if (!Array.isArray(saveRows) || saveRows.length === 0) break;
+      totalSaves += saveRows.length;
+      if (saveRows.length < PAGE_SIZE) break;
+      saveOffset += PAGE_SIZE;
+    }
+  }
+
+  return totalSaves;
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (!['GET', 'POST', 'PATCH'].includes(req.method)) return json(res, 405, { error: 'Method not allowed' });
@@ -44,6 +95,7 @@ export default async function handler(req, res) {
 
       if (!rows?.[0]) return json(res, 404, { profile: null });
       const profile = rows[0];
+      const saveCount = await countSavesForUserThoughts({ profileId: profile.id, authToken });
       const isSelf = Boolean(authUserId) && profile.id === authUserId;
       let isFollowing = false;
 
@@ -64,6 +116,7 @@ export default async function handler(req, res) {
       return json(res, 200, {
         profile: {
           ...profile,
+          save_count: saveCount,
           is_self: isSelf,
           is_following: isFollowing,
         },

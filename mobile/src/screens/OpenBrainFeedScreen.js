@@ -105,6 +105,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const [hasPostedToday, setHasPostedToday] = useState(false);
   const [postedHeading, setPostedHeading] = useState('');
   const [streakCount, setStreakCount] = useState(0);
+  const [saveCount, setSaveCount] = useState(0);
   const [prompt, setPrompt] = useState(() => randomFrom(THOUGHT_FALLBACK_PROMPTS));
   const [saving, setSaving] = useState(false);
   const [composerError, setComposerError] = useState('');
@@ -155,6 +156,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
       apiRequest('/open-brain/thoughts', { token, cache: { ttlMs: CACHE_TTL_MS.FEED } }),
     ]);
     setStreakCount(Number.isInteger(profileData?.profile?.streak_count) ? profileData.profile.streak_count : 0);
+    setSaveCount(Number.isInteger(profileData?.profile?.save_count) ? profileData.profile.save_count : 0);
     if (thoughtData?.has_posted_today && thoughtData?.thought) {
       const postedText = typeof thoughtData.thought?.content?.text === 'string' ? thoughtData.thought.content.text : '';
       setDraft(postedText);
@@ -322,6 +324,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
               `/open-brain/public-thoughts?user_id=${encodeURIComponent(thought.user_id)}`,
             ]
           : ['/open-brain/feed'],
+        pathPrefixes: ['/open-brain/profile', '/entries'],
       });
       Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
     } catch (err) {
@@ -421,6 +424,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
               dateLabel={todayLabel}
               timeLabel={timeLabel}
               streakCount={streakCount}
+              saveCount={saveCount}
               heading={hasPostedToday ? (postedHeading || "What's on your mind?") : "What's on your mind?"}
               prompt={prompt}
               onRefreshPrompt={() => setPrompt(current => randomFrom(THOUGHT_FALLBACK_PROMPTS, current))}

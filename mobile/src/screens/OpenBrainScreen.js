@@ -49,6 +49,7 @@ export default function OpenBrainScreen({ token, navigation }) {
   const [hasPostedToday, setHasPostedToday] = useState(false);
   const [postedHeading, setPostedHeading] = useState('');
   const [streakCount, setStreakCount] = useState(0);
+  const [saveCount, setSaveCount] = useState(0);
   const [prompt, setPrompt] = useState(() => randomFrom(THOUGHT_FALLBACK_PROMPTS));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +60,7 @@ export default function OpenBrainScreen({ token, navigation }) {
     try {
       const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
       setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : 0);
+      setSaveCount(Number.isInteger(data?.profile?.save_count) ? data.profile.save_count : 0);
       return true;
     } catch (err) {
       if (String(err.message).toLowerCase().includes('404') || String(err.message).toLowerCase().includes('not found')) {
@@ -128,6 +130,7 @@ export default function OpenBrainScreen({ token, navigation }) {
           dateLabel={todayLabel}
           timeLabel={timeLabel}
           streakCount={streakCount}
+          saveCount={saveCount}
           heading={hasPostedToday ? (postedHeading || "What's on your mind?") : "What's on your mind?"}
           prompt={prompt}
           onRefreshPrompt={() => setPrompt(current => randomFrom(THOUGHT_FALLBACK_PROMPTS, current))}
