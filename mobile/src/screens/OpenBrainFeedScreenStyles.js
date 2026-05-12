@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -27,8 +27,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   floatingDraftButtonActive: {
-    borderColor: openBrainStyle.accentStrong,
-    backgroundColor: openBrainStyle.accentDim,
+    borderColor: theme.colors.accentStrong,
+    backgroundColor: theme.colors.accentDim,
   },
   draftIcon: {
     color: theme.colors.textPrimary,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgBase,
   },
   tabActive: {
-    borderColor: openBrainStyle.accentStrong,
+    borderColor: theme.colors.accentStrong,
     backgroundColor: theme.colors.bgRaised,
   },
   tabLabel: {

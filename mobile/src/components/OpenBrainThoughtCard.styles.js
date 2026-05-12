@@ -1,17 +1,17 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: openBrainStyle.surfaceDark,
-    borderColor: openBrainStyle.white03,
+    backgroundColor: theme.colors.surfaceDark,
+    borderColor: theme.colors.white03,
     borderWidth: 1,
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingVertical: 20,
     marginBottom: 14,
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.28,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   metricCount: {
-    color: openBrainStyle.textWarm78,
+    color: theme.colors.textWarm78,
     fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
@@ -76,21 +76,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   metaDot: {
-    color: openBrainStyle.textWarm50,
+    color: theme.colors.textWarm50,
     fontFamily: openBrainStyle.fontRegular,
   },
   streak: {
-    color: openBrainStyle.textWarm78,
+    color: theme.colors.textWarm78,
     fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
   time: {
-    color: openBrainStyle.textWarm50,
+    color: theme.colors.textWarm50,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   body: {
-    color: openBrainStyle.textWarm,
+    color: theme.colors.textWarm,
     fontFamily: openBrainStyle.fontSerif,
     fontSize: 18,
     lineHeight: 30,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   thoughtTitle: {
-    color: openBrainStyle.textWarm,
+    color: theme.colors.textWarm,
     fontFamily: openBrainStyle.fontSerif,
     fontSize: 34,
     lineHeight: 40,
@@ -120,12 +120,12 @@ const styles = StyleSheet.create({
   },
   quoteBlock: {
     borderLeftWidth: 3,
-    borderLeftColor: openBrainStyle.accent,
+    borderLeftColor: theme.colors.accent,
     paddingLeft: 10,
   },
   quoteText: {
     fontStyle: 'italic',
-    color: openBrainStyle.textWarm82,
+    color: theme.colors.textWarm82,
   },
   meta: {
     color: theme.colors.textSecondary,
@@ -147,19 +147,19 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   followButtonActive: {
-    backgroundColor: openBrainStyle.white09,
+    backgroundColor: theme.colors.white09,
   },
   followButtonFollowing: {
-    backgroundColor: openBrainStyle.accentSoft,
-    borderColor: openBrainStyle.accentBorder,
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accentBorder,
   },
   followButtonText: {
-    color: openBrainStyle.textWarm80,
+    color: theme.colors.textWarm80,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
-    color: openBrainStyle.accentText,
+    color: theme.colors.accentText,
   },
   reactions: {
     flexDirection: 'row',
@@ -179,31 +179,31 @@ const styles = StyleSheet.create({
   },
   reactionChip: {
     borderRadius: 999,
-    backgroundColor: openBrainStyle.white09,
+    backgroundColor: theme.colors.white09,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   reactionChipActive: {
-    backgroundColor: openBrainStyle.white22,
+    backgroundColor: theme.colors.white22,
   },
   reactionText: {
-    color: openBrainStyle.textWarm66,
+    color: theme.colors.textWarm66,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   reactionTextActive: {
-    color: openBrainStyle.textLight,
+    color: theme.colors.textLight,
   },
   shareButton: {
     borderRadius: 999,
-    backgroundColor: openBrainStyle.white09,
+    backgroundColor: theme.colors.white09,
     paddingHorizontal: 12,
     paddingVertical: 7,
     position: 'relative',
   },
   secondaryActionButton: {
     borderRadius: 999,
-    backgroundColor: openBrainStyle.white09,
+    backgroundColor: theme.colors.white09,
     borderWidth: 1,
     borderColor: 'transparent',
     paddingHorizontal: 12,
@@ -211,19 +211,19 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   secondaryActionButtonAdded: {
-    backgroundColor: openBrainStyle.accentSoft,
-    borderColor: openBrainStyle.accentBorder,
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accentBorder,
   },
   secondaryActionButtonText: {
-    color: openBrainStyle.textWarm80,
+    color: theme.colors.textWarm80,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   secondaryActionButtonTextAdded: {
-    color: openBrainStyle.accentText,
+    color: theme.colors.accentText,
   },
   secondaryActionResponse: {
-    color: openBrainStyle.textWarm72,
+    color: theme.colors.textWarm72,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
     lineHeight: 16,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   shareButtonText: {
-    color: openBrainStyle.textWarm80,
+    color: theme.colors.textWarm80,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
@@ -243,16 +243,16 @@ const styles = StyleSheet.create({
     bottom: '100%',
     left: 0,
     marginBottom: 8,
-    backgroundColor: openBrainStyle.surfaceOverlay,
+    backgroundColor: theme.colors.surfaceOverlay,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: openBrainStyle.white15,
+    borderColor: theme.colors.white15,
     zIndex: 20,
   },
   actionTooltipText: {
-    color: openBrainStyle.textLight,
+    color: theme.colors.textLight,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
     lineHeight: 14,
@@ -262,12 +262,12 @@ const styles = StyleSheet.create({
     bottom: '100%',
     left: 0,
     marginBottom: 8,
-    backgroundColor: openBrainStyle.surfaceOverlay,
+    backgroundColor: theme.colors.surfaceOverlay,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: openBrainStyle.white15,
+    borderColor: theme.colors.white15,
     zIndex: 20,
   },
 });

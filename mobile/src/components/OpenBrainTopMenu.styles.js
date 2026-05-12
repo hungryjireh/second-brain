@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   outer: {
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   logoAccent: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
   },
   searchButton: {
     minWidth: 36,
@@ -63,19 +63,19 @@ const styles = StyleSheet.create({
     height: 17,
     borderRadius: 8.5,
     paddingHorizontal: 4,
-    backgroundColor: openBrainStyle.notificationBadgeBg,
+    backgroundColor: theme.colors.notificationBadgeBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   notificationBadgeText: {
-    color: openBrainStyle.accentOnSolid,
+    color: theme.colors.accentOnSolid,
     fontSize: 10,
     lineHeight: 12,
     fontFamily: openBrainStyle.fontBold,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: openBrainStyle.overlayBackdrop,
+    backgroundColor: theme.colors.overlayBackdrop,
     paddingHorizontal: 12,
     paddingTop: 70,
   },
@@ -114,13 +114,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   submitButtonDisabled: {
     opacity: 0.45,
   },
   submitLabel: {
-    color: openBrainStyle.accentOnSolid,
+    color: theme.colors.accentOnSolid,
     fontSize: 14,
     fontFamily: openBrainStyle.fontSemiBold,
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   seeMoreLabel: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
     fontSize: 14,
     lineHeight: 18,
     fontFamily: openBrainStyle.fontSemiBold,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   notificationsStatusUnread: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
   },
 });
 

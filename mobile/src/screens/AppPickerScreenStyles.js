@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     fontFamily: openBrainStyle.fontSerif,
   },
   logoBrand: { color: theme.colors.brand },
-  logoBlue: { color: openBrainStyle.accent },
+  logoBlue: { color: theme.colors.accent },
   logoutButton: {
     marginTop: 10,
     borderWidth: 0.5,

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -95,19 +95,19 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   followActiveButton: {
-    backgroundColor: openBrainStyle.white09,
+    backgroundColor: theme.colors.white09,
   },
   followingButton: {
-    backgroundColor: openBrainStyle.accentSoft,
-    borderColor: openBrainStyle.accentBorder,
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accentBorder,
   },
   followButtonText: {
-    color: openBrainStyle.textWarm80,
+    color: theme.colors.textWarm80,
     fontFamily: openBrainStyle.fontRegular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
-    color: openBrainStyle.accentText,
+    color: theme.colors.accentText,
   },
   muted: {
     color: theme.colors.textSecondary,

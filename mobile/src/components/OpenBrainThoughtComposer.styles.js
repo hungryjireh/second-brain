@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   card: {
@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 14,
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.28,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: 14 },
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   postedQuoteBlock: {
     borderLeftWidth: 3,
-    borderLeftColor: openBrainStyle.accent,
+    borderLeftColor: theme.colors.accent,
     paddingLeft: 10,
   },
   postedQuoteText: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   buttonDisabled: {
-    backgroundColor: openBrainStyle.white04,
+    backgroundColor: theme.colors.white04,
   },
   buttonText: {
     color: theme.colors.textPrimary,

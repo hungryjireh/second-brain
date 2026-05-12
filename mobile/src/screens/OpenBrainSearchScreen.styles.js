@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   screen: {
@@ -46,13 +46,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   submitButtonDisabled: {
     opacity: 0.45,
   },
   submitLabel: {
-    color: openBrainStyle.accentOnSolid,
+    color: theme.colors.accentOnSolid,
     fontSize: 14,
     fontFamily: openBrainStyle.fontSemiBold,
   },

@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 function fuzzyScoreUsername(username, query) {
@@ -207,7 +207,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
-            <Feather name="bell" size={19} color={openBrainStyle.accent} />
+            <Feather name="bell" size={19} color={theme.colors.accent} />
             {unreadCount > 0 ? (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
@@ -225,7 +225,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             accessibilityRole="button"
             accessibilityLabel="Search users"
           >
-            <Feather name="search" size={19} color={openBrainStyle.accent} />
+            <Feather name="search" size={19} color={theme.colors.accent} />
           </Pressable>
         </View>
       </View>

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 const HOME_BUTTON_BASE = {
   minHeight: 44,
   borderRadius: 10,
@@ -10,7 +10,7 @@ const HOME_BUTTON_BASE = {
   paddingVertical: 10,
 };
 const HOME_BUTTON_LABEL_BASE = {
-  color: openBrainStyle.textLight,
+  color: theme.colors.textLight,
   fontSize: 12,
   lineHeight: 15,
   letterSpacing: 0.8,
@@ -144,29 +144,29 @@ const styles = StyleSheet.create({
   },
   openButton: {
     flex: 0.33,
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   secondButton: {
     flex: 0.33,
-    backgroundColor: openBrainStyle.second,
+    backgroundColor: theme.colors.brand,
   },
   previewWrap: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   previewPanelTop: {
-    backgroundColor: openBrainStyle.accentBg,
+    backgroundColor: theme.colors.accentBg,
     padding: 30,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   previewPanelBottom: {
-    backgroundColor: openBrainStyle.accentBg,
+    backgroundColor: theme.colors.accentBg,
     padding: 30,
   },
   previewBadgeOpen: {
     alignSelf: 'flex-start',
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
     color: theme.colors.textPrimary,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   },
   previewBadgeSecond: {
     alignSelf: 'flex-start',
-    backgroundColor: openBrainStyle.second,
+    backgroundColor: theme.colors.brand,
     color: theme.colors.textPrimary,
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   previewCardOpen: {
     backgroundColor: theme.colors.bgSurface,
-    borderColor: openBrainStyle.accent,
+    borderColor: theme.colors.accent,
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
@@ -200,19 +200,19 @@ const styles = StyleSheet.create({
   },
   previewCardSecond: {
     backgroundColor: theme.colors.bgSurface,
-    borderColor: openBrainStyle.second,
+    borderColor: theme.colors.brand,
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     gap: 8,
   },
   previewMetaOpen: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
     fontSize: 11,
     fontFamily: openBrainStyle.fontSemiBold,
   },
   previewMetaSecond: {
-    color: openBrainStyle.second,
+    color: theme.colors.brand,
     fontSize: 11,
     fontFamily: openBrainStyle.fontSemiBold,
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     fontFamily: openBrainStyle.fontSerif,
   },
   productLogoAccent: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
   },
   productTagline: {
     color: theme.colors.textPrimary,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     fontFamily: openBrainStyle.fontSemiBold,
   },
   workflowSection: {
-    backgroundColor: openBrainStyle.accentBg,
+    backgroundColor: theme.colors.accentBg,
     paddingHorizontal: 40,
     paddingVertical: 40,
   },
@@ -445,10 +445,10 @@ const styles = StyleSheet.create({
   openCta: {
   },
   secondCta: {
-    backgroundColor: openBrainStyle.accentBg,
+    backgroundColor: theme.colors.accentBg,
   },
   ctaTitle: {
-    color: openBrainStyle.pureWhite,
+    color: theme.colors.pureWhite,
     fontSize: 62,
     lineHeight: 68,
     letterSpacing: -1,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
   },
   ctaBody: {
-    color: openBrainStyle.white90,
+    color: theme.colors.white90,
     fontSize: 18,
     lineHeight: 33,
     fontFamily: openBrainStyle.fontRegular,
@@ -486,28 +486,28 @@ const styles = StyleSheet.create({
     ...HOME_BUTTON_LABEL_BASE,
   },
   openAccentText: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
     fontSize: 28,
     letterSpacing: 0.3,
     fontFamily: openBrainStyle.fontSemiBold,
   },
   secondAccentText: {
-    color: openBrainStyle.second,
+    color: theme.colors.brand,
     fontSize: 28,
     letterSpacing: 0.3,
     fontFamily: openBrainStyle.fontSemiBold,
   },
   openAccentBg: {
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   openAccentBorder: {
-    borderColor: openBrainStyle.accent,
+    borderColor: theme.colors.accent,
   },
   secondAccentBg: {
-    backgroundColor: openBrainStyle.second,
+    backgroundColor: theme.colors.brand,
   },
   secondAccentBorder: {
-    borderColor: openBrainStyle.second,
+    borderColor: theme.colors.brand,
   },
   openBrainLogoText: {
     color: theme.colors.textPrimary,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     fontFamily: openBrainStyle.fontSerif,
   },
   openBrainLogoAccent: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
   },
   heroLogoInline: {
     fontSize: 18,
@@ -528,10 +528,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 15,
     letterSpacing: 0.1,
-    color: openBrainStyle.textLight,
+    color: theme.colors.textLight,
   },
   buttonLogoAccent: {
-    color: openBrainStyle.textLight,
+    color: theme.colors.textLight,
   },
   badgeLogoText: {
     fontSize: 10,

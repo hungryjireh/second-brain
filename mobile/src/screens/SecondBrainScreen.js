@@ -5,7 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { apiRequest, getApiBase } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
@@ -25,10 +25,10 @@ const PRIORITY_LEVELS = [
 ];
 
 const STATS = [
-  { key: 'reminder', label: 'Reminders', color: openBrainStyle.second, dimColor: openBrainStyle.secondDim },
-  { key: 'todo', label: 'TODOs', color: openBrainStyle.todo, dimColor: openBrainStyle.todoDim },
-  { key: 'thought', label: 'Thoughts', color: openBrainStyle.thought, dimColor: openBrainStyle.thoughtDim },
-  { key: 'note', label: 'Notes', color: openBrainStyle.note, dimColor: openBrainStyle.noteDim },
+  { key: 'reminder', label: 'Reminders', color: theme.colors.brand, dimColor: theme.colors.brandDim },
+  { key: 'todo', label: 'TODOs', color: theme.colors.todo, dimColor: theme.colors.todoDim },
+  { key: 'thought', label: 'Thoughts', color: theme.colors.thought, dimColor: theme.colors.thoughtDim },
+  { key: 'note', label: 'Notes', color: theme.colors.note, dimColor: theme.colors.noteDim },
 ];
 
 const TYPEBAR_MIN_HEIGHT = 38;

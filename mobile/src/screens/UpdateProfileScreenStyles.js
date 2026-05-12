@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.24,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
@@ -43,12 +43,12 @@ const styles = StyleSheet.create({
   },
   avatarFallback: {
     flex: 1,
-    backgroundColor: openBrainStyle.avatarFallbackBg,
+    backgroundColor: theme.colors.avatarFallbackBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    color: openBrainStyle.accentText,
+    color: theme.colors.accentText,
     fontFamily: openBrainStyle.fontBold,
     fontSize: 24,
     fontWeight: '700',
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     gap: 10,
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.22,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   eyebrow: {
-    color: openBrainStyle.accent,
+    color: theme.colors.accent,
     fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 11,
     letterSpacing: 1,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   timezoneDropdownOptionSelected: {
-    backgroundColor: openBrainStyle.accentDim,
+    backgroundColor: theme.colors.accentDim,
   },
   timezoneDropdownOptionText: {
     color: theme.colors.textSecondary,
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   timezoneDropdownOptionTextSelected: {
-    color: openBrainStyle.accentText,
+    color: theme.colors.accentText,
   },
   timezoneNoResults: {
     color: theme.colors.textMuted,
@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: openBrainStyle.accentStrong,
+    backgroundColor: theme.colors.accentStrong,
     borderRadius: 10,
     paddingVertical: 11,
     paddingHorizontal: 14,
   },
   primaryButtonText: {
-    color: openBrainStyle.accentOnSolid,
+    color: theme.colors.accentOnSolid,
     fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
@@ -240,9 +240,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   error: {
-    color: openBrainStyle.dangerStrong,
-    backgroundColor: openBrainStyle.dangerBg,
-    borderColor: openBrainStyle.dangerBorder,
+    color: theme.colors.dangerStrong,
+    backgroundColor: theme.colors.dangerBg,
+    borderColor: theme.colors.dangerBorder,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
@@ -251,9 +251,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   success: {
-    color: openBrainStyle.accentText,
-    backgroundColor: openBrainStyle.accentDim,
-    borderColor: openBrainStyle.accentBorder,
+    color: theme.colors.accentText,
+    backgroundColor: theme.colors.accentDim,
+    borderColor: theme.colors.accentBorder,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,

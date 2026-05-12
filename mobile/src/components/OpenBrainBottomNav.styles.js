@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   wrap: {
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   buttonActive: {
     backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.borderStrong,
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   label: {
     color: theme.colors.textSecondary,

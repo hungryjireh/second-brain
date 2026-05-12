@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   screen: {
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: openBrainStyle.accent,
+    backgroundColor: theme.colors.accent,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -53,12 +53,12 @@ const styles = StyleSheet.create({
     opacity: 0.86,
   },
   buttonText: {
-    color: openBrainStyle.accentOnSolid,
+    color: theme.colors.accentOnSolid,
     fontSize: 15,
     fontFamily: openBrainStyle.fontSemiBold,
   },
   error: {
-    color: openBrainStyle.dangerSoft,
+    color: theme.colors.dangerSoft,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: openBrainStyle.fontRegular,

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 24,
-    shadowColor: openBrainStyle.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgHover,
   },
   buttonText: {
-    color: openBrainStyle.buttonTextOnBrand,
+    color: theme.colors.buttonTextOnBrand,
     fontFamily: openBrainStyle.fontSemiBold,
     fontSize: 14,
   },
@@ -92,13 +92,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 8,
     borderWidth: 0.5,
-    borderColor: openBrainStyle.dangerBorder,
-    backgroundColor: openBrainStyle.dangerBg,
+    borderColor: theme.colors.dangerBorder,
+    backgroundColor: theme.colors.dangerBg,
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
   errorText: {
-    color: openBrainStyle.dangerStrong,
+    color: theme.colors.dangerStrong,
     fontSize: 12,
     fontFamily: openBrainStyle.fontRegular,
   },

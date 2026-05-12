@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle } from './constants/openbrainStyle';
-import { theme } from './theme';
+import { openBrainStyle, theme } from './src/theme';
 
 const styles = StyleSheet.create({
   appRoot: {

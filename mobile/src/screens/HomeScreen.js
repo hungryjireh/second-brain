@@ -170,7 +170,7 @@ export default function HomeScreen({ navigation, token }) {
       <View style={styles.previewWrap}>
         <View style={styles.previewPanelTop}>
           <Text style={styles.previewBadgeOpen}>
-            <OpenBrainLogo style={styles.badgeLogoText} accentStyle={styles.badgeLogoAccent} /> live feed
+            Openbrain live feed
           </Text>
           <View style={styles.previewCardOpen}>
             <OpenBrainThoughtCard
@@ -195,7 +195,7 @@ export default function HomeScreen({ navigation, token }) {
         </View>
         <View style={styles.previewPanelBottom}>
           <Text style={styles.previewBadgeSecond}>
-            <SecondBrainLogo style={styles.badgeLogoText} accentStyle={styles.badgeSecondLogoAccent} /> archive
+            SecondBrain archive
           </Text>
           <View style={styles.previewCardSecond}>
             <SecondBrainEntryCard
