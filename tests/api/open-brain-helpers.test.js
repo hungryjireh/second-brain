@@ -26,7 +26,7 @@ function createRes() {
 }
 
 test('open-brain helpers: isUuid validates UUID values', async () => {
-  const { isUuid } = await importFresh('../open-brain/helpers.js', 'is-uuid');
+  const { isUuid } = await importFresh('../../lib/open-brain/helpers.js', 'is-uuid');
 
   assert.equal(isUuid('123e4567-e89b-42d3-a456-426614174000'), true);
   assert.equal(isUuid('not-a-uuid'), false);
@@ -34,7 +34,7 @@ test('open-brain helpers: isUuid validates UUID values', async () => {
 });
 
 test('open-brain helpers: json writes status, content-type, and serialized body', async () => {
-  const { json } = await importFresh('../open-brain/helpers.js', 'json');
+  const { json } = await importFresh('../../lib/open-brain/helpers.js', 'json');
   const res = createRes();
 
   json(res, 201, { ok: true, count: 2 });
@@ -45,7 +45,7 @@ test('open-brain helpers: json writes status, content-type, and serialized body'
 });
 
 test('open-brain helpers: getEpochDayInTimezone returns consistent UTC epoch day by timezone date', async () => {
-  const { getEpochDayInTimezone } = await importFresh('../open-brain/helpers.js', 'epoch-day');
+  const { getEpochDayInTimezone } = await importFresh('../../lib/open-brain/helpers.js', 'epoch-day');
   const sourceDate = new Date('2026-01-01T00:30:00.000Z');
 
   const utcDay = getEpochDayInTimezone(sourceDate, 'UTC');
@@ -78,7 +78,7 @@ test('open-brain helpers: supabaseRequest builds query/body/headers and returns 
   };
 
   try {
-    const { supabaseRequest } = await importFresh('../open-brain/helpers.js', 'supabase-success');
+    const { supabaseRequest } = await importFresh('../../lib/open-brain/helpers.js', 'supabase-success');
     const data = await supabaseRequest('/rest/v1/thoughts', {
       method: 'POST',
       query: { select: 'id', limit: 1, skip: undefined },
@@ -125,7 +125,7 @@ test('open-brain helpers: supabaseRequest uses publishable key as auth fallback'
   };
 
   try {
-    const { supabaseRequest } = await importFresh('../open-brain/helpers.js', 'supabase-public-fallback');
+    const { supabaseRequest } = await importFresh('../../lib/open-brain/helpers.js', 'supabase-public-fallback');
     await supabaseRequest('/rest/v1/profiles', { method: 'GET' });
     assert.equal(capturedInit.headers.Authorization, 'Bearer anon-key');
   } finally {
@@ -151,7 +151,7 @@ test('open-brain helpers: supabaseRequest throws rich error for non-OK responses
   });
 
   try {
-    const { supabaseRequest } = await importFresh('../open-brain/helpers.js', 'supabase-error');
+    const { supabaseRequest } = await importFresh('../../lib/open-brain/helpers.js', 'supabase-error');
     await assert.rejects(
       () => supabaseRequest('/rest/v1/notifications', { method: 'POST', authToken: 'token' }),
       err => err && err.message === 'permission denied' && err.status === 403 && err.data?.message === 'permission denied',
@@ -173,7 +173,7 @@ test('open-brain helpers: supabaseRequest throws when env is missing', async () 
   delete process.env.SUPABASE_PUBLISHABLE_KEY;
 
   try {
-    const { supabaseRequest } = await importFresh('../open-brain/helpers.js', 'supabase-missing-env');
+    const { supabaseRequest } = await importFresh('../../lib/open-brain/helpers.js', 'supabase-missing-env');
     await assert.rejects(
       () => supabaseRequest('/rest/v1/thoughts'),
       /Missing Supabase env configuration/,

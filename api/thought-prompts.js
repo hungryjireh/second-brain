@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const promptsPath = path.join(__dirname, 'static', 'thought-prompts.json');
+const promptsPath = path.join(__dirname, '..', 'lib', 'static', 'thought-prompts.json');
 
 function json(res, status, body) {
   res.status(status).setHeader('Content-Type', 'application/json');

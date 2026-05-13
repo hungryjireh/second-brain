@@ -74,7 +74,7 @@ test('POST /api/open-brain/notifications creates follow notification', async () 
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'notifications-create-success');
+  const { default: notificationsHandler } = await importFresh('../../lib/open-brain/routes/notifications.js', 'notifications-create-success');
   const req = createReq({
     method: 'POST',
     headers: { authorization: 'Bearer non-jwt-token' },
@@ -127,7 +127,7 @@ test('POST /api/open-brain/notifications rejects unsupported notification type',
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'notifications-invalid-type');
+  const { default: notificationsHandler } = await importFresh('../../lib/open-brain/routes/notifications.js', 'notifications-invalid-type');
   const req = createReq({
     method: 'POST',
     headers: { authorization: 'Bearer non-jwt-token' },
@@ -181,7 +181,7 @@ test('POST /api/open-brain/notifications maps Supabase auth errors to 401', asyn
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'notifications-supabase-auth-error');
+  const { default: notificationsHandler } = await importFresh('../../lib/open-brain/routes/notifications.js', 'notifications-supabase-auth-error');
   const req = createReq({
     method: 'POST',
     headers: { authorization: 'Bearer non-jwt-token' },
@@ -241,7 +241,7 @@ test('GET /api/open-brain/notifications lists notifications for auth user', asyn
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'notifications-list-success');
+  const { default: notificationsHandler } = await importFresh('../../lib/open-brain/routes/notifications.js', 'notifications-list-success');
   const req = createReq({
     method: 'GET',
     headers: { authorization: 'Bearer non-jwt-token' },

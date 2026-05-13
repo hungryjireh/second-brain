@@ -73,7 +73,7 @@ test('PATCH /api/settings accepts valid timezone and persists setting', async ()
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: settingsHandler } = await importFresh('../settings.js', 'settings-patch-success');
+  const { default: settingsHandler } = await importFresh('../../api/settings.js', 'settings-patch-success');
   const req = createReq({
     method: 'PATCH',
     headers: { authorization: 'Bearer non-jwt-token' },
@@ -135,7 +135,7 @@ test('GET /api/ics exports calendar with escaped content and safe filename', asy
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: icsHandler } = await importFresh('../ics.js', 'ics-export-success');
+  const { default: icsHandler } = await importFresh('../../api/ics.js', 'ics-export-success');
   const req = createReq({
     method: 'GET',
     headers: { authorization: 'Bearer non-jwt-token' },
@@ -195,7 +195,7 @@ test('GET /api/ics rejects entries that are not scheduled reminders', async () =
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
-  const { default: icsHandler } = await importFresh('../ics.js', 'ics-invalid-category');
+  const { default: icsHandler } = await importFresh('../../api/ics.js', 'ics-invalid-category');
   const req = createReq({
     method: 'GET',
     headers: { authorization: 'Bearer non-jwt-token' },

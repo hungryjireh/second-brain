@@ -58,7 +58,7 @@ async function importFresh(path, tag) {
 }
 
 test('POST /api/auth/login returns 400 when identifier/password are missing', async () => {
-  const { default: loginHandler } = await importFresh('../auth/login.js', 'login-missing');
+  const { default: loginHandler } = await importFresh('../../api/auth/login.js', 'login-missing');
   const req = createReq({ method: 'POST', body: {} });
   const res = createRes();
 
@@ -69,7 +69,7 @@ test('POST /api/auth/login returns 400 when identifier/password are missing', as
 });
 
 test('POST /api/auth/login rejects invalid email/password credentials', async () => {
-  const { default: loginHandler } = await importFresh('../auth/login.js', 'login-invalid-email');
+  const { default: loginHandler } = await importFresh('../../api/auth/login.js', 'login-invalid-email');
   const req = createReq({
     method: 'POST',
     body: { email: 'nobody@example.com', password: 'wrong' },
@@ -83,7 +83,7 @@ test('POST /api/auth/login rejects invalid email/password credentials', async ()
 });
 
 test('POST /api/auth/login returns 401 for non-email username when local auth does not match', async () => {
-  const { default: loginHandler } = await importFresh('../auth/login.js', 'login-invalid');
+  const { default: loginHandler } = await importFresh('../../api/auth/login.js', 'login-invalid');
   const original = {
     AUTH_USERNAME: process.env.AUTH_USERNAME,
     AUTH_PASSWORD: process.env.AUTH_PASSWORD,
@@ -110,7 +110,7 @@ test('POST /api/auth/login returns 401 for non-email username when local auth do
 });
 
 test('auth handlers: OPTIONS returns 204 and unsupported methods return 405', async () => {
-  const { default: loginHandler } = await importFresh('../auth/login.js', 'login-methods');
+  const { default: loginHandler } = await importFresh('../../api/auth/login.js', 'login-methods');
 
   const loginOptionsRes = createRes();
   await loginHandler(createReq({ method: 'OPTIONS' }), loginOptionsRes);
@@ -118,7 +118,7 @@ test('auth handlers: OPTIONS returns 204 and unsupported methods return 405', as
 });
 
 test('settings handler: OPTIONS preflight and bearer token guard', async () => {
-  const { default: settingsHandler } = await importFresh('../settings.js', 'settings-preflight-auth');
+  const { default: settingsHandler } = await importFresh('../../api/settings.js', 'settings-preflight-auth');
 
   const optionsReq = createReq({ method: 'OPTIONS' });
   const optionsRes = createRes();
@@ -133,7 +133,7 @@ test('settings handler: OPTIONS preflight and bearer token guard', async () => {
 });
 
 test('PATCH /api/settings returns 401 for invalid bearer token', async () => {
-  const { default: settingsHandler } = await importFresh('../settings.js', 'settings-invalid-token');
+  const { default: settingsHandler } = await importFresh('../../api/settings.js', 'settings-invalid-token');
   const req = createReq({
     method: 'PATCH',
     headers: { authorization: 'Bearer obviously-invalid-token' },
@@ -148,7 +148,7 @@ test('PATCH /api/settings returns 401 for invalid bearer token', async () => {
 });
 
 test('telegram link key handler: OPTIONS, bearer token guard, and method check', async () => {
-  const { default: telegramLinkKeyHandler } = await importFresh('../telegram/link-key.js', 'telegram-methods');
+  const { default: telegramLinkKeyHandler } = await importFresh('../../api/telegram/link-key.js', 'telegram-methods');
 
   const optionsReq = createReq({ method: 'OPTIONS' });
   const optionsRes = createRes();
@@ -169,7 +169,7 @@ test('telegram link key handler: OPTIONS, bearer token guard, and method check',
 });
 
 test('entries handler: OPTIONS preflight and bearer token guard', async () => {
-  const { default: entriesHandler } = await importFresh('../entries.js', 'entries-preflight-auth');
+  const { default: entriesHandler } = await importFresh('../../api/entries.js', 'entries-preflight-auth');
 
   const optionsReq = createReq({ method: 'OPTIONS' });
   const optionsRes = createRes();
@@ -184,7 +184,7 @@ test('entries handler: OPTIONS preflight and bearer token guard', async () => {
 });
 
 test('ics handler: method guard and bearer token guard', async () => {
-  const { default: icsHandler } = await importFresh('../ics.js', 'ics-guards');
+  const { default: icsHandler } = await importFresh('../../api/ics.js', 'ics-guards');
 
   const wrongMethodReq = createReq({ method: 'POST' });
   const wrongMethodRes = createRes();
@@ -199,7 +199,7 @@ test('ics handler: method guard and bearer token guard', async () => {
 });
 
 test('bot handler: method guard and no-message noop', async () => {
-  const { default: botHandler } = await importFresh('../bot.js', 'bot-guards');
+  const { default: botHandler } = await importFresh('../../api/bot.js', 'bot-guards');
 
   const wrongMethodReq = createReq({ method: 'GET' });
   const wrongMethodRes = createRes();
@@ -216,7 +216,7 @@ test('bot handler: method guard and no-message noop', async () => {
 });
 
 test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug', async () => {
-  const { default: sharedThoughtHandler } = await importFresh('../open-brain/shared-thought.js', 'shared-thought-guards');
+  const { default: sharedThoughtHandler } = await importFresh('../../lib/open-brain/routes/shared-thought.js', 'shared-thought-guards');
 
   const optionsRes = createRes();
   await sharedThoughtHandler(createReq({ method: 'OPTIONS' }), optionsRes);
@@ -234,7 +234,7 @@ test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug
 });
 
 test('thank-you prompt handler: OPTIONS and method guard', async () => {
-  const { default: thankYouPromptHandler } = await importFresh('../thank-you-for-sharing-prompt.js', 'thank-you-prompt-guards');
+  const { default: thankYouPromptHandler } = await importFresh('../../api/thank-you-for-sharing-prompt.js', 'thank-you-prompt-guards');
 
   const optionsRes = createRes();
   await thankYouPromptHandler(createReq({ method: 'OPTIONS' }), optionsRes);
@@ -293,7 +293,7 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
 
-  const { default: profileHandler } = await importFresh('../open-brain/profile.js', 'open-brain-profile-anon-username');
+  const { default: profileHandler } = await importFresh('../../lib/open-brain/routes/profile.js', 'open-brain-profile-anon-username');
   const req = createReq({ method: 'GET', query: { username: 'alice' }, headers: {} });
   const res = createRes();
 
@@ -333,7 +333,7 @@ test('open-brain public-thoughts handler allows anonymous lookup by user_id', as
     }]),
   });
 
-  const { default: publicThoughtsHandler } = await importFresh('../open-brain/public-thoughts.js', 'open-brain-public-thoughts-anon');
+  const { default: publicThoughtsHandler } = await importFresh('../../lib/open-brain/routes/public-thoughts.js', 'open-brain-public-thoughts-anon');
   const req = createReq({
     method: 'GET',
     query: { user_id: '11111111-1111-4111-8111-111111111111' },
@@ -464,7 +464,7 @@ test('open-brain feed handler returns per-thought save_count from thought_second
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
 
-  const { default: feedHandler } = await importFresh('../open-brain/feed.js', 'open-brain-feed-save-count');
+  const { default: feedHandler } = await importFresh('../../lib/open-brain/routes/feed.js', 'open-brain-feed-save-count');
   const authToken = createTestJwt({ sub: viewerId });
   const req = createReq({
     method: 'GET',
@@ -614,7 +614,7 @@ test('open-brain feed handler excludes self-authored thoughts from following fee
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
 
-  const { default: feedHandler } = await importFresh('../open-brain/feed.js', 'open-brain-feed-exclude-self-from-following');
+  const { default: feedHandler } = await importFresh('../../lib/open-brain/routes/feed.js', 'open-brain-feed-exclude-self-from-following');
   const authToken = createTestJwt({ sub: viewerId });
   const req = createReq({
     method: 'GET',
@@ -701,7 +701,7 @@ test('open-brain thoughts handler returns created thought with profile metadata'
     throw new Error(`Unexpected fetch URL: ${parsed.toString()} (${method})`);
   };
 
-  const { default: thoughtsHandler } = await importFresh('../open-brain/thoughts.js', 'open-brain-thoughts-created-profile');
+  const { default: thoughtsHandler } = await importFresh('../../lib/open-brain/routes/thoughts.js', 'open-brain-thoughts-created-profile');
   const authToken = createTestJwt({ sub: userId });
   const req = createReq({
     method: 'POST',
@@ -729,7 +729,7 @@ test('open-brain thoughts handler returns created thought with profile metadata'
 });
 
 test('open-brain notifications handler: OPTIONS, method, auth, and payload guards', async () => {
-  const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'open-brain-notifications-guards');
+  const { default: notificationsHandler } = await importFresh('../../lib/open-brain/routes/notifications.js', 'open-brain-notifications-guards');
 
   const optionsRes = createRes();
   await notificationsHandler(createReq({ method: 'OPTIONS' }), optionsRes);

@@ -6,7 +6,7 @@ async function importFresh(path, tag) {
 }
 
 test('LLM tags are validated against permitted user tags excluding globally permissive tags', async () => {
-  const { filterClassifierTagsByPermittedUserTags } = await importFresh('../entries.js', 'classifier-tag-filter');
+  const { filterClassifierTagsByPermittedUserTags } = await importFresh('../../api/entries.js', 'classifier-tag-filter');
 
   const classifiedTags = [
     { name: 'Work', normalized_name: 'work' },
