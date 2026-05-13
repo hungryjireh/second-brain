@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, Share, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { apiRequest, invalidateApiCache, sendFollowNotification } from '../api';
+import { apiRequest, invalidateApiCache, readCachedApiData, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import { buildSharedThoughtUrl } from '../share';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
@@ -92,6 +92,14 @@ function updateUserAcrossFeed(feed, userId, updater) {
   };
 }
 
+function normalizeFeedPayload(data) {
+  const payload = data?.feed && typeof data.feed === 'object' ? data.feed : data;
+  return {
+    following: Array.isArray(payload?.following) ? payload.following : [],
+    everyone: Array.isArray(payload?.everyone) ? payload.everyone : [],
+  };
+}
+
 export default function OpenBrainFeedScreen({ token, navigation }) {
   const [tab, setTab] = useState('following');
   const [feed, setFeed] = useState({ following: [], everyone: [] });
@@ -172,18 +180,27 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const loadFeed = useCallback(async () => {
     setLoading(true);
     setError('');
+
+    let hydratedFromCache = false;
+    const cachedData = await readCachedApiData('/open-brain/feed', { token });
+    if (cachedData) {
+      setFeed(normalizeFeedPayload(cachedData));
+      setLoading(false);
+      hydratedFromCache = true;
+    }
+
     try {
       const data = await apiRequest('/open-brain/feed', { token, cache: { ttlMs: CACHE_TTL_MS.FEED } });
-      const payload = data?.feed && typeof data.feed === 'object' ? data.feed : data;
-      setFeed({
-        following: Array.isArray(payload?.following) ? payload.following : [],
-        everyone: Array.isArray(payload?.everyone) ? payload.everyone : [],
-      });
+      setFeed(normalizeFeedPayload(data));
     } catch (err) {
-      setError(err.message || 'Unable to load feed.');
-      setFeed({ following: [], everyone: [] });
+      if (!hydratedFromCache) {
+        setError(err.message || 'Unable to load feed.');
+        setFeed({ following: [], everyone: [] });
+      }
     } finally {
-      setLoading(false);
+      if (!hydratedFromCache) {
+        setLoading(false);
+      }
     }
   }, [token]);
 

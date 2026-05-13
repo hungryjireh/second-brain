@@ -40,6 +40,14 @@ async function readCache(cacheKey) {
   }
 }
 
+export async function readCachedApiData(path, { token, cacheKey } = {}) {
+  const normalizedPath = String(path || '').trim();
+  if (!normalizedPath) return null;
+  const key = buildCacheKey(normalizedPath, token, cacheKey);
+  const cached = await readCache(key);
+  return cached?.data ?? null;
+}
+
 async function writeCache(cacheKey, data) {
   try {
     await AsyncStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data }));

@@ -38,7 +38,7 @@ export const theme = {
     accent: '#CA8F73',
     accentStrong: '#CA8F73',
     accentDim: 'rgba(126,200,255,0.16)',
-    accentSoft: 'rgba(126,200,255,0.22)',
+    accentSoft: '#F1D9CC',
     accentBg: '#F3EEE4',
     accentBorder: 'rgba(126,200,255,0.7)',
     todo: '#378ADD',

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtComposer.styles';
 import { theme } from '../theme';
 
@@ -142,8 +143,14 @@ export default function OpenBrainThoughtComposer({
           <View style={styles.eyebrowRow}>
             <Text style={styles.eyebrow}>{dateLabel}{timeLabel ? ` • ${timeLabel}` : ''}</Text>
             <View style={styles.metricsRow}>
-              <Text style={styles.metric}>🔥 {streakCount}</Text>
-              <Text style={styles.metric}>🔖 {saveCount}</Text>
+              <View style={styles.metricInline}>
+                <Feather name="zap" size={12} color={theme.colors.textSecondary} />
+                <Text style={styles.metricCount}>{streakCount}</Text>
+              </View>
+              <View style={styles.metricInline}>
+                <Feather name="bookmark" size={12} color={theme.colors.textSecondary} />
+                <Text style={styles.metricCount}>{saveCount}</Text>
+              </View>
             </View>
           </View>
         )}

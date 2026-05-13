@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   },
   quoteText: {
     fontStyle: 'italic',
-    color: theme.colors.textWarm82,
+    color: theme.colors.textSecondary,
   },
   meta: {
     color: theme.colors.textSecondary,

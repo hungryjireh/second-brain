@@ -41,10 +41,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  metric: {
+  metricInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricCount: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.semibold,
-    fontSize: 11,
+    fontSize: 14,
   },
   heading: {
     color: theme.colors.textPrimary,

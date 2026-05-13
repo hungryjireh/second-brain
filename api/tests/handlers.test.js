@@ -486,6 +486,248 @@ test('open-brain feed handler returns per-thought save_count from thought_second
   assert.equal(jsonBody(res)?.everyone?.[0]?.viewer_has_added_to_second_brain, true);
 });
 
+test('open-brain feed handler excludes self-authored thoughts from following feed even if self appears in follows', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  const viewerId = '11111111-1111-4111-8111-111111111111';
+  const otherAuthorId = '22222222-2222-4222-8222-222222222222';
+  const viewerThoughtId = '33333333-3333-4333-8333-333333333333';
+  const otherThoughtId = '44444444-4444-4444-8444-444444444444';
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith('/auth/v1/user')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/follows')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([
+          { following_id: viewerId },
+          { following_id: otherAuthorId },
+        ]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/reactions')) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/profiles')) {
+      const idEq = parsed.searchParams.get('id');
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: 'UTC' }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([
+          { id: viewerId, username: 'me', avatar_url: null, streak_count: 1 },
+          { id: otherAuthorId, username: 'other', avatar_url: null, streak_count: 3 },
+        ]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thoughts')) {
+      const selected = parsed.searchParams.get('select');
+      const userEq = parsed.searchParams.get('user_id');
+      const visibility = parsed.searchParams.get('visibility');
+
+      if (selected === 'created_at' && userEq === `eq.${viewerId}`) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+
+      if (selected === 'id,user_id,content,created_at,visibility,share_slug' && visibility === 'eq.public') {
+        if (userEq && userEq.startsWith('in.(')) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify([{
+              id: otherThoughtId,
+              user_id: otherAuthorId,
+              content: { text: 'Followed user thought' },
+              created_at: '2026-01-02T00:00:00.000Z',
+              visibility: 'public',
+              share_slug: null,
+            }]),
+          };
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            {
+              id: viewerThoughtId,
+              user_id: viewerId,
+              content: { text: 'My thought' },
+              created_at: '2026-01-03T00:00:00.000Z',
+              visibility: 'public',
+              share_slug: null,
+            },
+            {
+              id: otherThoughtId,
+              user_id: otherAuthorId,
+              content: { text: 'Followed user thought' },
+              created_at: '2026-01-02T00:00:00.000Z',
+              visibility: 'public',
+              share_slug: null,
+            },
+          ]),
+        };
+      }
+
+      if (selected === 'id,user_id' && visibility === 'eq.public') {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            { id: viewerThoughtId, user_id: viewerId },
+            { id: otherThoughtId, user_id: otherAuthorId },
+          ]),
+        };
+      }
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thought_second_brain_saves')) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh('../open-brain/feed.js', 'open-brain-feed-exclude-self-from-following');
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: 'GET',
+    headers: { authorization: `Bearer ${authToken}` },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(Array.isArray(jsonBody(res)?.following), true);
+  assert.equal(jsonBody(res)?.following?.length, 1);
+  assert.equal(jsonBody(res)?.following?.[0]?.user_id, otherAuthorId);
+});
+
+test('open-brain thoughts handler returns created thought with profile metadata', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  const userId = '11111111-1111-4111-8111-111111111111';
+  const thoughtId = '33333333-3333-4333-8333-333333333333';
+
+  global.fetch = async (url, options = {}) => {
+    const parsed = new URL(url);
+    const method = String(options.method || 'GET').toUpperCase();
+
+    if (parsed.pathname.endsWith('/rest/v1/profiles') && method === 'GET') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: userId,
+          username: 'alice',
+          avatar_url: 'https://example.com/alice.png',
+          streak_count: 2,
+          last_posted_at: '2026-01-01T00:00:00.000Z',
+          timezone: 'UTC',
+        }]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thoughts') && method === 'POST') {
+      return {
+        ok: true,
+        status: 201,
+        text: async () => JSON.stringify([{
+          id: thoughtId,
+          user_id: userId,
+          content: { text: 'Today felt quiet.' },
+          created_at: '2026-01-02T02:00:00.000Z',
+          visibility: 'public',
+          share_slug: 'abc123',
+        }]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/profiles') && method === 'PATCH') {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: userId,
+          username: 'alice',
+          avatar_url: 'https://example.com/alice.png',
+          streak_count: 3,
+          last_posted_at: '2026-01-02T02:00:00.000Z',
+          timezone: 'UTC',
+        }]),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()} (${method})`);
+  };
+
+  const { default: thoughtsHandler } = await importFresh('../open-brain/thoughts.js', 'open-brain-thoughts-created-profile');
+  const authToken = createTestJwt({ sub: userId });
+  const req = createReq({
+    method: 'POST',
+    headers: { authorization: `Bearer ${authToken}` },
+    body: { thought: 'Today felt quiet.', visibility: 'public' },
+  });
+  const res = createRes();
+
+  try {
+    await thoughtsHandler(req, res);
+  } finally {
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  const payload = jsonBody(res);
+  assert.equal(res.statusCode, 201);
+  assert.equal(payload?.thought?.id, thoughtId);
+  assert.equal(payload?.thought?.text, 'Today felt quiet.');
+  assert.equal(payload?.thought?.profile?.username, 'alice');
+  assert.equal(payload?.thought?.profile?.is_self, true);
+  assert.equal(payload?.thought?.save_count, 0);
+  assert.equal(payload?.thought?.viewer_has_added_to_second_brain, false);
+});
+
 test('open-brain notifications handler: OPTIONS, method, auth, and payload guards', async () => {
   const { default: notificationsHandler } = await importFresh('../open-brain/notifications.js', 'open-brain-notifications-guards');
 

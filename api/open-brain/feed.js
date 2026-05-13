@@ -287,7 +287,11 @@ export default async function handler(req, res) {
       authToken: token,
     });
 
-    const followingIds = (follows || []).map(row => row.following_id).filter(Boolean);
+    const followingIds = Array.from(new Set(
+      (follows || [])
+        .map(row => row.following_id)
+        .filter(id => Boolean(id) && id !== userId)
+    ));
 
     const everyoneRows = await supabaseRequest('/rest/v1/thoughts', {
       method: 'GET',

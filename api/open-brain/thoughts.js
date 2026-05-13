@@ -112,7 +112,37 @@ export default async function handler(req, res) {
       authToken: token,
     });
 
-    return json(res, 201, { thought: rows?.[0] || null, profile: updatedProfileRows?.[0] || null });
+    const updatedProfile = updatedProfileRows?.[0] || null;
+    const createdThought = rows?.[0]
+      ? {
+          ...rows[0],
+          text: typeof rows[0]?.content?.text === 'string' ? rows[0].content.text : '',
+          profile: updatedProfile
+            ? {
+                id: updatedProfile.id,
+                username: updatedProfile.username || null,
+                avatar_url: updatedProfile.avatar_url || null,
+                streak_count: Number.isInteger(updatedProfile.streak_count) ? updatedProfile.streak_count : 0,
+                is_self: true,
+                is_following: false,
+              }
+            : null,
+          reactions: {
+            felt_this: 0,
+            me_too: 0,
+            made_me_think: 0,
+            mine: {
+              felt_this: false,
+              me_too: false,
+              made_me_think: false,
+            },
+          },
+          viewer_has_added_to_second_brain: false,
+          save_count: 0,
+        }
+      : null;
+
+    return json(res, 201, { thought: createdThought, profile: updatedProfile });
   } catch (err) {
     const message = err?.data?.message || err.message || 'request failed';
     if (err.status === 401 || err.status === 403) return json(res, 401, { error: 'unauthorized' });
