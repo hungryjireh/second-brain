@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch } from 'react-native';
+import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
+import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import { apiRequest, getApiBase } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
@@ -223,6 +224,7 @@ export default function SecondBrainScreen({ token }) {
   const [activeCategory, setActiveCategory] = useState('');
   const [activePriorityLevel, setActivePriorityLevel] = useState('');
   const [activeTag, setActiveTag] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [typebarInputHeight, setTypebarInputHeight] = useState(TYPEBAR_MIN_HEIGHT);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [openSwipeId, setOpenSwipeId] = useState(null);
@@ -237,6 +239,8 @@ export default function SecondBrainScreen({ token }) {
   const [telegramLinkKey, setTelegramLinkKey] = useState('');
   const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
   const [telegramLinkError, setTelegramLinkError] = useState('');
+  const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
+  const [actionTooltip, setActionTooltip] = useState('');
   const confirmDeleteTimeoutRef = useRef(null);
   const selectedImportedConversation = useMemo(
     () => (selectedEntry ? parseImportedConversationFromEntry(selectedEntry) : null),
@@ -245,6 +249,7 @@ export default function SecondBrainScreen({ token }) {
 
   const typebarBottom = 10 + Math.max(insets.bottom, 0);
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
+  const isWeb = Platform.OS === 'web';
 
   const loadEntries = useCallback(async () => {
     try {
@@ -546,6 +551,7 @@ export default function SecondBrainScreen({ token }) {
     setTimezoneError('');
     setTelegramLinkKey('');
     setTelegramLinkError('');
+    setTelegramCopyStatus('');
     setSettingsOpen(true);
   }
 
@@ -586,6 +592,7 @@ export default function SecondBrainScreen({ token }) {
     if (loadingTelegramLinkKey) return;
     setLoadingTelegramLinkKey(true);
     setTelegramLinkError('');
+    setTelegramCopyStatus('');
     try {
       const data = await apiRequest('/telegram/link-key', { token });
       setTelegramLinkKey(data?.key || '');
@@ -596,11 +603,22 @@ export default function SecondBrainScreen({ token }) {
     }
   }
 
+  async function copyTelegramLinkKey() {
+    if (!telegramLinkKey) return;
+    try {
+      await Clipboard.setStringAsync(telegramLinkKey);
+      setTelegramCopyStatus('Copied');
+    } catch {
+      setTelegramCopyStatus('Copy failed');
+    }
+  }
+
   const derivedData = useMemo(() => {
     const categoryCounts = { reminder: 0, todo: 0, thought: 0, note: 0 };
     const usageCounts = new Map();
     const filteredEntries = [];
     const selectedTag = activeTag.toLowerCase();
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
     for (const entry of entries) {
       const isArchived = Boolean(entry.is_archived);
@@ -621,6 +639,19 @@ export default function SecondBrainScreen({ token }) {
       if (activeCategory && entry.category !== activeCategory) continue;
       if (activePriorityLevel && getPriorityLevel(entry.priority ?? 0) !== activePriorityLevel) continue;
       if (selectedTag && !normalizedTags.some(tag => tag.toLowerCase() === selectedTag)) continue;
+      if (normalizedSearchQuery) {
+        const searchableText = [
+          entry.title,
+          entry.summary,
+          entry.raw_text,
+          entry.content,
+          normalizedTags.join(' '),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!searchableText.includes(normalizedSearchQuery)) continue;
+      }
 
       filteredEntries.push(entry);
     }
@@ -630,7 +661,7 @@ export default function SecondBrainScreen({ token }) {
       visibleEntries: filteredEntries,
       tagUsageCounts: usageCounts,
     };
-  }, [entries, showArchived, activeCategory, activePriorityLevel, activeTag]);
+  }, [entries, showArchived, activeCategory, activePriorityLevel, activeTag, searchQuery]);
 
   const { counts, visibleEntries, tagUsageCounts } = derivedData;
 
@@ -749,7 +780,7 @@ export default function SecondBrainScreen({ token }) {
               style={[styles.statCard, isActive && styles.statCardActive]}
               onPress={() => setActiveCategory(prev => (prev === stat.key ? '' : stat.key))}
             >
-              <View style={[styles.statGlow, { backgroundColor: stat.dimColor }]} />
+              <View style={[styles.statGlow, { backgroundColor: theme.colors.bgBase }]} />
               <Text style={[styles.statCount, { color: isActive ? theme.colors.brandText : stat.color }]}>
                 {counts[stat.key] ?? 0}
               </Text>
@@ -808,6 +839,17 @@ export default function SecondBrainScreen({ token }) {
             );
           })}
         </View>
+        <TextInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search entries..."
+          placeholderTextColor={theme.colors.textMuted}
+          style={styles.filterSearchInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
       </View>
 
       {!!error && <Text style={styles.error}>{error}</Text>}
@@ -955,8 +997,22 @@ export default function SecondBrainScreen({ token }) {
                 </Pressable>
                 {!!telegramLinkKey && (
                   <>
-                    <Text style={styles.settingsKeyText}>{telegramLinkKey}</Text>
-                    <Text style={styles.settingsHintText}>Send this in Telegram: /link &lt;your-key&gt;. This key expires in 10 minutes.</Text>
+                    <Text style={styles.settingsKeyText} selectable>{telegramLinkKey}</Text>
+                    <Pressable style={styles.settingsCopyButton} onPress={copyTelegramLinkKey}>
+                      <Text style={styles.settingsCopyButtonText}>
+                        {telegramCopyStatus === 'Copied' ? '✓ Copied' : (telegramCopyStatus || 'Copy key')}
+                      </Text>
+                    </Pressable>
+                    <Text style={styles.settingsHintText}>
+                      Send this in{' '}
+                      <Text
+                        style={styles.settingsHintLink}
+                        onPress={() => Linking.openURL('https://t.me/AccessiBrainBot')}
+                      >
+                        Telegram
+                      </Text>
+                      : /link &lt;your-key&gt;. This key expires in 10 minutes.
+                    </Text>
                   </>
                 )}
                 {!!telegramLinkError && <Text style={styles.error}>{telegramLinkError}</Text>}
@@ -1059,22 +1115,51 @@ export default function SecondBrainScreen({ token }) {
             setTypebarInputHeight(prev => (prev === nextHeight ? prev : nextHeight));
           }}
         />
-        <Pressable
-          style={[styles.typebarButton, !draft.trim() && styles.typebarButtonDisabled]}
-          onPress={createEntry}
-          disabled={!draft.trim()}
-        >
-          <Text style={[styles.typebarButtonText, !draft.trim() && styles.typebarButtonTextDisabled]}>↗</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.typebarButton, styles.typebarUploadButton]}
-          onPress={openSettings}
-          accessibilityLabel="Open settings"
-        >
-          <Text style={[styles.typebarButtonText, styles.typebarUploadButtonText]}>
-            ⚙
-          </Text>
-        </Pressable>
+        <View style={styles.typebarActionWrap}>
+          {actionTooltip === 'enter' ? (
+            <View style={styles.typebarTooltip}>
+              <Text style={styles.typebarTooltipText}>Enter note</Text>
+            </View>
+          ) : null}
+          <Pressable
+            style={[styles.typebarButton, !draft.trim() && styles.typebarButtonDisabled]}
+            onPress={createEntry}
+            disabled={!draft.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Enter note"
+            onHoverIn={() => setActionTooltip('enter')}
+            onHoverOut={() => setActionTooltip('')}
+            onLongPress={() => setActionTooltip('enter')}
+            onPressOut={() => {
+              if (!isWeb) setActionTooltip('');
+            }}
+          >
+            <Text style={[styles.typebarButtonText, !draft.trim() && styles.typebarButtonTextDisabled]}>↗</Text>
+          </Pressable>
+        </View>
+        <View style={styles.typebarActionWrap}>
+          {actionTooltip === 'settings' ? (
+            <View style={styles.typebarTooltip}>
+              <Text style={styles.typebarTooltipText}>Open settings</Text>
+            </View>
+          ) : null}
+          <Pressable
+            style={[styles.typebarButton, styles.typebarUploadButton]}
+            onPress={openSettings}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+            onHoverIn={() => setActionTooltip('settings')}
+            onHoverOut={() => setActionTooltip('')}
+            onLongPress={() => setActionTooltip('settings')}
+            onPressOut={() => {
+              if (!isWeb) setActionTooltip('');
+            }}
+          >
+            <Text style={[styles.typebarButtonText, styles.typebarUploadButtonText]}>
+              ⚙
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );

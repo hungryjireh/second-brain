@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   submitLabel: {
-    color: theme.colors.accentOnSolid,
+    color: theme.colors.textLight,
     fontSize: 14,
     fontFamily: theme.fonts.semibold,
   },

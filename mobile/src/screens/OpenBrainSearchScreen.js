@@ -152,23 +152,27 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
 
         {!!error ? <Text style={styles.errorText}>{error}</Text> : null}
         {!error && didSearch && !hasResults && !loading ? (
-          <Text style={styles.emptyText}>No matching users or thoughts.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No matching users or thoughts.</Text>
+          </View>
         ) : null}
 
         {loading ? <ActivityIndicator style={styles.loading} /> : null}
 
-        <FlatList
-          data={searchRows}
-          style={styles.resultsWrap}
-          keyExtractor={keyExtractor}
-          renderItem={renderResultItem}
-          keyboardShouldPersistTaps="handled"
-          initialNumToRender={12}
-          maxToRenderPerBatch={8}
-          updateCellsBatchingPeriod={50}
-          windowSize={7}
-          removeClippedSubviews
-        />
+        {!didSearch || hasResults || loading ? (
+          <FlatList
+            data={searchRows}
+            style={styles.resultsWrap}
+            keyExtractor={keyExtractor}
+            renderItem={renderResultItem}
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={12}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={50}
+            windowSize={7}
+            removeClippedSubviews
+          />
+        ) : null}
       </View>
     </View>
   );

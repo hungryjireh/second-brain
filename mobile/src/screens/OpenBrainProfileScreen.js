@@ -6,7 +6,8 @@ import { buildSharedThoughtUrl } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
-import { initialsFromName, mutedTint } from '../utils/profileAvatar';
+import { initialsFromName } from '../utils/profileAvatar';
+import { theme } from '../theme';
 import styles from './OpenBrainProfileScreen.styles';
 
 function formatThoughtDate(value) {
@@ -192,11 +193,6 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} token={token} />
-      {loading ? (
-        <View style={styles.statusState}>
-          <Text style={styles.muted}>Loading profile...</Text>
-        </View>
-      ) : null}
       <FlatList
         data={thoughtDisplayItems}
         style={styles.list}
@@ -211,7 +207,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                   {profile.avatar_url ? (
                     <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
                   ) : (
-                    <View style={[styles.avatarFallback, { backgroundColor: mutedTint(profile.username) }]}>
+                    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
                       <Text style={styles.avatarFallbackText}>{initialsFromName(profile.username)}</Text>
                     </View>
                   )}
@@ -238,6 +234,21 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                     </Pressable>
                   ) : null}
                 </View>
+              </View>
+            ) : null}
+            {!error && !profile ? (
+              <View style={styles.headerCard}>
+                <View style={styles.profileRow}>
+                  <View style={styles.avatarPlaceholder} />
+                  <View style={styles.profileText}>
+                    <View style={styles.usernamePlaceholder} />
+                    <View style={styles.metaRow}>
+                      <View style={styles.streakPlaceholder} />
+                      <View style={styles.thoughtCountPlaceholder} />
+                    </View>
+                  </View>
+                </View>
+                {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
               </View>
             ) : null}
             {!error && profile && thoughts.length === 0 ? (

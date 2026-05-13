@@ -12,7 +12,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 460,
     alignSelf: 'center',
-    backgroundColor: theme.colors.bgSurface,
+    backgroundColor: theme.colors.bgRaised,
     borderWidth: 0.5,
     borderColor: theme.colors.border,
     borderRadius: 16,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   buttonTextDisabled: {
-    color: theme.colors.textMuted,
+    color: theme.colors.textLight,
   },
   errorBox: {
     marginTop: 12,

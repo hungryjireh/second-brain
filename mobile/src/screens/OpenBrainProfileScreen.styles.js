@@ -15,12 +15,6 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     backgroundColor: theme.colors.bgBase,
   },
-  statusState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-  },
   headerCard: {
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -38,6 +32,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
+  },
+  avatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.bgHover,
+    borderColor: theme.colors.borderStrong,
+    borderWidth: 1,
   },
   avatarFallback: {
     width: 56,
@@ -62,6 +64,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 24,
   },
+  usernamePlaceholder: {
+    width: 160,
+    maxWidth: '90%',
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: theme.colors.bgHover,
+  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -75,8 +84,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  streakPlaceholder: {
+    width: 98,
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: theme.colors.bgHover,
+    borderColor: theme.colors.borderStrong,
+    borderWidth: 1,
+  },
   streakPillText: {
-    color: theme.colors.textSecondary,
+    color: theme.colors.textLight,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
@@ -84,6 +101,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
+  },
+  thoughtCountPlaceholder: {
+    width: 70,
+    height: 18,
+    borderRadius: 6,
+    backgroundColor: theme.colors.bgHover,
   },
   followButton: {
     alignSelf: 'center',

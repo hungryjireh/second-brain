@@ -18,13 +18,25 @@ const styles = {
   markdownListBullet: {},
   markdownQuote: {},
   markdownQuoteText: {},
+  markdownTableWrap: {},
+  markdownTable: {},
+  markdownTableRow: {},
+  markdownTableHeaderRow: {},
+  markdownTableCell: {},
+  markdownTableHeaderCell: {},
+  markdownTableHeaderText: {},
+  markdownTableText: {},
 };
 
 describe('SecondBrainMarkdownBody', () => {
-  it('renders heading, inline markdown, lists, quotes, and code blocks', () => {
+  it('renders heading, inline markdown, lists, quotes, code blocks, and tables', () => {
     const text = [
       '# Heading',
       'Plain **bold** __underlined__ *italic* `code` [link](https://example.com)',
+      '| Name | Score |',
+      '| --- | --- |',
+      '| Alice | 10 |',
+      '| Bob | 8 |',
       '- One',
       '- Two',
       '1. First',
@@ -43,6 +55,10 @@ describe('SecondBrainMarkdownBody', () => {
     expect(getByText('italic')).toBeTruthy();
     expect(getByText('code')).toBeTruthy();
     expect(getByText('link')).toBeTruthy();
+    expect(getByText('Name')).toBeTruthy();
+    expect(getByText('Score')).toBeTruthy();
+    expect(getByText('Alice')).toBeTruthy();
+    expect(getByText('10')).toBeTruthy();
     expect(getByText('One')).toBeTruthy();
     expect(getByText('Two')).toBeTruthy();
     expect(getByText('First')).toBeTruthy();

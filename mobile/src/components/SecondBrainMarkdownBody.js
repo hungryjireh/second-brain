@@ -35,6 +35,20 @@ function MarkdownText({ text, style, styles }) {
   );
 }
 
+function parseMarkdownTableRow(line) {
+  const trimmed = String(line ?? '').trim();
+  if (!trimmed.includes('|')) return null;
+  const normalized = trimmed.replace(/^\|/, '').replace(/\|$/, '');
+  const cells = normalized.split('|').map(cell => cell.trim());
+  return cells.length > 0 ? cells : null;
+}
+
+function isMarkdownTableSeparator(line, expectedCols) {
+  const cells = parseMarkdownTableRow(line);
+  if (!cells || cells.length !== expectedCols) return false;
+  return cells.every(cell => /^:?-{3,}:?$/.test(cell));
+}
+
 export default function SecondBrainMarkdownBody({ text, styles }) {
   const lines = String(text ?? '').replace(/\r\n/g, '\n').split('\n');
   const blocks = [];
@@ -66,6 +80,40 @@ export default function SecondBrainMarkdownBody({ text, styles }) {
     if (heading) {
       blocks.push(<MarkdownText key={`heading-${i}`} text={heading[2]} style={[styles.markdownParagraph, styles.markdownHeading]} styles={styles} />);
       i += 1;
+      continue;
+    }
+    const tableHeader = parseMarkdownTableRow(line);
+    if (tableHeader && i + 1 < lines.length && isMarkdownTableSeparator(lines[i + 1], tableHeader.length)) {
+      const rows = [];
+      i += 2;
+      while (i < lines.length) {
+        const row = parseMarkdownTableRow(lines[i]);
+        if (!row || row.length !== tableHeader.length) break;
+        rows.push(row);
+        i += 1;
+      }
+      blocks.push(
+        <ScrollView key={`table-${i}`} horizontal showsHorizontalScrollIndicator={false} style={styles.markdownTableWrap}>
+          <View style={styles.markdownTable}>
+            <View style={[styles.markdownTableRow, styles.markdownTableHeaderRow]}>
+              {tableHeader.map((cell, idx) => (
+                <View key={`th-${i}-${idx}`} style={[styles.markdownTableCell, styles.markdownTableHeaderCell]}>
+                  <MarkdownText text={cell} style={[styles.markdownParagraph, styles.markdownTableHeaderText]} styles={styles} />
+                </View>
+              ))}
+            </View>
+            {rows.map((row, rowIdx) => (
+              <View key={`tr-${i}-${rowIdx}`} style={styles.markdownTableRow}>
+                {row.map((cell, cellIdx) => (
+                  <View key={`td-${i}-${rowIdx}-${cellIdx}`} style={styles.markdownTableCell}>
+                    <MarkdownText text={cell} style={[styles.markdownParagraph, styles.markdownTableText]} styles={styles} />
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      );
       continue;
     }
     const bullet = line.match(/^[-*]\s+(.+)$/);

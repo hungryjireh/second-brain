@@ -69,6 +69,10 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
   },
+  sectionCardElevated: {
+    zIndex: 100,
+    elevation: 12,
+  },
   sectionTitle: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.semibold,
@@ -116,6 +120,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   inputDisabled: {
+    backgroundColor: theme.colors.bgBase,
     color: theme.colors.textMuted,
   },
   timezoneDropdown: {
@@ -203,7 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   primaryButtonText: {
-    color: theme.colors.accentOnSolid,
+    color: theme.colors.textLight,
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
@@ -237,6 +242,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 4,
+    zIndex: 1,
   },
   error: {
     color: theme.colors.dangerStrong,

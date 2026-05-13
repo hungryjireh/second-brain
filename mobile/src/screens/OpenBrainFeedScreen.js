@@ -149,6 +149,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     return items;
   }, [activeList]);
   const isEmptyState = !loading && !error && displayItems.length === 0;
+  const isListEmpty = loading || isEmptyState;
 
   const loadComposerData = useCallback(async () => {
     const [profileData, thoughtData] = await Promise.all([
@@ -375,23 +376,22 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
             <Text style={[styles.tabLabel, tab === 'everyone' && styles.tabLabelActive]}>everyone</Text>
           </Pressable>
         </View>
-        {loading ? (
-          <View style={styles.statusState}>
-            <Text style={styles.meta}>Loading feed...</Text>
-          </View>
-        ) : null}
         {!loading && error ? <Text style={styles.error}>{error}</Text> : null}
         <FlatList
           data={loading ? [] : displayItems}
           keyExtractor={keyExtractor}
-          contentContainerStyle={[styles.list, isEmptyState && styles.listEmpty]}
+          contentContainerStyle={[styles.list, isListEmpty && styles.listEmpty]}
           renderItem={renderItem}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
           updateCellsBatchingPeriod={50}
           windowSize={7}
           removeClippedSubviews
-          ListEmptyComponent={isEmptyState ? (
+          ListEmptyComponent={loading ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.meta}>Loading feed...</Text>
+            </View>
+          ) : isEmptyState ? (
             <View style={styles.emptyState}>
               <Text style={styles.meta}>No human is thinking right now</Text>
             </View>

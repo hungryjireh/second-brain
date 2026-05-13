@@ -80,11 +80,6 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: theme.colors.textPrimary,
   },
-  statusState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   list: {
     paddingBottom: 130,
   },
@@ -119,6 +114,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     marginBottom: 12,
+    textAlign: 'center',
   },
   error: {
     color: theme.colors.danger,

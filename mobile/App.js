@@ -68,7 +68,9 @@ const linking = {
       OpenBrainFeed: 'open-brain',
       OpenBrain: 'open-brain/write',
       CreateOpenBrainProfile: 'open-brain/create-profile',
-      OpenBrainProfile: 'open-brain/profile/:username',
+      OpenBrainProfile: {
+        path: 'open-brain/profile/:username?',
+      },
       UpdateOpenBrainProfile: 'open-brain/update-profile',
       OpenBrainUserSearch: 'open-brain/user-search',
       OpenBrainSearch: 'open-brain/search',

@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   previewBadgeOpen: {
     alignSelf: 'flex-start',
     backgroundColor: theme.colors.accent,
-    color: theme.colors.textPrimary,
+    color: theme.colors.textLight,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   previewBadgeSecond: {
     alignSelf: 'flex-start',
     backgroundColor: theme.colors.brand,
-    color: theme.colors.textPrimary,
+    color: theme.colors.textLight,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
   },
   productTagline: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 22,
     letterSpacing: 3.3,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
   },
   productDescription: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 26,
     marginBottom: 34,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   featureText: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textSecondary,
     flex: 1,
     fontSize: 16,
     lineHeight: 26,
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accentBg,
   },
   ctaTitle: {
-    color: theme.colors.pureWhite,
+    color: theme.colors.textPrimary,
     fontSize: 62,
     lineHeight: 68,
     letterSpacing: -1,
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
   },
   ctaBody: {
-    color: theme.colors.white90,
+    color: theme.colors.textSecondary,
     fontSize: 18,
     lineHeight: 33,
     fontFamily: theme.fonts.regular,
@@ -522,6 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 28,
     letterSpacing: -0.2,
+    backgroundColor: theme.colors.bgBase,
   },
   buttonLogoText: {
     fontSize: 12,

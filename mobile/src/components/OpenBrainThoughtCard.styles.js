@@ -3,7 +3,7 @@ import { theme } from '../theme';
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surfaceDark,
+    backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.white03,
     borderWidth: 1,
     borderRadius: 24,
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   metricCount: {
-    color: theme.colors.textWarm78,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
@@ -79,12 +79,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
   },
   streak: {
-    color: theme.colors.textWarm78,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   time: {
-    color: theme.colors.textWarm50,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
@@ -98,6 +98,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     fontSize: 16,
     lineHeight: 23,
+    color: theme.colors.textSecondary,
   },
   bodyLarge: {
     fontSize: 24,
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   thoughtTitle: {
-    color: theme.colors.textWarm,
+    color: theme.colors.textPrimary,
     fontFamily: theme.fonts.serif,
     fontSize: 34,
     lineHeight: 40,
@@ -181,21 +182,27 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white09,
     paddingHorizontal: 12,
     paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
   },
   reactionChipActive: {
     backgroundColor: theme.colors.white22,
+    borderWidth: 1,
+    borderColor: theme.colors.textPrimary,
   },
   reactionText: {
-    color: theme.colors.textWarm66,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   reactionTextActive: {
-    color: theme.colors.textLight,
+    color: theme.colors.textPrimary,
   },
   shareButton: {
     borderRadius: 999,
     backgroundColor: theme.colors.white09,
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
     paddingHorizontal: 12,
     paddingVertical: 7,
     position: 'relative',
@@ -204,22 +211,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: theme.colors.white09,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: theme.colors.textSecondary,
     paddingHorizontal: 12,
     paddingVertical: 7,
     position: 'relative',
   },
   secondaryActionButtonAdded: {
     backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accentBorder,
+    borderColor: theme.colors.textPrimary,
   },
   secondaryActionButtonText: {
-    color: theme.colors.textWarm80,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   secondaryActionButtonTextAdded: {
-    color: theme.colors.accentText,
+    color: theme.colors.textPrimary,
   },
   secondaryActionResponse: {
     color: theme.colors.textWarm72,
@@ -233,7 +240,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   shareButtonText: {
-    color: theme.colors.textWarm80,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },

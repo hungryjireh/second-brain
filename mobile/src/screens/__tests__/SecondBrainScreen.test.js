@@ -195,6 +195,32 @@ describe('SecondBrainScreen', () => {
     expect(getByText('Home item')).toBeTruthy();
   });
 
+  it('filters entries by search input', async () => {
+    const entries = [
+      { id: 1, title: 'Budget planning', summary: 'Q3 spreadsheet', raw_text: 'Forecast and allocation', is_archived: false, category: 'note', tags: ['finance'] },
+      { id: 2, title: 'Workout plan', summary: 'Leg day', raw_text: 'Squats and lunges', is_archived: false, category: 'note', tags: ['health'] },
+    ];
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === '/entries?limit=60') return { entries };
+      if (url === '/settings') return {};
+      return {};
+    });
+
+    const { getByText, queryByText, getByPlaceholderText } = render(<SecondBrainScreen token={token} />);
+
+    await waitFor(() => expect(getByText('Budget planning')).toBeTruthy());
+    expect(getByText('Workout plan')).toBeTruthy();
+
+    fireEvent.changeText(getByPlaceholderText('Search entries...'), 'budget');
+    expect(getByText('Budget planning')).toBeTruthy();
+    expect(queryByText('Workout plan')).toBeNull();
+
+    fireEvent.changeText(getByPlaceholderText('Search entries...'), 'health');
+    expect(queryByText('Budget planning')).toBeNull();
+    expect(getByText('Workout plan')).toBeTruthy();
+  });
+
   it('shows validation error and skips PATCH when priority is out of range', async () => {
     const entry = {
       id: 42,

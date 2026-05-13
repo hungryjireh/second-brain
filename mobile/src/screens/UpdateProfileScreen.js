@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { apiRequest } from '../api';
+import { apiRequest, invalidateApiCache } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { theme } from '../theme';
-import { initialsFromName, mutedTint } from '../utils/profileAvatar';
+import { initialsFromName } from '../utils/profileAvatar';
 import styles from './UpdateProfileScreenStyles';
 
 const TIMEZONE_OPTIONS = [
@@ -85,6 +85,11 @@ export default function UpdateProfileScreen({ token, navigation }) {
           timezone,
         },
       });
+      await invalidateApiCache({
+        token,
+        exactPaths: ['/open-brain/profile'],
+        pathPrefixes: ['/open-brain/feed'],
+      });
       setSuccess('Profile updated successfully.');
     } catch (err) {
       setError(err.message || 'Failed to update your profile.');
@@ -102,7 +107,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: mutedTint(username) }]}>
+              <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
                 <Text style={styles.avatarFallbackText}>{initialsFromName(username)}</Text>
               </View>
             )}
@@ -149,7 +154,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
               />
             </View>
 
-            <View style={styles.sectionCard}>
+            <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
               <Text style={styles.sectionTitle}>Regional settings</Text>
               <Text style={styles.label}>Timezone</Text>
               <View style={styles.timezoneDropdownWrapper}>

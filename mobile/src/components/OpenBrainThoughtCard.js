@@ -3,7 +3,7 @@ import { Image, Platform, Pressable, Text, View, useWindowDimensions } from 'rea
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
-import { initialsFromName, mutedTint } from '../utils/profileAvatar';
+import { initialsFromName } from '../utils/profileAvatar';
 
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
@@ -203,7 +203,7 @@ function OpenBrainThoughtCard({
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: mutedTint(name) }]}>
+              <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
                 <Text style={styles.avatarFallbackText}>{initialsFromName(name)}</Text>
               </View>
             )}
@@ -316,7 +316,7 @@ function OpenBrainThoughtCard({
                   onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
                 >
                   <View style={styles.actionButtonContent}>
-                    <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? '#8ef1cf' : theme.colors.textSecondary} />
+                    <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? theme.colors.textPrimary : theme.colors.textSecondary} />
                     {!iconOnlyActions ? (
                       <Text style={[styles.secondaryActionButtonText, addedToSecondBrain && styles.secondaryActionButtonTextAdded]}>
                         {addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}
@@ -396,7 +396,7 @@ function OpenBrainThoughtCard({
                 onHoverOut={Platform.OS === 'web' ? () => setHoveredAction('') : undefined}
               >
                 <View style={styles.actionButtonContent}>
-                  <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? '#8ef1cf' : theme.colors.textSecondary} />
+                  <Feather name={addedToSecondBrain ? 'check' : 'plus'} size={12} color={addedToSecondBrain ? theme.colors.textPrimary : theme.colors.textSecondary} />
                   {!iconOnlyActions ? (
                     <Text style={[styles.secondaryActionButtonText, addedToSecondBrain && styles.secondaryActionButtonTextAdded]}>
                       {addedToSecondBrain ? 'Added' : 'Add to SecondBrain'}

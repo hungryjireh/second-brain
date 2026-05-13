@@ -2278,13 +2278,10 @@ export default function App({ authToken, onUnauthorized }) {
                         alignSelf: 'flex-start',
                       }}
                     >
-                      Copy key
+                      {telegramCopyStatus === 'Copied'
+                        ? '✓ Copied'
+                        : telegramCopyStatus || 'Copy key'}
                     </button>
-                    {telegramCopyStatus && (
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        {telegramCopyStatus}
-                      </span>
-                    )}
                   </div>
                   <code
                     style={{
