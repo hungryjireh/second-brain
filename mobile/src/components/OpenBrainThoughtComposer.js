@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import styles from './OpenBrainThoughtComposer.styles';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 function normalizeThoughtText(text) {
   if (typeof text !== 'string') return '';

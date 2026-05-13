@@ -1,11 +1,11 @@
 import React from 'react';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { theme } from '../constants/theme';
 
 const STATS = [
-  { key: 'reminder', label: 'Reminders', color: openBrainStyle.second, dimColor: openBrainStyle.secondDim },
-  { key: 'todo',     label: 'TODOs',     color: openBrainStyle.todo, dimColor: openBrainStyle.todoDim },
-  { key: 'thought',  label: 'Thoughts',  color: openBrainStyle.thought, dimColor: openBrainStyle.thoughtDim },
-  { key: 'note',     label: 'Notes',     color: openBrainStyle.note, dimColor: openBrainStyle.noteDim },
+  { key: 'reminder', label: 'Reminders', color: theme.colors.second, dimColor: theme.colors.secondDim },
+  { key: 'todo',     label: 'TODOs',     color: theme.colors.todo, dimColor: theme.colors.todoDim },
+  { key: 'thought',  label: 'Thoughts',  color: theme.colors.thought, dimColor: theme.colors.thoughtDim },
+  { key: 'note',     label: 'Notes',     color: theme.colors.note, dimColor: theme.colors.noteDim },
 ];
 
 export default function StatsBar({
@@ -61,7 +61,7 @@ export default function StatsBar({
           />
           <span
             style={{
-              fontFamily: openBrainStyle.serifFamily,
+              fontFamily: theme.fonts.serif,
               fontSize: isMobile ? 20 : 26,
               color: isActive ? 'var(--brand-text)' : color,
               lineHeight: 1,

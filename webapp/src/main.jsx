@@ -8,7 +8,7 @@ import OpenBrainFeed from './OpenBrainFeed.jsx';
 import OpenBrainProfile from './OpenBrainProfile.jsx';
 import SharedThoughtPage from './SharedThoughtPage.jsx';
 import NotFoundPage from './NotFoundPage.jsx';
-import { openBrainStyle } from './constants/openbrainStyle';
+import { theme } from './constants/theme';
 import './index.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -18,7 +18,7 @@ function AppLogo({ name }) {
     return (
       <span
         style={{
-          fontFamily: openBrainStyle.serifFamily,
+          fontFamily: theme.fonts.serif,
           fontSize: 25,
           letterSpacing: '-0.3px',
           color: 'var(--text-primary)',
@@ -32,13 +32,13 @@ function AppLogo({ name }) {
   return (
     <span
       style={{
-        fontFamily: openBrainStyle.serifFamily,
+        fontFamily: theme.fonts.serif,
         fontSize: 25,
         letterSpacing: '-0.3px',
         color: 'var(--text-primary)',
       }}
     >
-      open<span style={{ color: openBrainStyle.accent }}>brain</span>
+      open<span style={{ color: theme.colors.accent }}>brain</span>
     </span>
   );
 }
@@ -88,7 +88,7 @@ function AppHome() {
           style={{
             marginTop: 4,
             marginBottom: 8,
-            fontFamily: openBrainStyle.serifFamily,
+            fontFamily: theme.fonts.serif,
             fontSize: 34,
             letterSpacing: '-0.4px',
             lineHeight: 1.1,

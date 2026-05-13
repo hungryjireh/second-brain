@@ -21,7 +21,6 @@ import OpenBrainUserSearchScreen from './src/screens/OpenBrainUserSearchScreen';
 import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
-import { openBrainFontLoadMap } from './src/constants/openbrainFonts';
 import { theme } from './src/theme';
 import styles from './App.styles';
 
@@ -86,7 +85,7 @@ const linking = {
 export default function App() {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [fontsLoaded] = useFonts(openBrainFontLoadMap);
+  const [fontsLoaded] = useFonts(theme.fonts.loadMap);
 
   useEffect(() => {
     (async () => {

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { openBrainStyle } from '../constants/openbrainStyle';
+import { theme } from '../constants/theme';
 
 const TAG_STYLES = {
-  reminder: { bg: openBrainStyle.reminderTagBg, color: openBrainStyle.reminderTagText, label: 'Reminder' },
-  todo:     { bg: openBrainStyle.todoDim, color: openBrainStyle.todoTagText, label: 'TODO' },
-  thought:  { bg: openBrainStyle.thoughtDim, color: openBrainStyle.thoughtTagText, label: 'Thought' },
-  note:     { bg: openBrainStyle.noteDim, color: openBrainStyle.noteTagText, label: 'Note' },
+  reminder: { bg: theme.colors.reminderTagBg, color: theme.colors.reminderTagText, label: 'Reminder' },
+  todo:     { bg: theme.colors.todoDim, color: theme.colors.todoTagText, label: 'TODO' },
+  thought:  { bg: theme.colors.thoughtDim, color: theme.colors.thoughtTagText, label: 'Thought' },
+  note:     { bg: theme.colors.noteDim, color: theme.colors.noteTagText, label: 'Note' },
 };
 
 const CATEGORY_ICONS = {
@@ -16,8 +16,8 @@ const CATEGORY_ICONS = {
 };
 
 function getPriorityColor(priority) {
-  if (priority >= 8) return openBrainStyle.priorityHigh;
-  if (priority >= 4) return openBrainStyle.note;
+  if (priority >= 8) return theme.colors.priorityHigh;
+  if (priority >= 4) return theme.colors.note;
   return 'var(--text-secondary)';
 }
 

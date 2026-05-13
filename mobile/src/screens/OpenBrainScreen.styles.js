@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -19,7 +18,7 @@ const styles = StyleSheet.create({
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 6,
   },
 });

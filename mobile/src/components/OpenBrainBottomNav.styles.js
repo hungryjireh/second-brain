@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   wrap: {
@@ -46,7 +45,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 13,
   },
   labelActive: {

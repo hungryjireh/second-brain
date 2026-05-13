@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
   },
   avatarFallbackText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontBold,
+    fontFamily: theme.fonts.bold,
     fontSize: 24,
     fontWeight: '700',
   },
@@ -59,7 +58,7 @@ const styles = StyleSheet.create({
   },
   username: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 20,
     lineHeight: 24,
   },
@@ -78,12 +77,12 @@ const styles = StyleSheet.create({
   },
   streakPillText: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   thoughtCount: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   followButton: {
@@ -103,7 +102,7 @@ const styles = StyleSheet.create({
   },
   followButtonText: {
     color: theme.colors.textWarm80,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
@@ -111,11 +110,11 @@ const styles = StyleSheet.create({
   },
   muted: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   empty: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontStyle: 'italic',
   },
   sectionHeaderRow: {
@@ -127,7 +126,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: theme.colors.textMuted,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
@@ -139,7 +138,7 @@ const styles = StyleSheet.create({
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
 });

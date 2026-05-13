@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle, theme } from './src/theme';
+import { theme } from './src/theme';
 
 const styles = StyleSheet.create({
   appRoot: {
@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.5,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   headerBrandAccent: {
     color: theme.colors.brand,
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     paddingRight: 12,
   },
   headerLiveDot: {

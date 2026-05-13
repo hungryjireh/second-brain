@@ -1,5 +1,4 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -30,7 +29,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.9,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   title: {
     marginTop: 8,
@@ -39,7 +38,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.4,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   titleAccent: {
     color: theme.colors.brand,
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     color: theme.colors.textSecondary,
     fontSize: 13,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   form: {
     gap: 10,
@@ -64,7 +63,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 10,
     fontSize: 14,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   button: {
     marginTop: 2,
@@ -82,7 +81,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: theme.colors.buttonTextOnBrand,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   buttonTextDisabled: {
@@ -100,7 +99,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.dangerStrong,
     fontSize: 12,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
 });
 

@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   outer: {
@@ -27,7 +26,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
     letterSpacing: -0.3,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   logoButton: {
     paddingVertical: 6,
@@ -71,7 +70,7 @@ const styles = StyleSheet.create({
     color: theme.colors.accentOnSolid,
     fontSize: 10,
     lineHeight: 12,
-    fontFamily: openBrainStyle.fontBold,
+    fontFamily: theme.fonts.bold,
   },
   modalBackdrop: {
     flex: 1,
@@ -105,7 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     color: theme.colors.textPrimary,
     fontSize: 14,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     backgroundColor: theme.colors.bgBase,
   },
   submitButton: {
@@ -122,7 +121,7 @@ const styles = StyleSheet.create({
   submitLabel: {
     color: theme.colors.accentOnSolid,
     fontSize: 14,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   resultsWrap: {
     width: '100%',
@@ -138,7 +137,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     marginBottom: 6,
   },
   resultRow: {
@@ -154,28 +153,28 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   resultSecondary: {
     marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   errorText: {
     width: '100%',
     color: theme.colors.danger,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   emptyText: {
     width: '100%',
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   seeMorePressable: {
     margin: 4,
@@ -187,7 +186,7 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textTransform: 'uppercase',
   },
   notificationsHeaderCellType: {
@@ -213,7 +212,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textTransform: 'uppercase',
   },
   notificationsHeaderCellStatus: {
@@ -221,7 +220,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textTransform: 'uppercase',
     textAlign: 'right',
   },
@@ -241,14 +240,14 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 13,
     lineHeight: 17,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   notificationsType: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontSize: 13,
     lineHeight: 17,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textTransform: 'capitalize',
   },
   notificationsStatus: {
@@ -256,7 +255,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textAlign: 'right',
   },
   notificationsStatusUnread: {

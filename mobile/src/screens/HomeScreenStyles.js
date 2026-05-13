@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 const HOME_BUTTON_BASE = {
   minHeight: 44,
   borderRadius: 10,
@@ -15,7 +14,7 @@ const HOME_BUTTON_LABEL_BASE = {
   lineHeight: 15,
   letterSpacing: 0.8,
   textTransform: 'uppercase',
-  fontFamily: openBrainStyle.fontSemiBold,
+  fontFamily: theme.fonts.semibold,
 };
 
 const styles = StyleSheet.create({
@@ -41,7 +40,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   navButton: {
     backgroundColor: theme.colors.textPrimary,
@@ -54,7 +53,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   hero: {
     paddingHorizontal: 30,
@@ -84,7 +83,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 3,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   eyebrowLoginButton: {
     borderRadius: 8,
@@ -98,7 +97,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   heroTitleWrap: {
     marginBottom: 20,
@@ -113,7 +112,7 @@ const styles = StyleSheet.create({
     fontSize: 70,
     lineHeight: 74,
     letterSpacing: -0.6,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontStyle: 'italic',
   },
   heroTitleBold: {
@@ -122,13 +121,13 @@ const styles = StyleSheet.create({
     lineHeight: 82,
     letterSpacing: -1.6,
     textTransform: 'lowercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   heroSubcopy: {
     color: theme.colors.textSecondary,
     fontSize: 16,
     lineHeight: 28,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     maxWidth: 700,
   },
   heroActions: {
@@ -175,7 +174,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 12,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   previewBadgeSecond: {
     alignSelf: 'flex-start',
@@ -188,7 +187,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 12,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   previewCardOpen: {
     backgroundColor: theme.colors.bgSurface,
@@ -209,23 +208,23 @@ const styles = StyleSheet.create({
   previewMetaOpen: {
     color: theme.colors.accent,
     fontSize: 11,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   previewMetaSecond: {
     color: theme.colors.brand,
     fontSize: 11,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   previewText: {
     color: theme.colors.textPrimary,
     fontSize: 13,
     lineHeight: 19,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   previewTags: {
     color: theme.colors.textSecondary,
     fontSize: 11,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   marqueeBar: {
     backgroundColor: theme.colors.bgSurface,
@@ -239,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   productsSection: {
     paddingHorizontal: 0,
@@ -256,7 +255,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0.8,
     marginBottom: 34,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   productTitleWrap: {
     marginBottom: 0,
@@ -265,14 +264,14 @@ const styles = StyleSheet.create({
     fontSize: 66,
     lineHeight: 72,
     letterSpacing: -0.8,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontStyle: 'italic',
   },
   productLogoText: {
     fontSize: 66,
     lineHeight: 72,
     letterSpacing: -0.8,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   productLogoAccent: {
     color: theme.colors.accent,
@@ -284,14 +283,14 @@ const styles = StyleSheet.create({
     letterSpacing: 3.3,
     textTransform: 'uppercase',
     marginBottom: 28,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   productDescription: {
     color: theme.colors.textPrimary,
     fontSize: 16,
     lineHeight: 26,
     marginBottom: 34,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   featureList: {
     gap: 22,
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 26,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   productButton: {
     ...HOME_BUTTON_BASE,
@@ -345,7 +344,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   workflowSection: {
     backgroundColor: theme.colors.accentBg,
@@ -358,7 +357,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 8,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   workflowTitle: {
     color: theme.colors.textPrimary,
@@ -366,7 +365,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     letterSpacing: -0.5,
     marginBottom: 16,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   stepGrid: {
     flexDirection: 'row',
@@ -388,7 +387,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.8,
     marginBottom: 8,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   stepIcon: {
     fontSize: 20,
@@ -399,13 +398,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     marginBottom: 6,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   stepDesc: {
     color: theme.colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   testimonialSection: {
     padding: 16,
@@ -420,13 +419,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 18,
     lineHeight: 28,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   quoteAuthor: {
     color: theme.colors.textSecondary,
     fontSize: 12,
     marginBottom: 10,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   ctaSection: {
     paddingHorizontal: 0,
@@ -452,7 +451,7 @@ const styles = StyleSheet.create({
     fontSize: 62,
     lineHeight: 68,
     letterSpacing: -1,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontStyle: 'italic',
     maxWidth: 360,
   },
@@ -460,7 +459,7 @@ const styles = StyleSheet.create({
     color: theme.colors.white90,
     fontSize: 18,
     lineHeight: 33,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     maxWidth: 360,
   },
   ctaButtonLight: {
@@ -480,7 +479,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     letterSpacing: 0.6,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   buttonLabelText: {
     ...HOME_BUTTON_LABEL_BASE,
@@ -489,13 +488,13 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontSize: 28,
     letterSpacing: 0.3,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   secondAccentText: {
     color: theme.colors.brand,
     fontSize: 28,
     letterSpacing: 0.3,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   openAccentBg: {
     backgroundColor: theme.colors.accent,
@@ -514,7 +513,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
     letterSpacing: -0.3,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   openBrainLogoAccent: {
     color: theme.colors.accent,
@@ -568,7 +567,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
     letterSpacing: -0.3,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   secondBrainLogoAccent: {
     color: theme.colors.brand,

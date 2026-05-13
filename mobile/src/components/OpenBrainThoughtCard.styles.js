@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   card: {
@@ -36,7 +35,7 @@ const styles = StyleSheet.create({
   },
   avatarFallbackText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 20,
   },
   metaBlock: {
@@ -62,7 +61,7 @@ const styles = StyleSheet.create({
   },
   metricCount: {
     color: theme.colors.textWarm78,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   metricIconHoverTarget: {
@@ -71,32 +70,32 @@ const styles = StyleSheet.create({
   },
   username: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 17,
     lineHeight: 20,
   },
   metaDot: {
     color: theme.colors.textWarm50,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   streak: {
     color: theme.colors.textWarm78,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   time: {
     color: theme.colors.textWarm50,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   body: {
     color: theme.colors.textWarm,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontSize: 18,
     lineHeight: 30,
   },
   bodyFeed: {
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 16,
     lineHeight: 23,
   },
@@ -109,7 +108,7 @@ const styles = StyleSheet.create({
   },
   thoughtTitle: {
     color: theme.colors.textWarm,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontSize: 34,
     lineHeight: 40,
     marginBottom: 12,
@@ -129,12 +128,12 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 6,
   },
   date: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     marginBottom: 6,
   },
@@ -155,7 +154,7 @@ const styles = StyleSheet.create({
   },
   followButtonText: {
     color: theme.colors.textWarm80,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
@@ -188,7 +187,7 @@ const styles = StyleSheet.create({
   },
   reactionText: {
     color: theme.colors.textWarm66,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   reactionTextActive: {
@@ -216,7 +215,7 @@ const styles = StyleSheet.create({
   },
   secondaryActionButtonText: {
     color: theme.colors.textWarm80,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   secondaryActionButtonTextAdded: {
@@ -224,7 +223,7 @@ const styles = StyleSheet.create({
   },
   secondaryActionResponse: {
     color: theme.colors.textWarm72,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     lineHeight: 16,
   },
@@ -235,7 +234,7 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     color: theme.colors.textWarm80,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   actionTooltip: {
@@ -253,7 +252,7 @@ const styles = StyleSheet.create({
   },
   actionTooltipText: {
     color: theme.colors.textLight,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     lineHeight: 14,
   },

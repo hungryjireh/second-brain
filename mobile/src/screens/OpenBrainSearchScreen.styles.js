@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   screen: {
@@ -18,7 +17,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 34,
     letterSpacing: -0.4,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     marginBottom: 10,
   },
   searchRow: {
@@ -37,7 +36,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: theme.colors.textPrimary,
     fontSize: 15,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     backgroundColor: theme.colors.bgSurface,
   },
   submitButton: {
@@ -54,7 +53,7 @@ const styles = StyleSheet.create({
   submitLabel: {
     color: theme.colors.accentOnSolid,
     fontSize: 14,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   resultsWrap: {
     flex: 1,
@@ -69,7 +68,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     marginBottom: 6,
   },
   resultRow: {
@@ -85,27 +84,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   resultSecondary: {
     marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   errorText: {
     color: theme.colors.danger,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 6,
   },
   emptyText: {
     color: theme.colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 6,
   },
   loading: {

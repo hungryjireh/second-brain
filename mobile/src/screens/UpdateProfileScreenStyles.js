@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
   },
   avatarFallbackText: {
     color: theme.colors.accentText,
-    fontFamily: openBrainStyle.fontBold,
+    fontFamily: theme.fonts.bold,
     fontSize: 24,
     fontWeight: '700',
   },
@@ -72,36 +71,36 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 16,
     marginBottom: 2,
   },
   eyebrow: {
     color: theme.colors.accent,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   title: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontSize: 34,
     lineHeight: 38,
   },
   copy: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
   label: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
   fieldHint: {
     color: theme.colors.textMuted,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     marginTop: -2,
   },
@@ -111,7 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 14,
     paddingHorizontal: 12,
     paddingVertical: 11,
@@ -136,12 +135,12 @@ const styles = StyleSheet.create({
   },
   timezoneDropdownText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 14,
   },
   timezoneDropdownChevron: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 12,
   },
   timezoneDropdownList: {
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
     marginHorizontal: 8,
     marginBottom: 4,
@@ -182,7 +181,7 @@ const styles = StyleSheet.create({
   },
   timezoneDropdownOptionText: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
   timezoneDropdownOptionTextSelected: {
@@ -190,7 +189,7 @@ const styles = StyleSheet.create({
   },
   timezoneNoResults: {
     color: theme.colors.textMuted,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -205,7 +204,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: theme.colors.accentOnSolid,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   buttonDisabled: {
@@ -226,12 +225,12 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   muted: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 14,
   },
   actionsRow: {
@@ -247,7 +246,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   success: {
@@ -258,7 +257,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
 });

@@ -1,5 +1,4 @@
 import { StyleSheet } from 'react-native';
-import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
@@ -33,7 +32,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: theme.colors.brandText,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   title: {
     marginTop: 4,
@@ -42,7 +41,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.4,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   card: {
     backgroundColor: theme.colors.bgRaised,
@@ -57,7 +56,7 @@ const styles = StyleSheet.create({
     fontSize: 25,
     letterSpacing: -0.3,
     lineHeight: 30,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   logoBrand: { color: theme.colors.brand },
   logoBlue: { color: theme.colors.accent },
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14,
     letterSpacing: 0.2,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     textTransform: 'uppercase',
   },
 });

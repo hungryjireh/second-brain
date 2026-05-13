@@ -1,4 +1,26 @@
+import {
+  DMSans_300Light,
+  DMSans_400Regular,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+
 export const theme = {
+  fonts: {
+    regular: 'DMSans_400Regular',
+    semibold: 'DMSans_600SemiBold',
+    bold: 'DMSans_700Bold',
+    serif: 'DMSerifDisplay_400Regular',
+    mono: 'Courier',
+    loadMap: {
+      DMSans_300Light,
+      DMSans_400Regular,
+      DMSans_600SemiBold,
+      DMSans_700Bold,
+      DMSerifDisplay_400Regular,
+    },
+  },
   colors: {
     bgBase: '#0d0d0d',
     bgSurface: '#161616',
@@ -64,12 +86,4 @@ export const theme = {
     dangerBg: 'rgba(220,60,60,0.1)',
     dangerBorder: 'rgba(220,60,60,0.28)',
   },
-};
-
-export const openBrainStyle = {
-  fontRegular: 'DMSans_400Regular',
-  fontSemiBold: 'DMSans_600SemiBold',
-  fontBold: 'DMSans_700Bold',
-  fontSerif: 'DMSerifDisplay_400Regular',
-  fontMono: 'Courier',
 };

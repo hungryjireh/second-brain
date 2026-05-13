@@ -5,7 +5,6 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { apiRequest, getApiBase } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';

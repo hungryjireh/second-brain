@@ -9,7 +9,7 @@ import {
   MAX_ENTRY_TAGS,
   MAX_USER_TAGS,
 } from './constants/tags.js';
-import { openBrainStyle } from './constants/openbrainStyle';
+import { theme } from './constants/theme';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const PRIORITY_LEVELS = [
@@ -1033,7 +1033,7 @@ export default function App({ authToken, onUnauthorized }) {
 
           <span
             style={{
-              fontFamily: openBrainStyle.serifFamily,
+              fontFamily: theme.fonts.serif,
               fontSize: 18,
               color: 'var(--text-primary)',
               letterSpacing: '-0.3px',

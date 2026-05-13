@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { openBrainStyle } from './constants/openbrainStyle';
+import { theme } from './constants/theme';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -47,7 +47,7 @@ export default function Login() {
         placeItems: 'center',
         padding: 20,
         background:
-          openBrainStyle.brandGlow,
+          theme.colors.brandGlow,
       }}
     >
       <div
@@ -58,7 +58,7 @@ export default function Login() {
           border: '0.5px solid var(--border)',
           borderRadius: 16,
           padding: 24,
-          boxShadow: `0 18px 40px ${openBrainStyle.shadowStrong}`,
+          boxShadow: `0 18px 40px ${theme.colors.shadowStrong}`,
         }}
       >
         <p
@@ -77,7 +77,7 @@ export default function Login() {
           style={{
             marginTop: 8,
             marginBottom: 8,
-            fontFamily: openBrainStyle.serifFamily,
+            fontFamily: theme.fonts.serif,
             fontSize: 34,
             letterSpacing: '-0.4px',
             lineHeight: 1.1,
@@ -138,7 +138,7 @@ export default function Login() {
               borderRadius: 10,
               border: '0.5px solid transparent',
               background: loading || !email.trim() || !password ? 'var(--bg-hover)' : 'var(--brand)',
-              color: loading || !email.trim() || !password ? 'var(--text-muted)' : openBrainStyle.buttonTextOnBrand,
+              color: loading || !email.trim() || !password ? 'var(--text-muted)' : theme.colors.buttonTextOnBrand,
               fontWeight: 600,
               fontSize: 14,
               fontFamily: 'inherit',
@@ -155,10 +155,10 @@ export default function Login() {
             style={{
               marginTop: 12,
               marginBottom: 0,
-              color: openBrainStyle.dangerStrong,
+              color: theme.colors.dangerStrong,
               fontSize: 12,
-              background: openBrainStyle.dangerBg,
-              border: `0.5px solid ${openBrainStyle.dangerBorder}`,
+              background: theme.colors.dangerBg,
+              border: `0.5px solid ${theme.colors.dangerBorder}`,
               borderRadius: 8,
               padding: '8px 10px',
             }}

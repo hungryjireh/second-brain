@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   container: {
@@ -32,7 +31,7 @@ const styles = StyleSheet.create({
   },
   draftIcon: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 22,
     lineHeight: 22,
   },
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 13,
   },
   tabLabelActive: {
@@ -98,7 +97,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: theme.colors.textMuted,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 0.72,
     textTransform: 'uppercase',
@@ -118,12 +117,12 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 12,
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     marginBottom: 12,
   },
 });

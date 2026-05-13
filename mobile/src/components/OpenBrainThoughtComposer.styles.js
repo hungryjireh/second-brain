@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   card: {
@@ -30,7 +29,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
@@ -44,12 +43,12 @@ const styles = StyleSheet.create({
   },
   metric: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 11,
   },
   heading: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontSize: 29,
     lineHeight: 34,
     marginTop: 12,
@@ -64,7 +63,7 @@ const styles = StyleSheet.create({
   },
   prompt: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
     fontStyle: 'italic',
     flex: 1,
@@ -82,7 +81,7 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
   divider: {
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.colors.bgSurface,
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 16,
     lineHeight: 23,
     borderRadius: 10,
@@ -129,7 +128,7 @@ const styles = StyleSheet.create({
   },
   postedText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 16,
     lineHeight: 23,
   },
@@ -138,7 +137,7 @@ const styles = StyleSheet.create({
   },
   postedTitle: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
     fontSize: 34,
     lineHeight: 40,
     marginBottom: 12,
@@ -174,7 +173,7 @@ const styles = StyleSheet.create({
   },
   remaining: {
     color: theme.colors.textSecondary,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 13,
   },
   visibilityButton: {
@@ -203,7 +202,7 @@ const styles = StyleSheet.create({
   },
   visibilityText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 12,
     flexShrink: 1,
   },
@@ -221,20 +220,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
     lineHeight: 16,
   },
   helperText: {
     color: theme.colors.textMuted,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     textAlign: 'right',
     marginTop: 10,
   },
   error: {
     color: theme.colors.danger,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     fontSize: 12,
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -254,7 +253,7 @@ const styles = StyleSheet.create({
   },
   formatButtonText: {
     color: theme.colors.textPrimary,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
     fontSize: 14,
     lineHeight: 16,
   },

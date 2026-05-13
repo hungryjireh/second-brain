@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
-import { openBrainStyle } from '../theme';
 
 const styles = StyleSheet.create({
   screen: {
@@ -17,13 +16,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 32,
     letterSpacing: -0.4,
-    fontFamily: openBrainStyle.fontSerif,
+    fontFamily: theme.fonts.serif,
   },
   copy: {
     color: theme.colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
   input: {
     borderWidth: 1,
@@ -33,7 +32,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: theme.colors.textPrimary,
     fontSize: 16,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
     backgroundColor: theme.colors.bgSurface,
   },
   placeholder: {
@@ -55,13 +54,13 @@ const styles = StyleSheet.create({
   buttonText: {
     color: theme.colors.accentOnSolid,
     fontSize: 15,
-    fontFamily: openBrainStyle.fontSemiBold,
+    fontFamily: theme.fonts.semibold,
   },
   error: {
     color: theme.colors.dangerSoft,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: openBrainStyle.fontRegular,
+    fontFamily: theme.fonts.regular,
   },
 });
 

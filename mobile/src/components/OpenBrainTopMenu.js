@@ -4,7 +4,6 @@ import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { openBrainStyle } from '../theme';
 import { theme } from '../theme';
 
 function fuzzyScoreUsername(username, query) {

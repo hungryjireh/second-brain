@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { openBrainStyle } from './constants/openbrainStyle';
+import { theme } from './constants/theme';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -141,10 +141,10 @@ export default function UpdateProfile({ embedded = false }) {
         gap: 12,
       }}
     >
-      <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
+      <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.colors.accent, fontWeight: 600 }}>
         Open-brain profile
       </p>
-      <h1 style={{ margin: 0, fontFamily: openBrainStyle.serifFamily, fontSize: 34, lineHeight: 1.1 }}>
+      <h1 style={{ margin: 0, fontFamily: theme.fonts.serif, fontSize: 34, lineHeight: 1.1 }}>
         Update your profile
       </h1>
       <p style={{ marginTop: 0, marginBottom: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
@@ -225,7 +225,7 @@ export default function UpdateProfile({ embedded = false }) {
           padding: '11px 14px',
           borderRadius: 10,
           border: '0.5px solid transparent',
-          background: saving || !username.trim() || !timezone.trim() ? 'var(--bg-hover)' : openBrainStyle.accentStrong,
+          background: saving || !username.trim() || !timezone.trim() ? 'var(--bg-hover)' : theme.colors.accentStrong,
           color: saving || !username.trim() || !timezone.trim() ? 'var(--text-muted)' : '#f2fbff',
           fontWeight: 600,
           fontSize: 14,
@@ -303,10 +303,10 @@ export default function UpdateProfile({ embedded = false }) {
         gap: 10,
       }}
     >
-      <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: openBrainStyle.accent, fontWeight: 600 }}>
+      <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.colors.accent, fontWeight: 600 }}>
         Open-brain profile
       </p>
-      <h1 style={{ margin: 0, fontFamily: openBrainStyle.serifFamily, fontSize: 34, lineHeight: 1.1 }}>
+      <h1 style={{ margin: 0, fontFamily: theme.fonts.serif, fontSize: 34, lineHeight: 1.1 }}>
         Update your profile
       </h1>
       <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>Loading profile…</p>
@@ -325,7 +325,7 @@ export default function UpdateProfile({ embedded = false }) {
         placeItems: 'center',
         padding: 20,
         background:
-          `radial-gradient(circle at 15% 15%, ${openBrainStyle.accentBg}, transparent 40%), var(--bg-base)`,
+          `radial-gradient(circle at 15% 15%, ${theme.colors.accentBg}, transparent 40%), var(--bg-base)`,
       }}
     >
       <button
