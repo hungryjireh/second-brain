@@ -4,9 +4,10 @@ import OpenBrainProfile from './OpenBrainProfile.jsx';
 import OpenBrainWrite from './OpenBrainWrite.jsx';
 import UpdateProfile from './UpdateProfile.jsx';
 import { theme } from './constants/theme';
+import feedPromptsPayload from '../../lib/static/feed-prompts.json';
+import { flattenPrompts } from './lib/prompt-helpers';
 
 const API = import.meta.env.VITE_API_URL || '/api';
-const FEED_PROMPT_ENDPOINTS = ['/api/feed-prompts', '/api/static/feed-prompts.json', '/feed-prompts.json'];
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
   { key: 'me_too', label: 'me too' },
@@ -32,31 +33,9 @@ function mutedTint(seed = '') {
   return palette[total % palette.length];
 }
 
-function flattenPrompts(payload) {
-  if (!payload || typeof payload !== 'object') return [];
-  return Object.values(payload)
-    .flatMap(group => (Array.isArray(group) ? group : []))
-    .filter(prompt => typeof prompt === 'string' && prompt.trim().length > 0);
-}
-
 function getRandomPrompt(prompts) {
   if (!Array.isArray(prompts) || prompts.length === 0) return 'feed';
   return prompts[Math.floor(Math.random() * prompts.length)];
-}
-
-async function loadFeedPrompts() {
-  for (const endpoint of FEED_PROMPT_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint);
-      if (!response.ok) continue;
-      const data = await response.json();
-      const prompts = flattenPrompts(data);
-      if (prompts.length > 0) return prompts;
-    } catch {
-      // Try the next endpoint.
-    }
-  }
-  return [];
 }
 
 function ThoughtCard({ item, onReact, reactingKey, onToggleFollow, followBusyUserId, onOpenProfile }) {
@@ -259,18 +238,8 @@ export default function OpenBrainFeed() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchPrompts = async () => {
-      const prompts = await loadFeedPrompts();
-      if (!isMounted) return;
-      setTitle(getRandomPrompt(prompts));
-    };
-
-    fetchPrompts();
-    return () => {
-      isMounted = false;
-    };
+    const prompts = flattenPrompts(feedPromptsPayload);
+    setTitle(getRandomPrompt(prompts));
   }, []);
 
   useEffect(() => {

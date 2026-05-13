@@ -1,15 +1,12 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { theme } from './constants/theme';
+import thoughtPromptsPayload from '../../lib/static/thought-prompts.json';
+import thankYouPromptsPayload from '../../lib/static/thank-you-for-sharing-prompt.json';
+import { flattenPrompts, getRandomPrompt } from './lib/prompt-helpers';
 
 const MAX_CHARS = 5000;
 const API = import.meta.env.VITE_API_URL || '/api';
-const PROMPT_ENDPOINTS = ['/api/thought-prompts', '/api/static/thought-prompts.json', '/thought-prompts.json'];
-const THANK_YOU_PROMPT_ENDPOINTS = [
-  '/api/thank-you-for-sharing-prompt',
-  '/api/static/thank-you-for-sharing-prompt.json',
-  '/thank-you-for-sharing-prompt.json',
-];
 
 function formatTodayLabel(date) {
   const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
@@ -20,56 +17,6 @@ function formatTodayLabel(date) {
 
 function formatTimeLabel(date) {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-}
-
-function flattenPrompts(payload) {
-  if (!payload || typeof payload !== 'object') return [];
-  return Object.values(payload)
-    .flatMap(group => (Array.isArray(group) ? group : []))
-    .filter(prompt => typeof prompt === 'string' && prompt.trim().length > 0);
-}
-
-function getRandomPrompt(prompts, currentPrompt = '') {
-  if (!Array.isArray(prompts) || prompts.length === 0) return '';
-  if (prompts.length === 1) return prompts[0];
-
-  let next = currentPrompt;
-  while (next === currentPrompt) {
-    next = prompts[Math.floor(Math.random() * prompts.length)];
-  }
-  return next;
-}
-
-async function loadThoughtPrompts() {
-  for (const endpoint of PROMPT_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint);
-      if (!response.ok) continue;
-      const data = await response.json();
-      const prompts = flattenPrompts(data);
-      if (prompts.length > 0) return prompts;
-    } catch {
-      // Try the next endpoint.
-    }
-  }
-
-  return [];
-}
-
-async function loadThankYouPrompts() {
-  for (const endpoint of THANK_YOU_PROMPT_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint);
-      if (!response.ok) continue;
-      const data = await response.json();
-      const prompts = flattenPrompts(data);
-      if (prompts.length > 0) return prompts;
-    } catch {
-      // Try the next endpoint.
-    }
-  }
-
-  return [];
 }
 
 export default function OpenBrainWrite({ embedded = false }) {
@@ -114,37 +61,14 @@ export default function OpenBrainWrite({ embedded = false }) {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchPrompts = async () => {
-      const prompts = await loadThoughtPrompts();
-      if (!isMounted) return;
-
-      setPromptPool(prompts);
-      setPrompt(getRandomPrompt(prompts));
-    };
-
-    fetchPrompts();
-
-    return () => {
-      isMounted = false;
-    };
+    const prompts = flattenPrompts(thoughtPromptsPayload);
+    setPromptPool(prompts);
+    setPrompt(getRandomPrompt(prompts));
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchThankYouPrompts = async () => {
-      const prompts = await loadThankYouPrompts();
-      if (!isMounted) return;
-      setThankYouPromptPool(prompts);
-    };
-
-    fetchThankYouPrompts();
-
-    return () => {
-      isMounted = false;
-    };
+    const prompts = flattenPrompts(thankYouPromptsPayload);
+    setThankYouPromptPool(prompts);
   }, []);
 
   useEffect(() => {

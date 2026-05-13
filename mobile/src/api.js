@@ -1,6 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+function resolveApiBase() {
+  const configured = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
+  if (configured) return configured.replace(/\/+$/, '');
+
+  const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest2?.extra?.expoGo?.hostUri || '';
+  const host = typeof hostUri === 'string' ? hostUri.split(':')[0] : '';
+  if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    return `http://${host}:3000/api`;
+  }
+
+  return 'http://localhost:3000/api';
+}
+
+const API_BASE = resolveApiBase();
 const TOKEN_KEY = 'authToken';
 const CACHE_PREFIX = 'apiCache:';
 let authExpiredHandler = null;
@@ -147,7 +161,10 @@ export async function apiRequest(path, {
       const cached = await readCache(cacheKey);
       if (cached?.data) return cached.data;
     }
-    throw err;
+    const baseHint = API_BASE.includes('localhost')
+      ? ` (${API_BASE} is only reachable from the same device).`
+      : '';
+    throw new Error(`Failed to fetch API${baseHint}`);
   }
 
   if (!response.ok) {

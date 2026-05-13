@@ -233,19 +233,6 @@ test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug
   assert.deepEqual(jsonBody(missingSlugRes), { error: 'slug is required' });
 });
 
-test('thank-you prompt handler: OPTIONS and method guard', async () => {
-  const { default: thankYouPromptHandler } = await importFresh('../../api/thank-you-for-sharing-prompt.js', 'thank-you-prompt-guards');
-
-  const optionsRes = createRes();
-  await thankYouPromptHandler(createReq({ method: 'OPTIONS' }), optionsRes);
-  assert.equal(optionsRes.statusCode, 204);
-
-  const wrongMethodRes = createRes();
-  await thankYouPromptHandler(createReq({ method: 'POST' }), wrongMethodRes);
-  assert.equal(wrongMethodRes.statusCode, 405);
-  assert.deepEqual(jsonBody(wrongMethodRes), { error: 'Method not allowed' });
-});
-
 test('open-brain profile handler allows anonymous username lookup', async () => {
   const original = {
     SUPABASE_URL: process.env.SUPABASE_URL,

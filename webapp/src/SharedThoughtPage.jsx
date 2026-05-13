@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import NotFoundPage from './NotFoundPage.jsx';
 import { theme } from './constants/theme';
+import sharePromptsPayload from '../../lib/static/share-prompts.json';
+import { flattenPrompts } from './lib/prompt-helpers';
 
 const API = import.meta.env.VITE_API_URL || '/api';
-const SHARE_PROMPT_ENDPOINTS = [`${API}/share-prompts`, '/api/static/share-prompts.json', '/share-prompts.json'];
 
 function formatPublished(dateString) {
   const date = new Date(dateString);
@@ -70,37 +71,14 @@ export default function SharedThoughtPage() {
   }, [slug]);
 
   useEffect(() => {
-    let isMounted = true;
+    const prompts = flattenPrompts(sharePromptsPayload);
+    if (prompts.length === 0) return;
 
-    async function loadSharePrompt() {
-      for (const endpoint of SHARE_PROMPT_ENDPOINTS) {
-        try {
-          const response = await fetch(endpoint);
-          if (!response.ok) continue;
-          const payload = await response.json();
-          const prompts = Object.values(payload || {})
-            .flatMap(group => (Array.isArray(group) ? group : []))
-            .filter(prompt => typeof prompt === 'string' && prompt.trim().length > 0);
-          if (!isMounted || prompts.length === 0) continue;
-
-          const replacedPrompts = [...prompts];
-          const replaceIndex = Math.floor(Math.random() * replacedPrompts.length);
-          replacedPrompts[replaceIndex] = 'Open Openbrain';
-
-          const next = replacedPrompts[Math.floor(Math.random() * replacedPrompts.length)];
-          setCtaPrompt(next);
-          return;
-        } catch {
-          // Try next endpoint.
-        }
-      }
-    }
-
-    loadSharePrompt();
-
-    return () => {
-      isMounted = false;
-    };
+    const replacedPrompts = [...prompts];
+    const replaceIndex = Math.floor(Math.random() * replacedPrompts.length);
+    replacedPrompts[replaceIndex] = 'Open Openbrain';
+    const next = replacedPrompts[Math.floor(Math.random() * replacedPrompts.length)];
+    setCtaPrompt(next);
   }, []);
 
   const publishedLabel = useMemo(

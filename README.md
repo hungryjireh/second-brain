@@ -171,6 +171,15 @@ VITE_API_URL=http://localhost:3000 npm run dev
 
 Note: the Vite dev server is configured to proxy `/api` to the backend during local development (see `webapp/vite.config.js`). If you run the frontend separately with `npm run dev`, either set `VITE_API_URL` to your backend URL or ensure your backend is available on `http://localhost:3000` so API requests return JSON instead of the frontend HTML.
 
+For Expo/mobile, set `EXPO_PUBLIC_API_URL` so the app can reach your API:
+
+```bash
+cd mobile
+EXPO_PUBLIC_API_URL=http://192.168.1.10:3000/api npm run start
+```
+
+Use your machine's LAN IP (not `localhost`) when testing on a physical phone. `localhost` only works when the API is running on the same device as the app.
+
 ---
 
 ## Project structure

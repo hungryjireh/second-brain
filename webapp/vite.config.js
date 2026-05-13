@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -10,6 +10,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    fs: {
+      allow: [searchForWorkspaceRoot(process.cwd()), '..'],
+    },
     // Proxy `/api` to backend during local dev. `vercel dev` already handles /api routing,
     // but when running `npm run dev` this ensures API calls reach the backend.
     proxy: {
