@@ -23,6 +23,7 @@ import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
+import { shouldApplyIOSInputZoomFix } from './src/utils/iosZoomFix';
 import styles from './App.styles';
 
 const Stack = createNativeStackNavigator();
@@ -118,6 +119,31 @@ export default function App() {
     });
 
     return () => setAuthExpiredHandler(null);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof navigator === 'undefined') {
+      return undefined;
+    }
+
+    if (!shouldApplyIOSInputZoomFix(Platform.OS, navigator.userAgent)) {
+      return undefined;
+    }
+
+    const styleId = 'ios-input-zoom-fix';
+    let styleTag = document.getElementById(styleId);
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = styleId;
+      styleTag.textContent = 'input, textarea, select { font-size: 16px !important; }';
+      document.head.appendChild(styleTag);
+    }
+
+    return () => {
+      if (styleTag && styleTag.parentNode) {
+        styleTag.parentNode.removeChild(styleTag);
+      }
+    };
   }, []);
 
   async function logout() {
