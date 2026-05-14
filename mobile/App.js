@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -8,6 +8,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import { Feather } from '@expo/vector-icons';
 import LoginScreen from './src/screens/LoginScreen';
 import AppPickerScreen from './src/screens/AppPickerScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -45,6 +46,19 @@ function HeaderLiveStatus() {
     <Text style={styles.headerLiveText}>
       {dateLabel}
     </Text>
+  );
+}
+
+function HeaderBackToApps({ navigation }) {
+  return (
+    <Pressable
+      onPress={() => navigation.replace('Apps')}
+      accessibilityRole="button"
+      accessibilityLabel="Back to Apps"
+      style={{ minWidth: 72, paddingVertical: 6, paddingLeft: 12, justifyContent: 'center' }}
+    >
+      <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
+    </Pressable>
   );
 }
 
@@ -156,13 +170,14 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen
                 name="SecondBrain"
-                options={{
+                options={({ navigation }) => ({
                   headerTitle: () => <HeaderBrand />,
                   headerTitleAlign: 'center',
+                  headerLeft: () => <HeaderBackToApps navigation={navigation} />,
                   headerRight: () => <HeaderLiveStatus />,
                   headerStyle: { backgroundColor: theme.colors.bgBase },
                   headerShadowVisible: false,
-                }}
+                })}
               >
                 {() => <SecondBrainScreen token={token} />}
               </Stack.Screen>
