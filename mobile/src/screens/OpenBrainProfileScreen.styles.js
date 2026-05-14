@@ -10,6 +10,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.bgBase,
   },
+  fixedHeader: {
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.bgBase,
+  },
   listContent: {
     flexGrow: 1,
     padding: 16,

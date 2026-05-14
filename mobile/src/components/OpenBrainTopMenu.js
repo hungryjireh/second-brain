@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest, sendFollowNotification } from '../api';
@@ -50,6 +50,8 @@ function coerceBoolean(value) {
 }
 
 export default function OpenBrainTopMenu({ navigation, token }) {
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width <= 420;
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -361,7 +363,11 @@ export default function OpenBrainTopMenu({ navigation, token }) {
               onSubmitEditing={handleSearch}
             />
             <Pressable
-              style={[styles.submitButton, (loading || !query.trim()) && styles.submitButtonDisabled]}
+              style={[
+                styles.submitButton,
+                isSmallScreen && styles.submitButtonFullWidth,
+                (loading || !query.trim()) && styles.submitButtonDisabled,
+              ]}
               onPress={handleSearch}
               disabled={loading || !query.trim()}
             >

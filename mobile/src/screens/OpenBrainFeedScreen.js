@@ -57,11 +57,8 @@ function randomFrom(list, current = '') {
 async function shareThought(thought) {
   const text = String(thought?.text || '').trim();
   if (!text) return;
-  const username = thought?.profile?.username ? `@${thought.profile.username}` : 'Someone';
   const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
-  const message = sharedUrl
-    ? `${username} shared a thought:\n\n${text}\n\n${sharedUrl}`
-    : `${username} shared a thought:\n\n${text}`;
+  const message = sharedUrl || text;
   await Share.share({
     message,
     ...(sharedUrl ? { url: sharedUrl } : {}),

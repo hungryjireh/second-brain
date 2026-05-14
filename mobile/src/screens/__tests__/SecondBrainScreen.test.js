@@ -156,14 +156,14 @@ describe('SecondBrainScreen', () => {
       return {};
     });
 
-    const { getByPlaceholderText, getByText } = render(<SecondBrainScreen token={token} />);
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<SecondBrainScreen token={token} />);
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/entries?limit=60', expect.objectContaining({ token }));
     });
 
     fireEvent.changeText(getByPlaceholderText('Type a note, reminder or thought...'), '  created from composer  ');
-    fireEvent.press(getByText('↗'));
+    fireEvent.press(getByLabelText('Enter note'));
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/entries', {
@@ -296,4 +296,5 @@ describe('SecondBrainScreen', () => {
       );
     });
   });
+
 });

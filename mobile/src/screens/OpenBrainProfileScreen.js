@@ -42,11 +42,8 @@ function coerceBoolean(value) {
 async function shareThought(thought, username) {
   const text = String(thought?.text || '').trim();
   if (!text) return;
-  const author = username ? `@${username}` : 'Someone';
   const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
-  const message = sharedUrl
-    ? `${author} shared a thought:\n\n${text}\n\n${sharedUrl}`
-    : `${author} shared a thought:\n\n${text}`;
+  const message = sharedUrl || text;
   await Share.share({
     message,
     ...(sharedUrl ? { url: sharedUrl } : {}),
@@ -196,6 +193,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         date={item.dateLabel}
         feedBody
         transparentCard
+        inlineActionWithDate
         addToSecondBrainPayload={item.thought}
         onShare={() => shareThought(item.thought, profile?.username)}
         onAddToSecondBrain={addToSecondBrain}
@@ -206,67 +204,68 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} token={token} />
+      <View style={styles.fixedHeader}>
+        {!!error ? <Text style={styles.error}>{error}</Text> : null}
+        {!error && profile ? (
+          <View style={styles.headerCard}>
+            <View style={styles.profileRow}>
+              {profile.avatar_url ? (
+                <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
+                  <Text style={styles.avatarFallbackText}>{initialsFromName(profile.username)}</Text>
+                </View>
+              )}
+              <View style={styles.profileText}>
+                <Text style={styles.username}>@{profile.username}</Text>
+                <View style={styles.metaRow}>
+                  <View style={styles.streakPill}>
+                    <Text style={styles.streakPillText}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
+                  </View>
+                  <Text style={styles.thoughtCount}>
+                    {thoughts.length} {thoughts.length === 1 ? 'thought' : 'thoughts'}
+                  </Text>
+                </View>
+              </View>
+              {!isSelf ? (
+                <Pressable
+                  style={[styles.followButton, isFollowing ? styles.followingButton : styles.followActiveButton, followBusy && { opacity: 0.55 }]}
+                  onPress={toggleFollow}
+                  disabled={followBusy}
+                >
+                  <Text style={[styles.followButtonText, isFollowing && styles.followButtonTextFollowing]}>
+                    {isFollowing ? 'unfollow' : 'follow'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+        {!error && !profile && !loading ? (
+          <View style={styles.headerCard}>
+            <View style={styles.profileRow}>
+              <View style={styles.avatarPlaceholder} />
+              <View style={styles.profileText}>
+                <View style={styles.usernamePlaceholder} />
+                <View style={styles.metaRow}>
+                  <View style={styles.streakPlaceholder} />
+                  <View style={styles.thoughtCountPlaceholder} />
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </View>
       <FlatList
         data={thoughtDisplayItems}
         style={styles.list}
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={(
-          <>
-            {!!error ? <Text style={styles.error}>{error}</Text> : null}
-            {!error && profile ? (
-              <View style={styles.headerCard}>
-                <View style={styles.profileRow}>
-                  {profile.avatar_url ? (
-                    <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-                  ) : (
-                    <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
-                      <Text style={styles.avatarFallbackText}>{initialsFromName(profile.username)}</Text>
-                    </View>
-                  )}
-                  <View style={styles.profileText}>
-                    <Text style={styles.username}>@{profile.username}</Text>
-                    <View style={styles.metaRow}>
-                      <View style={styles.streakPill}>
-                        <Text style={styles.streakPillText}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
-                      </View>
-                      <Text style={styles.thoughtCount}>
-                        {thoughts.length} {thoughts.length === 1 ? 'thought' : 'thoughts'}
-                      </Text>
-                    </View>
-                  </View>
-                  {!isSelf ? (
-                    <Pressable
-                      style={[styles.followButton, isFollowing ? styles.followingButton : styles.followActiveButton, followBusy && { opacity: 0.55 }]}
-                      onPress={toggleFollow}
-                      disabled={followBusy}
-                    >
-                      <Text style={[styles.followButtonText, isFollowing && styles.followButtonTextFollowing]}>
-                        {isFollowing ? 'unfollow' : 'follow'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              </View>
-            ) : null}
-            {!error && !profile ? (
-              <View style={styles.headerCard}>
-                <View style={styles.profileRow}>
-                  <View style={styles.avatarPlaceholder} />
-                  <View style={styles.profileText}>
-                    <View style={styles.usernamePlaceholder} />
-                    <View style={styles.metaRow}>
-                      <View style={styles.streakPlaceholder} />
-                      <View style={styles.thoughtCountPlaceholder} />
-                    </View>
-                  </View>
-                </View>
-                {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
-              </View>
-            ) : null}
-          </>
-        )}
-        ListEmptyComponent={!error && profile && thoughts.length === 0 ? (
+        ListEmptyComponent={!error && loading && !profile ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.muted}>Loading profile...</Text>
+          </View>
+        ) : !error && profile && thoughts.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.empty}>No public thoughts yet.</Text>
           </View>

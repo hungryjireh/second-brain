@@ -1,6 +1,16 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import OpenBrainThoughtCard from '../OpenBrainThoughtCard';
 
+function pressAddToSecondBrain(screen) {
+  const directButton = screen.queryByLabelText('Add to SecondBrain') || screen.queryByLabelText('Added to SecondBrain');
+  if (directButton) {
+    fireEvent.press(directButton);
+    return;
+  }
+  fireEvent.press(screen.getByLabelText('Thought actions'));
+  fireEvent.press(screen.getByText(/Add to SecondBrain|Added to SecondBrain/));
+}
+
 describe('OpenBrainThoughtCard', () => {
   it('renders metadata and calls onPress', () => {
     const onPress = jest.fn();
@@ -51,14 +61,14 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText('"Lord, we do not want better seeds, we want softer hearts."')).toBeTruthy();
   });
 
-  it('shows add response and still allows another add click', async () => {
+  it('shows confirmation before adding again when already added after first save', async () => {
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 1,
       text: 'A thought to save',
       profile: { username: 'jireh', streak_count: 1, is_self: true },
     };
-    const { getByLabelText, getByText } = render(
+    const screen = render(
       <OpenBrainThoughtCard
         item={item}
         onShare={jest.fn()}
@@ -66,12 +76,15 @@ describe('OpenBrainThoughtCard', () => {
       />
     );
 
-    fireEvent.press(getByLabelText('Add to SecondBrain'));
+    pressAddToSecondBrain(screen);
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
 
-    await waitFor(() => expect(getByLabelText('Added to SecondBrain')).toBeTruthy());
-    expect(getByText('Added to SecondBrain.')).toBeTruthy();
-    fireEvent.press(getByLabelText('Added to SecondBrain'));
+    await waitFor(() => expect(screen.getByLabelText('Added to SecondBrain')).toBeTruthy());
+    expect(screen.getByText('Added to SecondBrain.')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Added to SecondBrain'));
+    expect(screen.getByText('Add to SecondBrain again?')).toBeTruthy();
+    expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByText('Add again'));
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(2);
   });
 
@@ -111,7 +124,7 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText('0')).toBeTruthy();
   });
 
-  it('still allows add when viewer has already saved the thought', () => {
+  it('shows confirmation when viewer has already saved the thought', () => {
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 3,
@@ -119,7 +132,7 @@ describe('OpenBrainThoughtCard', () => {
       profile: { username: 'jireh', streak_count: 2, is_self: false },
       viewer_has_added_to_second_brain: true,
     };
-    const { getByLabelText } = render(
+    const screen = render(
       <OpenBrainThoughtCard
         item={item}
         onShare={jest.fn()}
@@ -127,7 +140,10 @@ describe('OpenBrainThoughtCard', () => {
       />
     );
 
-    fireEvent.press(getByLabelText('Added to SecondBrain'));
+    pressAddToSecondBrain(screen);
+    expect(screen.getByText('Add to SecondBrain again?')).toBeTruthy();
+    expect(onAddToSecondBrain).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('Add again'));
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
   });
 

@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, Pressable } from 'react-native';
+import { ScrollView, Text, View, Pressable, useWindowDimensions } from 'react-native';
 import styles from './HomeScreenStyles';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
@@ -80,15 +80,18 @@ const sampleSecondBrainEntry = {
   tags: ['product', 'decisionlog'],
 };
 
-function ProductCard({ number, tagline, description, features, buttonLabel, onPress, isOpenBrain }) {
+function ProductCard({ number, tagline, description, features, buttonLabel, onPress, isOpenBrain, compactLogo }) {
+  const compactStyle = isOpenBrain ? styles.productLogoTextCompact : styles.productSecondLogoTextCompact;
+  const logoStyle = compactLogo ? [styles.productLogoText, compactStyle] : styles.productLogoText;
+
   return (
     <View style={styles.productCard}>
       <Text style={styles.productNumber}>{number}</Text>
       <View style={styles.productTitleWrap}>
         {isOpenBrain ? (
-          <OpenBrainLogo style={styles.productLogoText} accentStyle={styles.productLogoAccent} />
+          <OpenBrainLogo style={logoStyle} accentStyle={styles.productLogoAccent} textProps={styles.productLogoNoWrap} />
         ) : (
-          <SecondBrainLogo style={styles.productLogoText} accentStyle={styles.productSecondLogoAccent} />
+          <SecondBrainLogo style={logoStyle} accentStyle={styles.productSecondLogoAccent} textProps={styles.productLogoNoWrap} />
         )}
       </View>
       <Text style={styles.productTagline}>{tagline}</Text>
@@ -110,23 +113,26 @@ function ProductCard({ number, tagline, description, features, buttonLabel, onPr
   );
 }
 
-function OpenBrainLogo({ style, accentStyle }) {
+function OpenBrainLogo({ style, accentStyle, textProps }) {
   return (
-    <Text style={[styles.openBrainLogoText, style]}>
+    <Text style={[styles.openBrainLogoText, style, textProps]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
       open<Text style={[styles.openBrainLogoAccent, accentStyle]}>brain</Text>
     </Text>
   );
 }
 
-function SecondBrainLogo({ style, accentStyle }) {
+function SecondBrainLogo({ style, accentStyle, textProps }) {
   return (
-    <Text style={[styles.secondBrainLogoText, style]}>
+    <Text style={[styles.secondBrainLogoText, style, textProps]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
       second<Text style={[styles.secondBrainLogoAccent, accentStyle]}>brain</Text>
     </Text>
   );
 }
 
 export default function HomeScreen({ navigation, token }) {
+  const { width } = useWindowDimensions();
+  const compactLogo = width <= 390;
+  const isSmallScreen = width <= 390;
   const primaryAction = token ? () => navigation.navigate('Apps') : () => navigation.navigate('Login');
   const currentYear = new Date().getFullYear();
 
@@ -157,11 +163,17 @@ export default function HomeScreen({ navigation, token }) {
           them into lasting
           knowledge. Together, they close the loop between inspiration and clarity.
         </Text>
-        <View style={styles.heroActions}>
-          <Pressable style={[styles.heroButton, styles.openButton]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
+        <View style={[styles.heroActions, isSmallScreen ? styles.heroActionsSmallScreen : null]}>
+          <Pressable
+            style={[styles.heroButton, styles.openButton, isSmallScreen ? styles.heroButtonSmallScreen : null]}
+            onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
+          >
             <Text style={styles.buttonLabelText}>Try Openbrain</Text>
           </Pressable>
-          <Pressable style={[styles.heroButton, styles.secondButton]} onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}>
+          <Pressable
+            style={[styles.heroButton, styles.secondButton, isSmallScreen ? styles.heroButtonSmallScreen : null]}
+            onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
+          >
             <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
           </Pressable>
         </View>
@@ -227,6 +239,7 @@ export default function HomeScreen({ navigation, token }) {
           buttonLabel="Start sharing ideas"
           onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
           isOpenBrain
+          compactLogo={compactLogo}
         />
         <ProductCard
           number="02 / 02"
@@ -235,6 +248,7 @@ export default function HomeScreen({ navigation, token }) {
           features={secondBrainFeatures}
           buttonLabel="Build your knowledge base"
           onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
+          compactLogo={compactLogo}
         />
       </View>
 

@@ -118,6 +118,10 @@ const styles = StyleSheet.create({
     fontSize: 36,
     lineHeight: 42,
   },
+  thoughtTitleFeedCompact: {
+    fontSize: 28,
+    lineHeight: 34,
+  },
   quoteBlock: {
     borderLeftWidth: 3,
     borderLeftColor: theme.colors.accent,
@@ -132,10 +136,35 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     marginBottom: 6,
   },
+  standaloneAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginBottom: 4,
+  },
+  standaloneAuthorPrefix: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  standaloneAuthor: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   date: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
+    marginBottom: 6,
+  },
+  dateActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 6,
   },
   followButton: {
@@ -167,6 +196,12 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 20,
   },
+  reactionsCompact: {
+    flexWrap: 'nowrap',
+    gap: 6,
+    alignItems: 'center',
+    width: '100%',
+  },
   actionsGroup: {
     marginLeft: 'auto',
     flexDirection: 'row',
@@ -177,6 +212,122 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
   },
+  actionsBlockCompact: {
+    gap: 0,
+  },
+  mobileActionDrawerWrap: { position: 'relative', alignItems: 'flex-end' },
+  mobileActionTrigger: {
+    borderWidth: 0,
+    borderRadius: 8,
+    minWidth: 28,
+    minHeight: 26,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.white09,
+  },
+  mobileActionTriggerText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  mobileActionTriggerIcon: {
+    color: theme.colors.textSecondary,
+  },
+  mobileActionDrawer: {
+    position: 'absolute',
+    zIndex: 3,
+    minWidth: 170,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.white15,
+    backgroundColor: theme.colors.bgRaised,
+    paddingVertical: 4,
+  },
+  mobileActionDrawerPortal: {
+    zIndex: 90,
+    elevation: 90,
+  },
+  mobileActionDrawerBackdrop: {
+    flex: 1,
+  },
+  confirmModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  confirmModalBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  confirmModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  confirmModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.white15,
+    backgroundColor: theme.colors.bgRaised,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 10,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  confirmModalTitle: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 17,
+    lineHeight: 22,
+  },
+  confirmModalBody: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  confirmModalActions: {
+    marginTop: 6,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  confirmModalButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
+    backgroundColor: theme.colors.white09,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  confirmModalButtonPrimary: {
+    borderColor: theme.colors.textPrimary,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  confirmModalButtonText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+  },
+  confirmModalButtonTextPrimary: {
+    color: theme.colors.textPrimary,
+  },
+  mobileActionDrawerItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  mobileActionDrawerText: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+  },
   reactionChip: {
     borderRadius: 999,
     backgroundColor: theme.colors.white09,
@@ -184,6 +335,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderWidth: 1,
     borderColor: theme.colors.textSecondary,
+  },
+  reactionChipCompact: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
   },
   reactionChipActive: {
     backgroundColor: theme.colors.white22,
@@ -194,6 +351,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
+  },
+  reactionTextCompact: {
+    fontSize: 10,
+    lineHeight: 13,
+    textAlign: 'center',
   },
   reactionTextActive: {
     color: theme.colors.textPrimary,

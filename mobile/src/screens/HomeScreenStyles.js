@@ -135,11 +135,19 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 24,
   },
+  heroActionsSmallScreen: {
+    width: '100%',
+  },
   heroButton: {
     ...HOME_BUTTON_BASE,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  heroButtonSmallScreen: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 20,
   },
   openButton: {
     flex: 0.33,
@@ -259,6 +267,7 @@ const styles = StyleSheet.create({
   },
   productTitleWrap: {
     marginBottom: 0,
+    width: '100%',
   },
   productTitleScript: {
     fontSize: 66,
@@ -272,6 +281,18 @@ const styles = StyleSheet.create({
     lineHeight: 72,
     letterSpacing: -0.8,
     fontFamily: theme.fonts.serif,
+  },
+  productLogoTextCompact: {
+    fontSize: 56,
+    lineHeight: 62,
+  },
+  productSecondLogoTextCompact: {
+    fontSize: 48,
+    lineHeight: 54,
+  },
+  productLogoNoWrap: {
+    width: '100%',
+    includeFontPadding: false,
   },
   productLogoAccent: {
     color: theme.colors.accent,
@@ -370,7 +391,7 @@ const styles = StyleSheet.create({
   stepGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     columnGap: 10,
     rowGap: 10,
   },
@@ -380,7 +401,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 14,
-    width: '48.5%',
+    width: '47.5%',
   },
   stepNum: {
     color: theme.colors.textMuted,
@@ -510,8 +531,8 @@ const styles = StyleSheet.create({
   },
   openBrainLogoText: {
     color: theme.colors.textPrimary,
-    fontSize: 25,
-    lineHeight: 30,
+    fontSize: 21,
+    lineHeight: 26,
     letterSpacing: -0.3,
     fontFamily: theme.fonts.serif,
   },
@@ -565,8 +586,8 @@ const styles = StyleSheet.create({
   },
   secondBrainLogoText: {
     color: theme.colors.textPrimary,
-    fontSize: 25,
-    lineHeight: 30,
+    fontSize: 21,
+    lineHeight: 26,
     letterSpacing: -0.3,
     fontFamily: theme.fonts.serif,
   },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking } from 'react-native';
+import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking, useWindowDimensions } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
@@ -10,6 +11,7 @@ import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
 import SwipeToDeleteRow from '../components/SwipeToDeleteRow';
+import TimezoneDropdown from '../components/TimezoneDropdown';
 import {
   CATEGORIES,
   GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
@@ -32,6 +34,7 @@ const STATS = [
 ];
 
 const TYPEBAR_MIN_HEIGHT = 38;
+const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
 
 function parseImportedConversationFromEntry(entry) {
   const rawText = String(entry?.raw_text ?? '').trim();
@@ -195,15 +198,10 @@ function groupByDate(entries) {
   return groups;
 }
 
-function getTimezoneOptions() {
-  if (typeof Intl.supportedValuesOf === 'function') {
-    return Intl.supportedValuesOf('timeZone');
-  }
-  return ['Asia/Singapore', 'UTC'];
-}
-
 export default function SecondBrainScreen({ token }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width <= SMALL_SCREEN_FILTER_BREAKPOINT;
   const [entries, setEntries] = useState([]);
   const [userTags, setUserTags] = useState([]);
   const [userTagsLoaded, setUserTagsLoaded] = useState(false);
@@ -222,6 +220,7 @@ export default function SecondBrainScreen({ token }) {
   const [editTagDraft, setEditTagDraft] = useState('');
   const [editTagError, setEditTagError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState('');
   const [activePriorityLevel, setActivePriorityLevel] = useState('');
   const [activeTag, setActiveTag] = useState('');
@@ -234,7 +233,6 @@ export default function SecondBrainScreen({ token }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
   const [timezoneDraft, setTimezoneDraft] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
-  const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
   const [timezoneError, setTimezoneError] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [telegramLinkKey, setTelegramLinkKey] = useState('');
@@ -252,6 +250,7 @@ export default function SecondBrainScreen({ token }) {
   const typebarBottom = 10 + Math.max(insets.bottom, 0);
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
   const isWeb = Platform.OS === 'web';
+  const typebarPlaceholder = isSmallScreen ? 'Type here' : 'Type a note, reminder or thought...';
 
   const loadEntries = useCallback(async () => {
     try {
@@ -302,6 +301,14 @@ export default function SecondBrainScreen({ token }) {
   useEffect(() => {
     openActionDrawerIdRef.current = openActionDrawerId;
   }, [openActionDrawerId]);
+
+  useEffect(() => {
+    if (isSmallScreen) {
+      setIsFilterDropdownOpen(false);
+      return;
+    }
+    setIsFilterDropdownOpen(true);
+  }, [isSmallScreen]);
 
   async function createEntry() {
     if (!draft.trim()) return;
@@ -573,7 +580,6 @@ export default function SecondBrainScreen({ token }) {
 
   function openSettings() {
     setTimezoneDraft(timezone);
-    setTimezoneMenuOpen(false);
     setTimezoneError('');
     setTelegramLinkKey('');
     setTelegramLinkError('');
@@ -583,7 +589,6 @@ export default function SecondBrainScreen({ token }) {
 
   function closeSettings() {
     if (savingSettings) return;
-    setTimezoneMenuOpen(false);
     setSettingsOpen(false);
   }
 
@@ -770,10 +775,6 @@ export default function SecondBrainScreen({ token }) {
   }
 
   const groupedEntries = useMemo(() => groupByDate(visibleEntries), [visibleEntries]);
-  const timezoneOptions = useMemo(() => {
-    const options = getTimezoneOptions();
-    return options.includes(timezoneDraft) ? options : [timezoneDraft, ...options];
-  }, [timezoneDraft]);
   const dateFormatters = useMemo(() => createDateFormatters(timezone), [timezone]);
   const groupedRows = useMemo(() => {
     const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
@@ -797,20 +798,26 @@ export default function SecondBrainScreen({ token }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.statsGrid}>
+      <View testID="stats-grid" style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
         {STATS.map(stat => {
           const isActive = activeCategory === stat.key;
           return (
             <Pressable
               key={stat.key}
-              style={[styles.statCard, isActive && styles.statCardActive]}
+              testID={`stat-card-${stat.key}`}
+              style={[styles.statCard, isSmallScreen && styles.statCardSmall, isActive && styles.statCardActive]}
               onPress={() => setActiveCategory(prev => (prev === stat.key ? '' : stat.key))}
             >
               <View style={[styles.statGlow, { backgroundColor: theme.colors.bgBase }]} />
               <Text style={[styles.statCount, { color: isActive ? theme.colors.brandText : stat.color }]}>
                 {counts[stat.key] ?? 0}
               </Text>
-              <Text style={[styles.statLabel, isActive && styles.statLabelActive]}>{stat.label}</Text>
+              <Text
+                style={[styles.statLabel, isSmallScreen && styles.statLabelSmall, isActive && styles.statLabelActive]}
+                numberOfLines={1}
+              >
+                {stat.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -818,53 +825,86 @@ export default function SecondBrainScreen({ token }) {
 
       <View style={styles.filterSection}>
         <View style={styles.filterHeaderRow}>
-          <Text style={styles.filterLabel}>FILTER</Text>
-          <View style={styles.archivedToggle}>
-            <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
-            <Switch
-              value={showArchived}
-              onValueChange={setShowArchived}
-              trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
-              thumbColor={theme.colors.bg}
-              ios_backgroundColor={theme.colors.border}
-            />
+          {isSmallScreen ? (
+            <Pressable
+              testID="filter-dropdown-toggle"
+              style={styles.filterDropdownToggle}
+              onPress={() => setIsFilterDropdownOpen(prev => !prev)}
+            >
+              <Text style={styles.filterLabel}>FILTER</Text>
+              <Feather
+                name={isFilterDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={12}
+                style={styles.filterDropdownChevronIcon}
+              />
+            </Pressable>
+          ) : (
+            <>
+              <Text style={styles.filterLabel}>FILTER</Text>
+              <View style={styles.archivedToggle}>
+                <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
+                <Switch
+                  value={showArchived}
+                  onValueChange={setShowArchived}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
+                  thumbColor={theme.colors.bg}
+                  ios_backgroundColor={theme.colors.border}
+                />
+              </View>
+            </>
+          )}
+        </View>
+
+        {isFilterDropdownOpen ? (
+          <View style={styles.filterDropdownContent}>
+            {isSmallScreen ? (
+              <View style={[styles.archivedToggle, styles.archivedToggleDropdown]}>
+                <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
+                <Switch
+                  value={showArchived}
+                  onValueChange={setShowArchived}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
+                  thumbColor={theme.colors.bg}
+                  ios_backgroundColor={theme.colors.border}
+                />
+              </View>
+            ) : null}
+            <View style={styles.filterRow}>
+              <Text style={styles.filterRowLabel}>PRIORITY</Text>
+              {PRIORITY_LEVELS.map(level => {
+                const isActive = activePriorityLevel === level.key;
+                return (
+                  <Pressable
+                    key={level.key}
+                    style={[styles.pill, isActive && styles.pillActive]}
+                    onPress={() => setActivePriorityLevel(prev => (prev === level.key ? '' : level.key))}
+                  >
+                    <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{level.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={styles.filterRow}>
+              <Text style={styles.filterRowLabel}>{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
+              {globalTags.map(tag => {
+                const isActive = activeTag.toLowerCase() === tag.toLowerCase();
+                const isDisabled = !tagUsageCounts.has(tag);
+                return (
+                  <Pressable
+                    key={tag}
+                    testID={`tag-filter-${tag.toLowerCase()}`}
+                    style={[styles.pill, isActive && styles.pillActive, isDisabled && styles.pillDisabled]}
+                    disabled={isDisabled}
+                    onPress={() => setActiveTag(prev => (prev.toLowerCase() === tag.toLowerCase() ? '' : tag))}
+                  >
+                    <Text style={[styles.pillText, isActive && styles.pillTextActive, isDisabled && styles.pillTextDisabled]}>{`#${tag}`}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          <Text style={styles.filterRowLabel}>PRIORITY</Text>
-          {PRIORITY_LEVELS.map(level => {
-            const isActive = activePriorityLevel === level.key;
-            return (
-              <Pressable
-                key={level.key}
-                style={[styles.pill, isActive && styles.pillActive]}
-                onPress={() => setActivePriorityLevel(prev => (prev === level.key ? '' : level.key))}
-              >
-                <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{level.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.filterRow}>
-          <Text style={styles.filterRowLabel}>{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
-          {globalTags.map(tag => {
-            const isActive = activeTag.toLowerCase() === tag.toLowerCase();
-            const isDisabled = !tagUsageCounts.has(tag);
-            return (
-              <Pressable
-                key={tag}
-                testID={`tag-filter-${tag.toLowerCase()}`}
-                style={[styles.pill, isActive && styles.pillActive, isDisabled && styles.pillDisabled]}
-                disabled={isDisabled}
-                onPress={() => setActiveTag(prev => (prev.toLowerCase() === tag.toLowerCase() ? '' : tag))}
-              >
-                <Text style={[styles.pillText, isActive && styles.pillTextActive, isDisabled && styles.pillTextDisabled]}>{`#${tag}`}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        ) : null}
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -891,7 +931,11 @@ export default function SecondBrainScreen({ token }) {
             <ScrollView style={styles.editScroll} contentContainerStyle={styles.editScrollContent}>
               <Text style={styles.editTitle}>Edit entry</Text>
               <Text style={styles.editLabel}>Category</Text>
-              <View style={styles.categoryRow}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryRow}
+              >
                 {CATEGORIES.map(category => {
                   const isActive = editCategory === category;
                   return (
@@ -904,7 +948,7 @@ export default function SecondBrainScreen({ token }) {
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
               <Text style={styles.editLabel}>Title</Text>
               <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.editField} placeholder="Title" placeholderTextColor={theme.colors.textSecondary} />
               <Text style={styles.editLabel}>Summary</Text>
@@ -976,39 +1020,29 @@ export default function SecondBrainScreen({ token }) {
             <ScrollView style={styles.settingsScroll} contentContainerStyle={styles.settingsScrollContent}>
               <Text style={styles.settingsTitle}>Settings</Text>
               <Text style={styles.settingsLabel}>Timezone</Text>
-              <Pressable
-                style={styles.settingsDropdown}
-                onPress={() => setTimezoneMenuOpen(prev => !prev)}
-              >
-                <Text style={styles.settingsDropdownText}>{timezoneDraft || 'Select timezone'}</Text>
-                <Text style={styles.settingsDropdownChevron}>{timezoneMenuOpen ? '▲' : '▼'}</Text>
-              </Pressable>
-              {timezoneMenuOpen ? (
-                <ScrollView
-                  style={styles.settingsDropdownList}
-                  showsVerticalScrollIndicator
-                  contentContainerStyle={styles.settingsDropdownListContent}
-                >
-                  {timezoneOptions.map(option => {
-                    const isSelected = option === timezoneDraft;
-                    return (
-                      <Pressable
-                        key={option}
-                        style={[styles.settingsDropdownOption, isSelected && styles.settingsDropdownOptionSelected]}
-                        onPress={() => {
-                          setTimezoneDraft(option);
-                          setTimezoneMenuOpen(false);
-                          setTimezoneError('');
-                        }}
-                      >
-                        <Text style={[styles.settingsDropdownOptionText, isSelected && styles.settingsDropdownOptionTextSelected]}>
-                          {option}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              ) : null}
+              <View style={styles.settingsDropdownWrapper}>
+                <TimezoneDropdown
+                  value={timezoneDraft}
+                  onChange={option => {
+                    setTimezoneDraft(option);
+                    setTimezoneError('');
+                  }}
+                  placeholderTextColor={theme.colors.textMuted}
+                  styles={{
+                    dropdown: styles.settingsDropdown,
+                    dropdownText: styles.settingsDropdownText,
+                    dropdownChevronIcon: styles.settingsDropdownChevronIcon,
+                    dropdownList: styles.settingsDropdownList,
+                    dropdownListContent: styles.settingsDropdownListContent,
+                    searchInput: styles.settingsDropdownSearchInput,
+                    dropdownOption: styles.settingsDropdownOption,
+                    dropdownOptionSelected: styles.settingsDropdownOptionSelected,
+                    dropdownOptionText: styles.settingsDropdownOptionText,
+                    dropdownOptionTextSelected: styles.settingsDropdownOptionTextSelected,
+                    noResults: styles.settingsNoResults,
+                  }}
+                />
+              </View>
               {!!timezoneError && <Text style={styles.error}>{timezoneError}</Text>}
               <View style={styles.settingsCard}>
                 <Text style={styles.settingsCardLabel}>Telegram account linking</Text>
@@ -1130,9 +1164,9 @@ export default function SecondBrainScreen({ token }) {
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="Type a note, reminder or thought..."
+          placeholder={typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
-          style={[styles.typebarInput, { height: typebarInputHeight }]}
+          style={[styles.typebarInput, isSmallScreen && styles.typebarInputSmall, { height: typebarInputHeight }]}
           multiline
           scrollEnabled={false}
           textAlignVertical="top"
@@ -1161,7 +1195,11 @@ export default function SecondBrainScreen({ token }) {
               if (!isWeb) setActionTooltip('');
             }}
           >
-            <Text style={[styles.typebarButtonText, !draft.trim() && styles.typebarButtonTextDisabled]}>↗</Text>
+            <Feather
+              name="arrow-up-right"
+              size={15}
+              style={[styles.typebarButtonIcon, !draft.trim() && styles.typebarButtonIconDisabled]}
+            />
           </Pressable>
         </View>
         <View style={styles.typebarActionWrap}>
@@ -1182,9 +1220,7 @@ export default function SecondBrainScreen({ token }) {
               if (!isWeb) setActionTooltip('');
             }}
           >
-            <Text style={[styles.typebarButtonText, styles.typebarUploadButtonText]}>
-              ⚙
-            </Text>
+            <Feather name="settings" style={styles.typebarUploadButtonIcon} size={15} />
           </Pressable>
         </View>
       </View>

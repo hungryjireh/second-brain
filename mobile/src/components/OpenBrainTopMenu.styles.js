@@ -115,6 +115,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.accent,
   },
+  submitButtonFullWidth: {
+    width: '100%',
+  },
   submitButtonDisabled: {
     opacity: 0.45,
   },

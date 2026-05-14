@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -24,6 +24,7 @@ import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
 import { shouldApplyIOSInputZoomFix } from './src/utils/iosZoomFix';
+import { shouldShowSecondBrainHeaderDate } from './src/utils/responsive';
 import styles from './App.styles';
 
 const Stack = createNativeStackNavigator();
@@ -100,6 +101,8 @@ const linking = {
 };
 
 export default function App() {
+  const { width } = useWindowDimensions();
+  const hideSecondBrainHeaderDate = !shouldShowSecondBrainHeaderDate(width);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fontsLoaded] = useFonts(theme.fonts.loadMap);
@@ -200,7 +203,7 @@ export default function App() {
                   headerTitle: () => <HeaderBrand />,
                   headerTitleAlign: 'center',
                   headerLeft: () => <HeaderBackToApps navigation={navigation} />,
-                  headerRight: () => <HeaderLiveStatus />,
+                  headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
                   headerStyle: { backgroundColor: theme.colors.bgBase },
                   headerShadowVisible: false,
                 })}
@@ -222,9 +225,11 @@ export default function App() {
               <Stack.Screen name="OpenBrainSearch" options={{ headerShown: false }}>
                 {props => <OpenBrainSearchScreen {...props} token={token} />}
               </Stack.Screen>
-              <Stack.Screen name="SharedThought" component={SharedThoughtScreen} options={{ headerShown: false }} />
             </>
           ) : null}
+          <Stack.Screen name="SharedThought" options={{ headerShown: false }}>
+            {props => <SharedThoughtScreen {...props} token={token} />}
+          </Stack.Screen>
           </Stack.Navigator>
         </NavigationContainer>
       </View>

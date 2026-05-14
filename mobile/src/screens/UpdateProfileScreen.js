@@ -4,28 +4,10 @@ import { apiRequest, invalidateApiCache } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
+import TimezoneDropdown from '../components/TimezoneDropdown';
 import { theme } from '../theme';
 import { initialsFromName } from '../utils/profileAvatar';
 import styles from './UpdateProfileScreenStyles';
-
-const TIMEZONE_OPTIONS = [
-  'Asia/Singapore',
-  'UTC',
-  'Asia/Manila',
-  'Asia/Jakarta',
-  'Asia/Bangkok',
-  'Asia/Tokyo',
-  'America/Los_Angeles',
-  'America/New_York',
-  'Europe/London',
-];
-
-function getTimezoneOptions() {
-  if (typeof Intl.supportedValuesOf === 'function') {
-    return Intl.supportedValuesOf('timeZone');
-  }
-  return TIMEZONE_OPTIONS;
-}
 
 export default function UpdateProfileScreen({ token, navigation }) {
   const defaultTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore', []);
@@ -33,20 +15,10 @@ export default function UpdateProfileScreen({ token, navigation }) {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [timezone, setTimezone] = useState(defaultTimezone);
   const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
-  const [timezoneSearch, setTimezoneSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const timezoneOptions = useMemo(() => {
-    const options = getTimezoneOptions();
-    return options.includes(timezone) ? options : [timezone, ...options];
-  }, [timezone]);
-  const filteredTimezoneOptions = useMemo(() => {
-    const query = timezoneSearch.trim().toLowerCase();
-    if (!query) return timezoneOptions;
-    return timezoneOptions.filter(option => option.toLowerCase().includes(query));
-  }, [timezoneOptions, timezoneSearch]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -101,136 +73,108 @@ export default function UpdateProfileScreen({ token, navigation }) {
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} token={token} />
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerCard}>
-          <View style={styles.avatarWrap}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
-                <Text style={styles.avatarFallbackText}>{initialsFromName(username)}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.eyebrow}>Open-brain profile</Text>
-            <Text style={styles.title}>Profile settings</Text>
-            <Text style={styles.copy}>Edit how people see you on OpenBrain.</Text>
+      <View style={styles.content}>
+        <View style={styles.headerSection}>
+          <View style={styles.headerCard}>
+            <View style={styles.avatarWrap}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
+                  <Text style={styles.avatarFallbackText}>{initialsFromName(username)}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.headerTextWrap}>
+              <Text style={styles.eyebrow}>Open-brain profile</Text>
+              <Text style={styles.title}>Profile settings</Text>
+              <Text style={styles.copy}>Edit how people see you on OpenBrain.</Text>
+            </View>
           </View>
         </View>
-
-        {loading ? (
-          <View style={styles.sectionCard}>
-            <Text style={styles.muted}>Loading profile...</Text>
-          </View>
-        ) : (
-          <>
+        <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContentContainer} keyboardShouldPersistTaps="handled">
+          {loading ? (
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Identity</Text>
-              <Text style={styles.label}>Username</Text>
-              <TextInput
-                value={username}
-                editable={false}
-                placeholder="e.g. jireh"
-                placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, styles.inputDisabled]}
-                maxLength={24}
-                autoCapitalize="none"
-              />
-              <Text style={styles.fieldHint}>Username is fixed for now.</Text>
+              <Text style={styles.muted}>Loading profile...</Text>
             </View>
-
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Profile photo</Text>
-              <Text style={styles.label}>Avatar URL (optional)</Text>
-              <TextInput
-                value={avatarUrl}
-                onChangeText={setAvatarUrl}
-                placeholder="https://example.com/avatar.jpg"
-                placeholderTextColor={theme.colors.textMuted}
-                style={styles.input}
-                autoCapitalize="none"
-                inputMode="url"
-              />
-            </View>
-
-            <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
-              <Text style={styles.sectionTitle}>Regional settings</Text>
-              <Text style={styles.label}>Timezone</Text>
-              <View style={styles.timezoneDropdownWrapper}>
-                <Pressable
-                  style={styles.timezoneDropdown}
-                  onPress={() => {
-                    setTimezoneMenuOpen(prev => {
-                      if (prev) setTimezoneSearch('');
-                      return !prev;
-                    });
-                  }}
-                >
-                  <Text style={styles.timezoneDropdownText}>{timezone || 'Select timezone'}</Text>
-                  <Text style={styles.timezoneDropdownChevron}>{timezoneMenuOpen ? '▲' : '▼'}</Text>
-                </Pressable>
-                {timezoneMenuOpen ? (
-                  <ScrollView
-                    style={styles.timezoneDropdownList}
-                    showsVerticalScrollIndicator
-                    contentContainerStyle={styles.timezoneDropdownListContent}
-                  >
-                    <TextInput
-                      value={timezoneSearch}
-                      onChangeText={setTimezoneSearch}
-                      placeholder="Search timezone"
-                      placeholderTextColor={theme.colors.textMuted}
-                      style={styles.timezoneSearchInput}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    {filteredTimezoneOptions.map(option => {
-                      const isSelected = option === timezone;
-                      return (
-                        <Pressable
-                          key={option}
-                          style={[styles.timezoneDropdownOption, isSelected && styles.timezoneDropdownOptionSelected]}
-                          onPress={() => {
-                            setTimezone(option);
-                            setTimezoneMenuOpen(false);
-                            setTimezoneSearch('');
-                          }}
-                        >
-                          <Text style={[styles.timezoneDropdownOptionText, isSelected && styles.timezoneDropdownOptionTextSelected]}>
-                            {option}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                    {filteredTimezoneOptions.length === 0 ? (
-                      <Text style={styles.timezoneNoResults}>No timezones found.</Text>
-                    ) : null}
-                  </ScrollView>
-                ) : null}
+          ) : (
+            <>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Identity</Text>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  value={username}
+                  editable={false}
+                  placeholder="e.g. jireh"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={[styles.input, styles.inputDisabled]}
+                  maxLength={24}
+                  autoCapitalize="none"
+                />
+                <Text style={styles.fieldHint}>Username is fixed for now.</Text>
               </View>
-            </View>
 
-            {!!error && <Text style={styles.error}>{error}</Text>}
-            {!!success && <Text style={styles.success}>{success}</Text>}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Profile photo</Text>
+                <Text style={styles.label}>Avatar URL (optional)</Text>
+                <TextInput
+                  value={avatarUrl}
+                  onChangeText={setAvatarUrl}
+                  placeholder="https://example.com/avatar.jpg"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={styles.input}
+                  autoCapitalize="none"
+                  inputMode="url"
+                />
+              </View>
 
-            <View style={styles.actionsRow}>
-              <Pressable
-                style={[styles.primaryButton, (saving || !timezone.trim()) && styles.buttonDisabled]}
-                onPress={handleUpdateProfile}
-                disabled={saving || !timezone.trim()}
-              >
-                <Text style={[styles.primaryButtonText, (saving || !timezone.trim()) && styles.buttonDisabledText]}>
-                  {saving ? 'Saving profile...' : 'Save changes'}
-                </Text>
-              </Pressable>
-              <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainFeed')}>
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
-            </View>
-          </>
-        )}
-      </ScrollView>
+              <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
+                <Text style={styles.sectionTitle}>Regional settings</Text>
+                <Text style={styles.label}>Timezone</Text>
+                <View style={styles.timezoneDropdownWrapper}>
+                  <TimezoneDropdown
+                    value={timezone}
+                    onChange={setTimezone}
+                    placeholderTextColor={theme.colors.textMuted}
+                    onOpenChange={setTimezoneMenuOpen}
+                    styles={{
+                      dropdown: styles.timezoneDropdown,
+                      dropdownText: styles.timezoneDropdownText,
+                      dropdownChevronIcon: styles.timezoneDropdownChevronIcon,
+                      dropdownList: styles.timezoneDropdownList,
+                      dropdownListContent: styles.timezoneDropdownListContent,
+                      searchInput: styles.timezoneSearchInput,
+                      dropdownOption: styles.timezoneDropdownOption,
+                      dropdownOptionSelected: styles.timezoneDropdownOptionSelected,
+                      dropdownOptionText: styles.timezoneDropdownOptionText,
+                      dropdownOptionTextSelected: styles.timezoneDropdownOptionTextSelected,
+                      noResults: styles.timezoneNoResults,
+                    }}
+                  />
+                </View>
+              </View>
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+              {!!success && <Text style={styles.success}>{success}</Text>}
+
+              <View style={styles.actionsRow}>
+                <Pressable
+                  style={[styles.primaryButton, (saving || !timezone.trim()) && styles.buttonDisabled]}
+                  onPress={handleUpdateProfile}
+                  disabled={saving || !timezone.trim()}
+                >
+                  <Text style={[styles.primaryButtonText, (saving || !timezone.trim()) && styles.buttonDisabledText]}>
+                    {saving ? 'Saving profile...' : 'Save changes'}
+                  </Text>
+                </Pressable>
+                <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainFeed')}>
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
       <OpenBrainBottomNav navigation={navigation} currentRoute="UpdateOpenBrainProfile" />
     </View>
   );

@@ -1,5 +1,6 @@
 import { memo, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { theme } from '../theme';
 
 function getEntryBody(entry) {
@@ -119,7 +120,11 @@ function SecondBrainEntryCard({
                     }}
                     disabled={isBusy}
                   >
-                    <Text style={styles.mobileActionTriggerText}>{isBusy ? '...' : '⋯'}</Text>
+                    {isBusy ? (
+                      <Text style={styles.mobileActionTriggerText}>...</Text>
+                    ) : (
+                      <Feather name="more-horizontal" size={16} style={styles.mobileActionTriggerIcon} />
+                    )}
                   </Pressable>
                 </View>
               </View>
@@ -180,9 +185,13 @@ function SecondBrainEntryCard({
                   }}
                   disabled={isBusy}
                 >
-                  <Text style={[styles.deleteText, isDeleteConfirm && styles.deleteTextConfirm]}>
-                    {isBusy ? '...' : (isDeleteConfirm ? '!' : '×')}
-                  </Text>
+                  {isBusy ? (
+                    <Text style={[styles.deleteText, isDeleteConfirm && styles.deleteTextConfirm]}>...</Text>
+                  ) : isDeleteConfirm ? (
+                    <Text style={[styles.deleteText, styles.deleteTextConfirm]}>!</Text>
+                  ) : (
+                    <Feather name="x" size={14} style={styles.deleteIcon} />
+                  )}
                 </Pressable>
               ) : null}
             </View>

@@ -431,6 +431,7 @@ export default function App({ authToken, onUnauthorized }) {
   const [savingEdit, setSavingEdit] = useState(false);
   const [timezone, setTimezone] = useState('Asia/Singapore');
   const [timezoneDraft, setTimezoneDraft] = useState('Asia/Singapore');
+  const [timezoneSearch, setTimezoneSearch] = useState('');
   const [timezoneError, setTimezoneError] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -635,6 +636,11 @@ export default function App({ authToken, onUnauthorized }) {
     const options = getTimezoneOptions();
     return options.includes(timezoneDraft) ? options : [timezoneDraft, ...options];
   }, [timezoneDraft]);
+  const filteredTimezoneOptions = useMemo(() => {
+    const query = timezoneSearch.trim().toLowerCase();
+    if (!query) return timezoneOptions;
+    return timezoneOptions.filter(option => option.toLowerCase().includes(query));
+  }, [timezoneOptions, timezoneSearch]);
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   function handleDelete(id) {
@@ -732,6 +738,7 @@ export default function App({ authToken, onUnauthorized }) {
 
   function handleOpenSettings() {
     setTimezoneDraft(timezone);
+    setTimezoneSearch('');
     setTimezoneError(null);
     setTelegramLinkKey('');
     setTelegramLinkError(null);
@@ -741,6 +748,7 @@ export default function App({ authToken, onUnauthorized }) {
 
   function handleCloseSettings() {
     if (savingSettings) return;
+    setTimezoneSearch('');
     setSettingsOpen(false);
   }
 
@@ -1795,7 +1803,7 @@ export default function App({ authToken, onUnauthorized }) {
               </div>
               <textarea
                 ref={editDescriptionRef}
-                rows={4}
+                rows={10}
                 value={editContent}
                 onChange={e => setEditContent(e.target.value)}
                 style={{
@@ -1806,6 +1814,7 @@ export default function App({ authToken, onUnauthorized }) {
                   fontSize: 13,
                   color: 'var(--text-primary)',
                   fontFamily: 'inherit',
+                  minHeight: 220,
                   resize: 'vertical',
                 }}
               />
@@ -2207,6 +2216,20 @@ export default function App({ authToken, onUnauthorized }) {
             </p>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Timezone</span>
+              <input
+                value={timezoneSearch}
+                onChange={e => setTimezoneSearch(e.target.value)}
+                placeholder="Search timezone"
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 13,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                }}
+              />
               <select
                 value={timezoneDraft}
                 onChange={e => setTimezoneDraft(e.target.value)}
@@ -2220,9 +2243,13 @@ export default function App({ authToken, onUnauthorized }) {
                   fontFamily: 'inherit',
                 }}
               >
-                {timezoneOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
+                {filteredTimezoneOptions.length === 0 ? (
+                  <option value="" disabled>No timezones found</option>
+                ) : (
+                  filteredTimezoneOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))
+                )}
               </select>
             </label>
             {timezoneError && (

@@ -160,7 +160,7 @@ export default function OpenBrainThoughtComposer({
             <Text style={styles.prompt}>{prompt || placeholder}</Text>
             {!!onRefreshPrompt && (
               <Pressable style={styles.refreshButton} onPress={onRefreshPrompt} disabled={!canRefreshPrompt}>
-                <Text style={styles.refreshText}>↻</Text>
+                <Feather name="rotate-cw" size={13} color={theme.colors.textSecondary} />
               </Pressable>
             )}
           </View>

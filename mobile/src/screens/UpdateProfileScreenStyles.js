@@ -8,9 +8,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
-  contentContainer: {
-    padding: 16,
+  headerSection: {
+    marginBottom: 12,
+  },
+  formScroll: {
+    flex: 1,
+  },
+  formContentContainer: {
     paddingBottom: 120,
   },
   headerCard: {
@@ -19,7 +26,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 12,
     flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
@@ -147,6 +153,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.semibold,
     fontSize: 12,
+  },
+  timezoneDropdownChevronIcon: {
+    color: theme.colors.textSecondary,
   },
   timezoneDropdownList: {
     position: 'absolute',
