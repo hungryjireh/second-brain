@@ -5,7 +5,7 @@ import styles from './OpenBrainBottomNav.styles';
 const BUTTONS = [
   { key: 'OpenBrainFeed', label: 'Home' },
   { key: 'OpenBrainProfile', label: 'Profile' },
-  { key: 'UpdateOpenBrainProfile', label: 'Settings' },
+  { key: 'OpenBrainSettings', label: 'Settings' },
 ];
 
 export default function OpenBrainBottomNav({ navigation, currentRoute }) {

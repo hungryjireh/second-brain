@@ -4,7 +4,7 @@ import { theme } from './constants/theme';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-export default function UpdateProfile({ embedded = false }) {
+export default function UpdateProfile({ embedded = false, backPath = '/open-brain/settings' }) {
   const navigate = useNavigate();
   const defaultTimezone = 'Asia/Singapore';
   const timezoneOptions = useMemo(
@@ -238,7 +238,7 @@ export default function UpdateProfile({ embedded = false }) {
 
       <button
         type="button"
-        onClick={() => navigate('/open-brain')}
+        onClick={() => navigate(backPath)}
         style={{
           width: '100%',
           padding: '10px 14px',

@@ -291,7 +291,7 @@ export default function OpenBrainFeed() {
   const hasMultipleThoughts = activeList.length > 1;
 
   if (activeCard === 'update-profile') {
-    return <UpdateProfile />;
+    return <UpdateProfile backPath="/open-brain" />;
   }
 
   if (activeCard === 'you') {
@@ -556,14 +556,14 @@ export default function OpenBrainFeed() {
               type="button"
               onClick={() => {
                 setIsDrawerOpen(false);
-                navigate('/open-brain?card=update-profile');
+                navigate('/open-brain/settings');
               }}
               style={menuItemStyle}
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
               <span aria-hidden="true" style={{ width: 14, display: 'inline-flex', justifyContent: 'center', flexShrink: 0, fontSize: 14, lineHeight: 1 }}>⚙</span>
-              <span>Update profile</span>
+              <span>Settings</span>
             </button>
             <div style={{ marginTop: 'auto', paddingTop: 8 }}>
               <div

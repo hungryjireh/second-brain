@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.textLight,
     fontFamily: theme.fonts.bold,
     fontSize: 24,
     fontWeight: '700',
@@ -68,6 +68,12 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
     fontSize: 20,
     lineHeight: 24,
+  },
+  bio: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
   },
   usernamePlaceholder: {
     width: 160,

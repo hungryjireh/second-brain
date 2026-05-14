@@ -6,6 +6,9 @@ import CreateProfile from './CreateProfile.jsx';
 import Login from './Login.jsx';
 import OpenBrainFeed from './OpenBrainFeed.jsx';
 import OpenBrainProfile from './OpenBrainProfile.jsx';
+import OpenBrainSettings from './OpenBrainSettings.jsx';
+import ResetPassword from './ResetPassword.jsx';
+import UpdateProfile from './UpdateProfile.jsx';
 import SharedThoughtPage from './SharedThoughtPage.jsx';
 import NotFoundPage from './NotFoundPage.jsx';
 import { theme } from './constants/theme';
@@ -261,6 +264,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/apps" element={<AppHome />} />
         <Route path="/open-brain" element={<ProtectedOpenBrain />} />
         <Route path="/open-brain/feed" element={<OpenBrainFeed />} />
+        <Route path="/open-brain/settings" element={<OpenBrainSettings />} />
+        <Route path="/open-brain/settings/updateprofile" element={<UpdateProfile />} />
+        <Route path="/open-brain/settings/reset-password" element={<ResetPassword />} />
         <Route path="/open-brain/u/:username" element={<OpenBrainProfile />} />
         <Route path="/open-brain/t/:slug" element={<SharedThoughtPage />} />
         <Route path="/open-brain/create-profile" element={<ProtectedCreateProfile />} />

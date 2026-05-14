@@ -10,6 +10,8 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
+  username_changed_once boolean not null default false,
+  bio text,
   avatar_url text,
   streak_count int not null default 0,
   last_posted_at timestamptz,
@@ -17,6 +19,12 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+add column if not exists username_changed_once boolean not null default false;
+
+alter table public.profiles
+add column if not exists bio text;
 
 -- Keep updated_at fresh on profile updates
 create or replace function public.set_updated_at()

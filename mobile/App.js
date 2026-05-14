@@ -18,6 +18,8 @@ import OpenBrainFeedScreen from './src/screens/OpenBrainFeedScreen';
 import CreateProfileScreen from './src/screens/CreateProfileScreen';
 import OpenBrainProfileScreen from './src/screens/OpenBrainProfileScreen';
 import UpdateProfileScreen from './src/screens/UpdateProfileScreen';
+import OpenBrainSettingsScreen from './src/screens/OpenBrainSettingsScreen';
+import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import OpenBrainUserSearchScreen from './src/screens/OpenBrainUserSearchScreen';
 import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
@@ -88,6 +90,8 @@ const linking = {
         path: 'open-brain/profile/:username?',
       },
       UpdateOpenBrainProfile: 'open-brain/update-profile',
+      OpenBrainSettings: 'open-brain/settings',
+      OpenBrainResetPassword: 'open-brain/settings/reset-password',
       OpenBrainUserSearch: 'open-brain/user-search',
       OpenBrainSearch: 'open-brain/search',
       SharedThought: 'shared-thought/:slug',
@@ -218,6 +222,12 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen name="UpdateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <UpdateProfileScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="OpenBrainSettings" options={{ headerShown: false }}>
+                {props => <OpenBrainSettingsScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="OpenBrainResetPassword" options={{ headerShown: false }}>
+                {props => <ResetPasswordScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="OpenBrainUserSearch" options={{ headerShown: false }}>
                 {props => <OpenBrainUserSearchScreen {...props} token={token} />}

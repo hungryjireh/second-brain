@@ -2,65 +2,14 @@ import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.bgBase,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
   headerSection: {
-    marginBottom: 12,
+    marginBottom: 2,
   },
   formScroll: {
     flex: 1,
   },
   formContentContainer: {
     paddingBottom: 120,
-  },
-  headerCard: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    shadowColor: theme.colors.shadow,
-    shadowOpacity: 0.24,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  avatarWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarFallback: {
-    flex: 1,
-    backgroundColor: theme.colors.avatarFallbackBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarFallbackText: {
-    color: theme.colors.accentText,
-    fontFamily: theme.fonts.bold,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  headerTextWrap: {
-    flex: 1,
-    gap: 2,
   },
   sectionCard: {
     backgroundColor: theme.colors.bgSurface,
@@ -85,28 +34,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 2,
   },
-  eyebrow: {
-    color: theme.colors.accent,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.serif,
-    fontSize: 34,
-    lineHeight: 38,
-  },
-  copy: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
-  },
   label: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.regular,
     fontSize: 13,
+  },
+  bioLabel: {
+    marginTop: 8,
   },
   fieldHint: {
     color: theme.colors.textMuted,
@@ -124,6 +58,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 12,
     paddingVertical: 11,
+  },
+  textArea: {
+    minHeight: 96,
   },
   inputDisabled: {
     backgroundColor: theme.colors.bgBase,
@@ -209,12 +146,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   primaryButton: {
-    flex: 1,
     alignItems: 'center',
     backgroundColor: theme.colors.accentStrong,
     borderRadius: 10,
     paddingVertical: 11,
     paddingHorizontal: 14,
+    width: '100%',
   },
   primaryButtonText: {
     color: theme.colors.textLight,
@@ -228,7 +165,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   secondaryButton: {
-    flex: 1,
     alignItems: 'center',
     backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.border,
@@ -236,6 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
+    width: '100%',
   },
   secondaryButtonText: {
     color: theme.colors.textSecondary,
@@ -248,7 +185,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   actionsRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 10,
     marginTop: 4,
     zIndex: 1,

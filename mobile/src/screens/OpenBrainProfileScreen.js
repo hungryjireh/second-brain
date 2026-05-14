@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Image, Pressable, Share, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, Share, Text, View } from 'react-native';
 import { apiRequest, invalidateApiCache, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import { buildThoughtSharePayload } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
-import { initialsFromName } from '../utils/profileAvatar';
-import { theme } from '../theme';
 import styles from './OpenBrainProfileScreen.styles';
+import ProfileAvatar from '../components/ProfileAvatar';
 
 function formatThoughtDate(value) {
   const date = new Date(value);
@@ -204,15 +203,18 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         {!error && profile ? (
           <View style={styles.headerCard}>
             <View style={styles.profileRow}>
-              {profile.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
-                  <Text style={styles.avatarFallbackText}>{initialsFromName(profile.username)}</Text>
-                </View>
-              )}
+              <ProfileAvatar
+                avatarUrl={profile.avatar_url}
+                username={profile.username}
+                imageStyle={styles.avatar}
+                fallbackStyle={styles.avatarFallback}
+                textStyle={styles.avatarFallbackText}
+              />
               <View style={styles.profileText}>
                 <Text style={styles.username}>@{profile.username}</Text>
+                {!!String(profile.bio || '').trim() && (
+                  <Text style={styles.bio}>{String(profile.bio).trim()}</Text>
+                )}
                 <View style={styles.metaRow}>
                   <View style={styles.streakPill}>
                     <Text style={styles.streakPillText}>🔥 streak {Number.isInteger(profile.streak_count) ? profile.streak_count : 0}</Text>
