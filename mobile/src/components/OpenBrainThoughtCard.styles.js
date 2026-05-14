@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   followButton: {
-    borderColor: 'transparent',
+    borderColor: theme.colors.textSecondary,
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
@@ -151,15 +151,15 @@ const styles = StyleSheet.create({
   },
   followButtonFollowing: {
     backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accentBorder,
+    borderColor: theme.colors.textSecondary,
   },
   followButtonText: {
-    color: theme.colors.textWarm80,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
-    color: theme.colors.accentText,
+    color: theme.colors.textSecondary,
   },
   reactions: {
     flexDirection: 'row',

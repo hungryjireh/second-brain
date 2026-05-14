@@ -130,4 +130,16 @@ describe('OpenBrainThoughtCard', () => {
     fireEvent.press(getByLabelText('Added to SecondBrain'));
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
   });
+
+  it('shows follow button when is_self comes as string false', () => {
+    const item = {
+      id: 5,
+      user_id: 'user-2',
+      text: 'Thought from another person',
+      profile: { username: 'alex', streak_count: 1, is_self: 'false', is_following: 'false' },
+    };
+    const { getByText } = render(<OpenBrainThoughtCard item={item} />);
+
+    expect(getByText('Follow')).toBeTruthy();
+  });
 });

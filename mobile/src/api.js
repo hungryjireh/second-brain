@@ -2,16 +2,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 function resolveApiBase() {
+  const normalizeApiBase = (value) => {
+    const trimmed = String(value || '').trim().replace(/\/+$/, '');
+    if (!trimmed) return '';
+    return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`;
+  };
+
   const configured = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
-  if (configured) return configured.replace(/\/+$/, '');
+  if (configured) return normalizeApiBase(configured);
 
   const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest2?.extra?.expoGo?.hostUri || '';
   const host = typeof hostUri === 'string' ? hostUri.split(':')[0] : '';
   if (host && host !== 'localhost' && host !== '127.0.0.1') {
-    return `http://${host}:3000/api`;
+    return normalizeApiBase(`http://${host}:3000`);
   }
 
-  return 'http://localhost:3000/api';
+  return normalizeApiBase('http://localhost:3000');
 }
 
 const API_BASE = resolveApiBase();

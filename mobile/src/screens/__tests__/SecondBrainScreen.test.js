@@ -9,9 +9,15 @@ jest.mock('../../api', () => ({
 
 describe('SecondBrainScreen', () => {
   const token = 'token';
+  const originalFetch = global.fetch;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it('archives an entry and updates button label', async () => {
@@ -252,5 +258,42 @@ describe('SecondBrainScreen', () => {
       '/entries?id=42',
       expect.objectContaining({ method: 'PATCH' })
     );
+  });
+
+  it('downloads .ics via absolute API base path', async () => {
+    const reminderEntry = {
+      id: 42,
+      title: 'Doctor appointment',
+      summary: 'Tomorrow 9am',
+      raw_text: 'Bring documents',
+      is_archived: false,
+      category: 'reminder',
+      remind_at: 1893459600,
+    };
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === '/entries?limit=60') return { entries: [reminderEntry] };
+      if (url === '/settings') return {};
+      return {};
+    });
+
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+
+    const { getByText } = render(<SecondBrainScreen token={token} />);
+
+    await waitFor(() => expect(getByText('Doctor appointment')).toBeTruthy());
+    fireEvent.press(getByText('.ics'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:3000/api/ics?id=42',
+        expect.objectContaining({
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      );
+    });
   });
 });

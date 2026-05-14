@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
-import { apiRequest } from '../api';
+import { apiRequest, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import { theme } from '../theme';
 
@@ -38,6 +38,17 @@ function fuzzySortUsers(users, query) {
     .map(item => item.user);
 }
 
+function coerceBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
+  }
+  return false;
+}
+
 export default function OpenBrainTopMenu({ navigation, token }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -49,6 +60,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const [error, setError] = useState('');
   const [results, setResults] = useState({ users: [], thoughts: [] });
   const [didSearch, setDidSearch] = useState(false);
+  const [followBusyUserId, setFollowBusyUserId] = useState('');
 
   async function handleSearch() {
     const value = query.trim().replace(/^@+/, '');
@@ -73,11 +85,44 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     }
   }
 
+  async function toggleFollowFromSearch(user) {
+    const targetUserId = user?.id;
+    if (!token || !targetUserId || followBusyUserId) return;
+    const isSelf = coerceBoolean(user?.is_self);
+    if (isSelf) return;
+    const currentlyFollowing = coerceBoolean(user?.is_following);
+    setFollowBusyUserId(targetUserId);
+    setResults(current => ({
+      ...current,
+      users: (current.users || []).map(item => (
+        item?.id === targetUserId ? { ...item, is_following: !currentlyFollowing } : item
+      )),
+    }));
+    try {
+      if (currentlyFollowing) {
+        await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`, { method: 'DELETE', token });
+      } else {
+        await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: targetUserId } });
+        await sendFollowNotification(token, targetUserId);
+      }
+    } catch {
+      setResults(current => ({
+        ...current,
+        users: (current.users || []).map(item => (
+          item?.id === targetUserId ? { ...item, is_following: currentlyFollowing } : item
+        )),
+      }));
+    } finally {
+      setFollowBusyUserId('');
+    }
+  }
+
   function closeSearch() {
     setIsSearchOpen(false);
     setQuery('');
     setError('');
     setDidSearch(false);
+    setFollowBusyUserId('');
     setResults({ users: [], thoughts: [] });
   }
 
@@ -156,13 +201,31 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     }
     if (item.type === 'user') {
       const user = item.user;
+      const isSelf = coerceBoolean(user?.is_self);
+      const isFollowing = coerceBoolean(user?.is_following);
+      const followBusy = followBusyUserId === user?.id;
       return (
-        <Pressable style={styles.resultRow} onPress={() => openProfile(user.username)}>
-          <Text style={styles.resultPrimary}>@{user.username}</Text>
-          <Text style={styles.resultSecondary}>
-            {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
-          </Text>
-        </Pressable>
+        <View style={styles.resultRow}>
+          <Pressable style={styles.userInfoPressable} onPress={() => openProfile(user.username)}>
+            <Text style={styles.resultPrimary}>@{user.username}</Text>
+            <Text style={styles.resultSecondary}>
+              {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
+            </Text>
+          </Pressable>
+          {!isSelf ? (
+            <Pressable
+              style={[
+                styles.followButton,
+                isFollowing ? styles.followButtonFollowing : styles.followButtonActive,
+                followBusy && { opacity: 0.55 },
+              ]}
+              onPress={() => toggleFollowFromSearch(user)}
+              disabled={followBusy || !token}
+            >
+              <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       );
     }
     const thought = item.thought;
@@ -176,7 +239,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         </Text>
       </Pressable>
     );
-  }, [openProfile]);
+  }, [followBusyUserId, openProfile, token]);
 
   return (
     <View style={styles.outer}>

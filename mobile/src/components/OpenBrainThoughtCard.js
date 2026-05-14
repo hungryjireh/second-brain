@@ -75,6 +75,17 @@ function getThoughtSaveCount(item) {
   return coerceCount(item.save_count);
 }
 
+function coerceBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
+  }
+  return false;
+}
+
 function OpenBrainThoughtCard({
   item,
   text,
@@ -191,8 +202,8 @@ function OpenBrainThoughtCard({
     const avatarUrl = item.profile?.avatar_url || '';
     const streak = coerceCount(item.profile?.streak_count);
     const saveCount = getThoughtSaveCount(item);
-    const isSelf = Boolean(item.profile?.is_self);
-    const isFollowing = Boolean(item.profile?.is_following);
+    const isSelf = coerceBoolean(item.profile?.is_self);
+    const isFollowing = coerceBoolean(item.profile?.is_following);
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
 

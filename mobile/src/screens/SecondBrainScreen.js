@@ -211,6 +211,7 @@ export default function SecondBrainScreen({ token }) {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [openActionDrawerId, setOpenActionDrawerId] = useState(null);
   const [editCategory, setEditCategory] = useState('note');
   const [editTitle, setEditTitle] = useState('');
   const [editSummary, setEditSummary] = useState('');
@@ -242,6 +243,7 @@ export default function SecondBrainScreen({ token }) {
   const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
   const [actionTooltip, setActionTooltip] = useState('');
   const confirmDeleteTimeoutRef = useRef(null);
+  const openActionDrawerIdRef = useRef(null);
   const selectedImportedConversation = useMemo(
     () => (selectedEntry ? parseImportedConversationFromEntry(selectedEntry) : null),
     [selectedEntry]
@@ -296,6 +298,10 @@ export default function SecondBrainScreen({ token }) {
       confirmDeleteTimeoutRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    openActionDrawerIdRef.current = openActionDrawerId;
+  }, [openActionDrawerId]);
 
   async function createEntry() {
     if (!draft.trim()) return;
@@ -411,7 +417,7 @@ export default function SecondBrainScreen({ token }) {
 
   const downloadIcs = useCallback(async entryId => {
     try {
-      const response = await fetch(`api/ics?id=${entryId}`, {
+      const response = await fetch(`${getApiBase()}/ics?id=${encodeURIComponent(entryId)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (!response.ok) {
@@ -501,7 +507,25 @@ export default function SecondBrainScreen({ token }) {
   }, []);
 
   const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
+  const handleActionDrawerChange = useCallback((entryId, isOpen) => {
+    setOpenActionDrawerId(current => {
+      if (isOpen) return entryId;
+      if (current === entryId) return null;
+      return current;
+    });
+  }, []);
   const keyExtractor = useCallback(item => item.key, []);
+  const renderCell = useCallback(({ item, children, style, ...rest }) => {
+    const isRaised = item?.entry?.id === openActionDrawerIdRef.current;
+    return (
+      <View
+        {...rest}
+        style={[style, styles.listCell, isRaised ? styles.listCellRaised : null]}
+      >
+        {children}
+      </View>
+    );
+  }, []);
   const renderListItem = useCallback(({ item }) => {
     if (item.type === 'header') {
       return <Text style={styles.sectionHeaderText}>{`${item.group} · ${item.count}`}</Text>;
@@ -527,6 +551,7 @@ export default function SecondBrainScreen({ token }) {
         onToggleArchive={toggleArchive}
         onDownloadIcs={downloadIcs}
         onRequestDelete={requestDelete}
+        onActionDrawerChange={handleActionDrawerChange}
       />
     );
     if (isWeb) return cardContent;
@@ -534,6 +559,7 @@ export default function SecondBrainScreen({ token }) {
       <SwipeToDeleteRow
         id={entry.id}
         isOpen={openSwipeId === entry.id}
+        isRaised={openActionDrawerId === entry.id}
         onOpen={setOpenSwipeId}
         actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
         onActionPress={() => requestDelete(entry.id)}
@@ -543,7 +569,7 @@ export default function SecondBrainScreen({ token }) {
         {cardContent}
       </SwipeToDeleteRow>
     );
-  }, [busyId, closeSwipe, confirmDeleteId, downloadIcs, openEntry, openSwipeId, requestDelete, startEdit, toggleArchive]);
+  }, [busyId, closeSwipe, confirmDeleteId, downloadIcs, handleActionDrawerChange, openActionDrawerId, openEntry, openSwipeId, requestDelete, startEdit, toggleArchive]);
 
   function openSettings() {
     setTimezoneDraft(timezone);
@@ -1047,12 +1073,13 @@ export default function SecondBrainScreen({ token }) {
         style={styles.list}
         contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
         keyExtractor={keyExtractor}
+        CellRendererComponent={renderCell}
         renderItem={renderListItem}
         initialNumToRender={10}
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         windowSize={9}
-        removeClippedSubviews
+        removeClippedSubviews={false}
       />
 
       {selectedEntry ? (

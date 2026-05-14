@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { memo, useRef, useState } from 'react';
+import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { theme } from '../theme';
 
 function getEntryBody(entry) {
@@ -39,9 +39,14 @@ function SecondBrainEntryCard({
   onToggleArchive,
   onDownloadIcs,
   onRequestDelete,
+  onActionDrawerChange,
   displayRemindAt,
   displayDate,
 }) {
+  const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
+  const [drawerAnchor, setDrawerAnchor] = useState(null);
+  const actionTriggerRef = useRef(null);
+  const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? '📝';
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
@@ -49,11 +54,37 @@ function SecondBrainEntryCard({
     ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
     : (entry.is_archived ? 'Unarchive' : 'Archive');
   const isWeb = Platform.OS === 'web';
+  const isSmallScreen = width < 720;
+
+  function closeActionDrawer() {
+    onActionDrawerChange?.(entry.id, false);
+    setIsActionDrawerOpen(false);
+  }
+
+  function openActionDrawer() {
+    const triggerNode = actionTriggerRef.current;
+    if (triggerNode?.measureInWindow) {
+      triggerNode.measureInWindow((x, y, w, h) => {
+        setDrawerAnchor({ x, y, w, h });
+        onActionDrawerChange?.(entry.id, true);
+        setIsActionDrawerOpen(true);
+      });
+      return;
+    }
+    onActionDrawerChange?.(entry.id, true);
+    setIsActionDrawerOpen(true);
+  }
+
+  const drawerLeft = drawerAnchor
+    ? Math.max(8, Math.min(width - 8 - 132, drawerAnchor.x + drawerAnchor.w - 132))
+    : 8;
+  const drawerTop = drawerAnchor ? drawerAnchor.y + drawerAnchor.h + 6 : 0;
 
   return (
     <Pressable
       style={styles.card}
       onPress={() => {
+        closeActionDrawer();
         if (!isWeb && isSwipeOpen) {
           onCloseSwipe();
           return;
@@ -63,68 +94,101 @@ function SecondBrainEntryCard({
     >
       <View style={styles.cardTopRow}>
         <View style={styles.cardMainCol}>
-          <View style={styles.cardMetaRow}>
-            <Text style={styles.cardIcon}>{icon}</Text>
-            <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
-            <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
-          </View>
+          {isSmallScreen ? (
+            <View style={styles.cardMetaRowMobile}>
+              <View style={styles.cardMetaLead}>
+                <Text style={styles.cardIcon}>{icon}</Text>
+                <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
+                <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
+              </View>
+              <View style={styles.mobileTitleActionRow}>
+                <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
+                  <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
+                </View>
+                <View style={styles.mobileActionDrawerWrap}>
+                  <Pressable
+                    ref={actionTriggerRef}
+                    style={styles.mobileActionTrigger}
+                    onPress={event => {
+                      event?.stopPropagation?.();
+                      if (isActionDrawerOpen) {
+                        closeActionDrawer();
+                        return;
+                      }
+                      openActionDrawer();
+                    }}
+                    disabled={isBusy}
+                  >
+                    <Text style={styles.mobileActionTriggerText}>{isBusy ? '...' : '⋯'}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.cardMetaRow}>
+              <Text style={styles.cardIcon}>{icon}</Text>
+              <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
+              <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
+            </View>
+          )}
           <Text style={styles.cardBody}>{entry.summary || getEntryBody(entry)}</Text>
         </View>
-        <View style={styles.cardActionCol}>
-          <View style={styles.cardActionRow}>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={event => {
-                event?.stopPropagation?.();
-                onStartEdit(entry);
-              }}
-              disabled={isBusy}
-            >
-              <Text style={styles.secondaryButtonText}>Edit</Text>
-            </Pressable>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={event => {
-                event?.stopPropagation?.();
-                onToggleArchive(entry);
-              }}
-              disabled={isBusy}
-            >
-              <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
-            </Pressable>
-            {entry.category === 'reminder' && entry.remind_at ? (
+        {!isSmallScreen ? (
+          <View style={styles.cardActionCol}>
+            <View style={styles.cardActionRow}>
               <Pressable
                 style={styles.secondaryButton}
                 onPress={event => {
                   event?.stopPropagation?.();
-                  onDownloadIcs(entry.id);
+                  onStartEdit(entry);
                 }}
                 disabled={isBusy}
               >
-                <Text style={styles.secondaryButtonText}>.ics</Text>
+                <Text style={styles.secondaryButtonText}>Edit</Text>
               </Pressable>
-            ) : null}
-            <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-              <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
-            </View>
-            {isWeb ? (
               <Pressable
-                style={[styles.deleteButton, isDeleteConfirm && styles.deleteButtonConfirm]}
+                style={styles.secondaryButton}
                 onPress={event => {
                   event?.stopPropagation?.();
-                  onRequestDelete(entry.id);
+                  onToggleArchive(entry);
                 }}
                 disabled={isBusy}
               >
-                <Text style={[styles.deleteText, isDeleteConfirm && styles.deleteTextConfirm]}>
-                  {isBusy ? '...' : (isDeleteConfirm ? '!' : '×')}
-                </Text>
+                <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
               </Pressable>
-            ) : null}
+              {entry.category === 'reminder' && entry.remind_at ? (
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={event => {
+                    event?.stopPropagation?.();
+                    onDownloadIcs(entry.id);
+                  }}
+                  disabled={isBusy}
+                >
+                  <Text style={styles.secondaryButtonText}>.ics</Text>
+                </Pressable>
+              ) : null}
+              <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
+                <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
+              </View>
+              {isWeb ? (
+                <Pressable
+                  style={[styles.deleteButton, isDeleteConfirm && styles.deleteButtonConfirm]}
+                  onPress={event => {
+                    event?.stopPropagation?.();
+                    onRequestDelete(entry.id);
+                  }}
+                  disabled={isBusy}
+                >
+                  <Text style={[styles.deleteText, isDeleteConfirm && styles.deleteTextConfirm]}>
+                    {isBusy ? '...' : (isDeleteConfirm ? '!' : '×')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
-        </View>
+        ) : null}
       </View>
-
       <View style={styles.metaInfoRow}>
         {entry.remind_at ? (
           <>
@@ -145,6 +209,49 @@ function SecondBrainEntryCard({
             </View>
           ))}
         </View>
+      ) : null}
+
+      {isSmallScreen ? (
+        <Modal transparent visible={isActionDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
+          <Pressable style={styles.mobileActionDrawerBackdrop} onPress={closeActionDrawer}>
+            <View style={[styles.mobileActionDrawer, styles.mobileActionDrawerPortal, { top: drawerTop, left: drawerLeft }]}>
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={event => {
+                  event?.stopPropagation?.();
+                  closeActionDrawer();
+                  onStartEdit(entry);
+                }}
+              >
+                <Text style={styles.mobileActionDrawerText}>Edit</Text>
+              </Pressable>
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={event => {
+                  event?.stopPropagation?.();
+                  closeActionDrawer();
+                  onToggleArchive(entry);
+                }}
+              >
+                <Text style={styles.mobileActionDrawerText}>{archiveLabel}</Text>
+              </Pressable>
+              {isWeb ? (
+                <Pressable
+                  style={styles.mobileActionDrawerItem}
+                  onPress={event => {
+                    event?.stopPropagation?.();
+                    closeActionDrawer();
+                    onRequestDelete(entry.id);
+                  }}
+                >
+                  <Text style={[styles.mobileActionDrawerText, styles.mobileActionDrawerDeleteText]}>
+                    {isDeleteConfirm ? 'Confirm Delete' : 'Delete'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </Pressable>
+        </Modal>
       ) : null}
     </Pressable>
   );

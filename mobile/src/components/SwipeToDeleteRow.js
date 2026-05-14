@@ -7,6 +7,7 @@ export default function SwipeToDeleteRow({
   id,
   onOpen,
   isOpen,
+  isRaised,
   actionLabel,
   onActionPress,
   actionWidth,
@@ -58,7 +59,7 @@ export default function SwipeToDeleteRow({
   );
 
   return (
-    <View style={styles.swipeRow}>
+    <View style={[styles.swipeRow, isRaised ? styles.swipeRowRaised : null]}>
       <View style={styles.swipeActionWrap}>
         <Pressable testID={`entry-swipe-delete-${id}`} style={styles.swipeDeleteAction} onPress={onActionPress}>
           <Text style={styles.swipeDeleteText}>{actionLabel}</Text>

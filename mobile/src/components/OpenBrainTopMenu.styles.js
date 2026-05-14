@@ -141,6 +141,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -148,6 +151,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     marginBottom: 8,
+  },
+  userInfoPressable: {
+    flex: 1,
   },
   resultPrimary: {
     color: theme.colors.textPrimary,
@@ -157,6 +163,25 @@ const styles = StyleSheet.create({
   },
   resultSecondary: {
     marginTop: 2,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: theme.fonts.regular,
+  },
+  followButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  followButtonActive: {
+    backgroundColor: theme.colors.white09,
+  },
+  followButtonFollowing: {
+    backgroundColor: theme.colors.accentSoft,
+  },
+  followButtonText: {
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,

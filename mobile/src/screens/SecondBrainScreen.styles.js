@@ -302,6 +302,12 @@ const styles = StyleSheet.create({
   swipeRow: {
     position: 'relative',
     marginBottom: 8,
+    zIndex: 1,
+    overflow: 'visible',
+  },
+  swipeRowRaised: {
+    zIndex: 20,
+    elevation: 20,
   },
   swipeActionWrap: {
     position: 'absolute',
@@ -324,6 +330,7 @@ const styles = StyleSheet.create({
   swipeDeleteText: { color: theme.colors.danger, fontSize: 12, fontWeight: '700' },
   swipeCardWrap: {
     zIndex: 2,
+    overflow: 'visible',
   },
   card: {
     backgroundColor: theme.colors.bgSurface,
@@ -333,6 +340,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  listCell: { position: 'relative', zIndex: 1, overflow: 'visible' },
+  listCellRaised: { position: 'relative', zIndex: 30, elevation: 30, overflow: 'visible' },
   entryOverlay: {
     position: 'absolute',
     top: 0,
@@ -411,6 +420,46 @@ const styles = StyleSheet.create({
   cardMainCol: { flex: 1, minWidth: 0 },
   cardActionCol: { alignItems: 'flex-end', gap: 8, flexShrink: 0 },
   cardActionRow: { flexDirection: 'row', gap: 6, flexWrap: 'nowrap', justifyContent: 'flex-end' },
+  cardMetaRowMobile: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 2 },
+  cardMetaLead: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, flex: 1, minWidth: 0 },
+  mobileTitleActionRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  mobileActionDrawerWrap: { position: 'relative', alignItems: 'flex-end' },
+  mobileActionTrigger: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    minWidth: 30,
+    minHeight: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  mobileActionTriggerText: { color: theme.colors.textSecondary, fontSize: 16, lineHeight: 18, fontWeight: '700' },
+  mobileActionDrawer: {
+    position: 'absolute',
+    zIndex: 3,
+    minWidth: 132,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+    paddingVertical: 4,
+  },
+  mobileActionDrawerPortal: {
+    zIndex: 90,
+    elevation: 90,
+  },
+  mobileActionDrawerBackdrop: {
+    flex: 1,
+  },
+  mobileActionDrawerItem: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  mobileActionDrawerText: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: '500' },
+  mobileActionDrawerDeleteText: { color: theme.colors.danger },
   cardMetaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 2 },
   cardIcon: { fontSize: 15, lineHeight: 15, marginTop: 1 },
   priorityText: { fontSize: 12, lineHeight: 12, fontWeight: '700', marginTop: 1 },

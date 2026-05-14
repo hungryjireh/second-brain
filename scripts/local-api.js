@@ -33,11 +33,24 @@ function walk(dir) {
   return out;
 }
 
+function toExpressRoute(relPath) {
+  const normalized = relPath
+    .replace(/\\/g, '/')
+    .replace(/\.js$/, '')
+    .replace(/\/index$/, '');
+
+  const segments = normalized.split('/').filter(Boolean).map((segment) => {
+    const match = segment.match(/^\[([A-Za-z0-9_]+)\]$/);
+    return match ? `:${match[1]}` : segment;
+  });
+
+  return `/api/${segments.join('/')}` || '/api';
+}
+
 // Mount each file under /api as an Express route
 for (const file of walk(apiDir)) {
-  const rel = path.relative(apiDir, file).replace(/\\/g, '/');
-  let route = '/api/' + rel.replace(/\.js$/, '');
-  route = route.replace(/\/index$/, '') || '/api';
+  const rel = path.relative(apiDir, file);
+  const route = toExpressRoute(rel);
 
   const mod = await import(pathToFileURL(file).href);
   const handler = mod.default;
@@ -48,6 +61,9 @@ for (const file of walk(apiDir)) {
 
   app.all(route, async (req, res) => {
     try {
+      if (req.params && Object.keys(req.params).length) {
+        req.query = { ...(req.query || {}), ...req.params };
+      }
       await handler(req, res);
     } catch (err) {
       console.error(`[local-api] Handler error for ${route}:`, err);

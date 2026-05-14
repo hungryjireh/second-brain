@@ -11,6 +11,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgBase,
   },
   listContent: {
+    flexGrow: 1,
     padding: 16,
     paddingBottom: 32,
     backgroundColor: theme.colors.bgBase,
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   followButton: {
     alignSelf: 'center',
     borderRadius: 999,
-    borderColor: 'transparent',
+    borderColor: theme.colors.textSecondary,
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -121,15 +122,15 @@ const styles = StyleSheet.create({
   },
   followingButton: {
     backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.accentBorder,
+    borderColor: theme.colors.textSecondary,
   },
   followButtonText: {
-    color: theme.colors.textWarm80,
+    color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
   },
   followButtonTextFollowing: {
-    color: theme.colors.accentText,
+    color: theme.colors.textSecondary,
   },
   muted: {
     color: theme.colors.textSecondary,
@@ -139,6 +140,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontStyle: 'italic',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionHeaderRow: {
     flexDirection: 'row',

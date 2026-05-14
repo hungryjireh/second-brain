@@ -28,6 +28,17 @@ function isSameLocalDay(a, b) {
     && a.getDate() === b.getDate();
 }
 
+function coerceBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
+  }
+  return false;
+}
+
 async function shareThought(thought, username) {
   const text = String(thought?.text || '').trim();
   if (!text) return;
@@ -113,8 +124,8 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [load]);
 
   async function toggleFollow() {
-    if (!profile || profile.is_self || followBusy) return;
-    const currentlyFollowing = Boolean(profile.is_following);
+    if (!profile || coerceBoolean(profile.is_self) || followBusy) return;
+    const currentlyFollowing = coerceBoolean(profile.is_following);
     setFollowBusy(true);
     setProfile(prev => (prev ? { ...prev, is_following: !currentlyFollowing } : prev));
     try {
@@ -167,6 +178,8 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [token]);
 
   const keyExtractor = useCallback(item => (item.type === 'section' ? item.id : String(item.thought.id)), []);
+  const isSelf = coerceBoolean(profile?.is_self);
+  const isFollowing = coerceBoolean(profile?.is_following);
 
   const renderItem = useCallback(({ item }) => {
     if (item.type === 'section') {
@@ -222,14 +235,14 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                       </Text>
                     </View>
                   </View>
-                  {!profile.is_self ? (
+                  {!isSelf ? (
                     <Pressable
-                      style={[styles.followButton, profile.is_following ? styles.followingButton : styles.followActiveButton, followBusy && { opacity: 0.55 }]}
+                      style={[styles.followButton, isFollowing ? styles.followingButton : styles.followActiveButton, followBusy && { opacity: 0.55 }]}
                       onPress={toggleFollow}
                       disabled={followBusy}
                     >
-                      <Text style={[styles.followButtonText, profile.is_following && styles.followButtonTextFollowing]}>
-                        {profile.is_following ? 'unfollow' : 'follow'}
+                      <Text style={[styles.followButtonText, isFollowing && styles.followButtonTextFollowing]}>
+                        {isFollowing ? 'unfollow' : 'follow'}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -251,11 +264,13 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
                 {loading ? <Text style={styles.muted}>Loading profile...</Text> : null}
               </View>
             ) : null}
-            {!error && profile && thoughts.length === 0 ? (
-              <Text style={styles.empty}>No public thoughts yet.</Text>
-            ) : null}
           </>
         )}
+        ListEmptyComponent={!error && profile && thoughts.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.empty}>No public thoughts yet.</Text>
+          </View>
+        ) : null}
         renderItem={renderItem}
         initialNumToRender={8}
         maxToRenderPerBatch={6}
