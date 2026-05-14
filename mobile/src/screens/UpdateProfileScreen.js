@@ -3,6 +3,10 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { apiRequest, invalidateApiCache } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
+import {
+  pickAndValidateProfileImage,
+  uploadProfileImageAndGetPublicUrl,
+} from '../utils/profileImageUploadUtils';
 import TimezoneDropdown from '../components/TimezoneDropdown';
 import { theme } from '../theme';
 import styles from './UpdateProfileScreenStyles';
@@ -16,6 +20,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
   const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [canChangeUsername, setCanChangeUsername] = useState(false);
@@ -45,8 +50,35 @@ export default function UpdateProfileScreen({ token, navigation }) {
     loadProfile();
   }, [loadProfile]);
 
+  async function handleUploadAvatar() {
+    if (uploadingAvatar || saving) return;
+    setError('');
+    setSuccess('');
+
+    try {
+      const selectedImage = await pickAndValidateProfileImage();
+      if (!selectedImage) return;
+      const { asset, sourceUri, extension } = selectedImage;
+
+      setUploadingAvatar(true);
+      const publicUrl = await uploadProfileImageAndGetPublicUrl({
+        asset,
+        sourceUri,
+        extension,
+        token,
+        username,
+      });
+      setAvatarUrl(publicUrl);
+      setSuccess('Photo uploaded. Save changes to apply it to your profile.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload profile photo.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   async function handleUpdateProfile() {
-    if (!username.trim() || !timezone.trim() || saving) return;
+    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar) return;
     setSaving(true);
     setError('');
     setSuccess('');
@@ -123,18 +155,17 @@ export default function UpdateProfileScreen({ token, navigation }) {
             <Text style={styles.fieldHint}>{bio.length}/280</Text>
           </View>
 
-          <View style={styles.sectionCard}>
+        <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Profile photo</Text>
-            <Text style={styles.label}>Avatar URL (optional)</Text>
-            <TextInput
-              value={avatarUrl}
-              onChangeText={setAvatarUrl}
-              placeholder="https://example.com/avatar.jpg"
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              autoCapitalize="none"
-              inputMode="url"
-            />
+            <Pressable
+              style={[styles.uploadButton, uploadingAvatar && styles.buttonDisabled]}
+              onPress={handleUploadAvatar}
+              disabled={uploadingAvatar || saving}
+            >
+              <Text style={[styles.uploadButtonText, uploadingAvatar && styles.buttonDisabledText]}>
+                {uploadingAvatar ? 'Uploading photo...' : 'Upload from device'}
+              </Text>
+            </Pressable>
           </View>
 
           <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
@@ -168,11 +199,16 @@ export default function UpdateProfileScreen({ token, navigation }) {
 
           <View style={styles.actionsRow}>
             <Pressable
-              style={[styles.primaryButton, (saving || !username.trim() || !timezone.trim()) && styles.buttonDisabled]}
+              style={[styles.primaryButton, (saving || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabled]}
               onPress={handleUpdateProfile}
-              disabled={saving || !username.trim() || !timezone.trim()}
+              disabled={saving || uploadingAvatar || !username.trim() || !timezone.trim()}
             >
-              <Text style={[styles.primaryButtonText, (saving || !username.trim() || !timezone.trim()) && styles.buttonDisabledText]}>
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  (saving || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabledText,
+                ]}
+              >
                 {saving ? 'Saving profile...' : 'Save changes'}
               </Text>
             </Pressable>

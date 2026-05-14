@@ -275,7 +275,7 @@ export default function UpdateProfile({ embedded = false, backPath = '/open-brai
         <p
           style={{
             margin: 0,
-            color: '#86efac',
+            color: theme.colors.accent,
             fontSize: 12,
             background: 'rgba(34,197,94,0.12)',
             border: '0.5px solid rgba(34,197,94,0.35)',

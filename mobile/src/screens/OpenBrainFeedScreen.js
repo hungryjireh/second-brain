@@ -376,6 +376,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     return (
       <OpenBrainThoughtCard
         item={item.item}
+        token={token}
         date={item.dateLabel}
         onReact={handleReact}
         onShare={shareThought}

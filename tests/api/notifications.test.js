@@ -35,13 +35,13 @@ async function importFresh(path, tag) {
 
 test('POST /api/open-brain/notifications creates follow notification', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   let insertPayload = null;
   let insertHeaders = null;
@@ -88,8 +88,8 @@ test('POST /api/open-brain/notifications creates follow notification', async () 
   try {
     await notificationsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -105,13 +105,13 @@ test('POST /api/open-brain/notifications creates follow notification', async () 
 
 test('POST /api/open-brain/notifications rejects unsupported notification type', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (input, init = {}) => {
     const url = new URL(input);
@@ -141,8 +141,8 @@ test('POST /api/open-brain/notifications rejects unsupported notification type',
   try {
     await notificationsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -152,13 +152,13 @@ test('POST /api/open-brain/notifications rejects unsupported notification type',
 
 test('POST /api/open-brain/notifications maps Supabase auth errors to 401', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (input, init = {}) => {
     const url = new URL(input);
@@ -195,8 +195,8 @@ test('POST /api/open-brain/notifications maps Supabase auth errors to 401', asyn
   try {
     await notificationsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -206,13 +206,13 @@ test('POST /api/open-brain/notifications maps Supabase auth errors to 401', asyn
 
 test('GET /api/open-brain/notifications lists notifications for auth user', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (input, init = {}) => {
     const url = new URL(input);
@@ -251,8 +251,8 @@ test('GET /api/open-brain/notifications lists notifications for auth user', asyn
   try {
     await notificationsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 

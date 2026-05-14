@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import crypto from 'crypto';
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://example.supabase.co';
-process.env.SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'anon-key';
+process.env.EXPO_PUBLIC_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://example.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'anon-key';
 
 function createReq({ method = 'GET', body = {}, headers = {}, query = {} } = {}) {
   return { method, body, headers, query };
@@ -235,13 +235,13 @@ test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug
 
 test('open-brain profile handler allows anonymous username lookup', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (url) => {
     const parsed = new URL(url);
@@ -287,8 +287,8 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
   try {
     await profileHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -301,13 +301,13 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
 
 test('open-brain public-thoughts handler allows anonymous lookup by user_id', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async () => ({
     ok: true,
@@ -331,8 +331,8 @@ test('open-brain public-thoughts handler allows anonymous lookup by user_id', as
   try {
     await publicThoughtsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -343,13 +343,13 @@ test('open-brain public-thoughts handler allows anonymous lookup by user_id', as
 
 test('open-brain feed handler returns per-thought save_count from thought_second_brain_saves', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   const viewerId = '11111111-1111-4111-8111-111111111111';
   const authorId = '22222222-2222-4222-8222-222222222222';
@@ -462,8 +462,8 @@ test('open-brain feed handler returns per-thought save_count from thought_second
   try {
     await feedHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -475,13 +475,13 @@ test('open-brain feed handler returns per-thought save_count from thought_second
 
 test('open-brain feed handler excludes self-authored thoughts from following feed even if self appears in follows', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   const viewerId = '11111111-1111-4111-8111-111111111111';
   const otherAuthorId = '22222222-2222-4222-8222-222222222222';
@@ -612,8 +612,8 @@ test('open-brain feed handler excludes self-authored thoughts from following fee
   try {
     await feedHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -625,13 +625,13 @@ test('open-brain feed handler excludes self-authored thoughts from following fee
 
 test('open-brain thoughts handler returns created thought with profile metadata', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   const userId = '11111111-1111-4111-8111-111111111111';
   const thoughtId = '33333333-3333-4333-8333-333333333333';
@@ -700,8 +700,8 @@ test('open-brain thoughts handler returns created thought with profile metadata'
   try {
     await thoughtsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 

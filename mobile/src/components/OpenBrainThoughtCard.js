@@ -1,9 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Image, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
-import { initialsFromName } from '../utils/profileAvatar';
+import ProfileAvatar from './ProfileAvatar';
 
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
@@ -97,6 +97,7 @@ function OpenBrainThoughtCard({
   date,
   onPress,
   onOpenProfile,
+  token,
   onToggleFollow,
   onReact,
   onShare,
@@ -265,13 +266,15 @@ function OpenBrainThoughtCard({
       <View style={styles.card}>
         <View style={styles.header}>
           <Pressable onPress={() => onOpenProfile?.(name)} accessibilityRole="button">
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: theme.colors.accent }]}>
-                <Text style={styles.avatarFallbackText}>{initialsFromName(name)}</Text>
-              </View>
-            )}
+            <ProfileAvatar
+              profile={item.profile}
+              avatarUrl={avatarUrl}
+              username={name}
+              token={token}
+              imageStyle={styles.avatar}
+              fallbackStyle={styles.avatarFallback}
+              textStyle={styles.avatarFallbackText}
+            />
           </Pressable>
           <View style={styles.metaBlock}>
             <View style={styles.metaLine}>

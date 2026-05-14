@@ -74,7 +74,7 @@ npm run setup        # installs root + webapp deps
 | **Telegram bot** | Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token |
 | **Telegram chat ID** | Message [@userinfobot](https://t.me/userinfobot) → copy the id |
 | **Groq API key** | [console.groq.com/keys](https://console.groq.com/keys) |
-| **Supabase project** | Create a project at [supabase.com/dashboard](https://supabase.com/dashboard), then copy `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` from Project Settings → API |
+| **Supabase project** | Create a project at [supabase.com/dashboard](https://supabase.com/dashboard), then copy `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Project Settings → API |
 
 ### 3. Run the DB migration
 
@@ -107,8 +107,8 @@ Go to **Project → Settings → Environment Variables** and add every key from 
 | `TELEGRAM_CHAT_ID` | @userinfobot |
 | `TELEGRAM_WEBHOOK_SECRET` | Any random string, e.g. `openssl rand -hex 32` |
 | `GROQ_API_KEY` | console.groq.com |
-| `SUPABASE_URL` | Supabase Project Settings → API |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API |
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase Project Settings → API |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API |
 | `TELEGRAM_TOKEN_ENCRYPTION_KEY` | Random 32+ char secret (used to encrypt stored Telegram link auth tokens) |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `AUTH_USERNAME` | Local fallback login username |

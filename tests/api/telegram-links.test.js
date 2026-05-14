@@ -7,14 +7,14 @@ async function importFresh(path, tag) {
 
 test('telegram link token is stored encrypted and returned decrypted via RPC lookup', async () => {
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     TELEGRAM_TOKEN_ENCRYPTION_KEY: process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY,
   };
   const originalFetch = global.fetch;
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
   process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = 'test-key-material';
 
   const rows = new Map();
@@ -53,22 +53,22 @@ test('telegram link token is stored encrypted and returned decrypted via RPC loo
     assert.deepEqual(linked, { userId: 'user-1', authToken: 'plain-token-123' });
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEnv.TELEGRAM_TOKEN_ENCRYPTION_KEY;
   }
 });
 
 test('telegram RPC lookup still supports legacy plaintext auth_token rows', async () => {
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     TELEGRAM_TOKEN_ENCRYPTION_KEY: process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY,
   };
   const originalFetch = global.fetch;
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
   process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = 'test-key-material';
 
   global.fetch = async (input, init = {}) => {
@@ -93,22 +93,22 @@ test('telegram RPC lookup still supports legacy plaintext auth_token rows', asyn
     assert.deepEqual(linked, { userId: 'legacy-user', authToken: 'legacy-plaintext-token' });
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEnv.TELEGRAM_TOKEN_ENCRYPTION_KEY;
   }
 });
 
 test('telegram link write can store one token while authorizing with another token', async () => {
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     TELEGRAM_TOKEN_ENCRYPTION_KEY: process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY,
   };
   const originalFetch = global.fetch;
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_key_for_tests';
   process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = 'test-key-material';
 
   let lastAuthorizationHeader = null;
@@ -137,8 +137,8 @@ test('telegram link write can store one token while authorizing with another tok
     assert.equal(lastAuthorizationHeader, 'Bearer short-lived-supabase-token-for-write');
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     process.env.TELEGRAM_TOKEN_ENCRYPTION_KEY = originalEnv.TELEGRAM_TOKEN_ENCRYPTION_KEY;
   }
 });

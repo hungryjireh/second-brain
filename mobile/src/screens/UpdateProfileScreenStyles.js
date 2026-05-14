@@ -179,6 +179,21 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
+  uploadButton: {
+    alignItems: 'center',
+    backgroundColor: theme.colors.bgRaised,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 2,
+  },
+  uploadButtonText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 13,
+  },
   muted: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
@@ -202,10 +217,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   success: {
-    color: theme.colors.accentText,
-    backgroundColor: theme.colors.accentDim,
-    borderColor: theme.colors.accentBorder,
-    borderWidth: 1,
+    color: theme.colors.accent,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,

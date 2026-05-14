@@ -57,13 +57,13 @@ test('open-brain helpers: getEpochDayInTimezone returns consistent UTC epoch day
 
 test('open-brain helpers: supabaseRequest builds query/body/headers and returns parsed data', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   let capturedUrl = null;
   let capturedInit = null;
@@ -102,21 +102,21 @@ test('open-brain helpers: supabaseRequest builds query/body/headers and returns 
     assert.equal(url.searchParams.get('limit'), '1');
     assert.equal(url.searchParams.has('skip'), false);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 });
 
 test('open-brain helpers: supabaseRequest uses publishable key as auth fallback', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   let capturedInit = null;
   global.fetch = async (_input, init = {}) => {
@@ -129,21 +129,21 @@ test('open-brain helpers: supabaseRequest uses publishable key as auth fallback'
     await supabaseRequest('/rest/v1/profiles', { method: 'GET' });
     assert.equal(capturedInit.headers.Authorization, 'Bearer anon-key');
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 });
 
 test('open-brain helpers: supabaseRequest throws rich error for non-OK responses', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async () => new Response(JSON.stringify({ message: 'permission denied' }), {
     status: 403,
@@ -157,20 +157,20 @@ test('open-brain helpers: supabaseRequest throws rich error for non-OK responses
       err => err && err.message === 'permission denied' && err.status === 403 && err.data?.message === 'permission denied',
     );
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 });
 
 test('open-brain helpers: supabaseRequest throws when env is missing', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  delete process.env.SUPABASE_URL;
-  delete process.env.SUPABASE_PUBLISHABLE_KEY;
+  delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+  delete process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   try {
     const { supabaseRequest } = await importFresh('../../lib/open-brain/helpers.js', 'supabase-missing-env');
@@ -179,7 +179,7 @@ test('open-brain helpers: supabaseRequest throws when env is missing', async () 
       /Missing Supabase env configuration/,
     );
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });

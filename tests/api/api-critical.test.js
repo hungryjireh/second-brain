@@ -44,13 +44,13 @@ async function importFresh(path, tag) {
 
 test('PATCH /api/settings accepts valid timezone and persists setting', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   let savedPayload = null;
 
@@ -84,8 +84,8 @@ test('PATCH /api/settings accepts valid timezone and persists setting', async ()
   try {
     await settingsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -100,13 +100,13 @@ test('PATCH /api/settings accepts valid timezone and persists setting', async ()
 
 test('GET /api/ics exports calendar with escaped content and safe filename', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (input, init = {}) => {
     const url = new URL(input);
@@ -146,8 +146,8 @@ test('GET /api/ics exports calendar with escaped content and safe filename', asy
   try {
     await icsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 
@@ -162,13 +162,13 @@ test('GET /api/ics exports calendar with escaped content and safe filename', asy
 
 test('GET /api/ics rejects entries that are not scheduled reminders', async () => {
   const original = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     fetch: global.fetch,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
 
   global.fetch = async (input, init = {}) => {
     const url = new URL(input);
@@ -206,8 +206,8 @@ test('GET /api/ics rejects entries that are not scheduled reminders', async () =
   try {
     await icsHandler(req, res);
   } finally {
-    process.env.SUPABASE_URL = original.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = original.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     global.fetch = original.fetch;
   }
 

@@ -204,8 +204,10 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
           <View style={styles.headerCard}>
             <View style={styles.profileRow}>
               <ProfileAvatar
+                profile={profile}
                 avatarUrl={profile.avatar_url}
                 username={profile.username}
+                token={token}
                 imageStyle={styles.avatar}
                 fallbackStyle={styles.avatarFallback}
                 textStyle={styles.avatarFallbackText}

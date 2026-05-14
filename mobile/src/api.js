@@ -1,9 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
+
+function isLocalHostName(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function normalizeTransportSecurity(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (!raw.startsWith('http://')) return raw;
+  try {
+    const url = new URL(raw);
+    if (isLocalHostName(url.hostname)) return raw;
+  } catch {
+    // If URL parsing fails, keep original and let fetch/reporting surface it.
+    return raw;
+  }
+  return raw.replace(/^http:\/\//i, 'https://');
+}
 
 function resolveApiBase() {
   const normalizeApiBase = (value) => {
-    const trimmed = String(value || '').trim().replace(/\/+$/, '');
+    const secured = normalizeTransportSecurity(value);
+    const trimmed = String(secured || '').trim().replace(/\/+$/, '');
     if (!trimmed) return '';
     return /\/api$/i.test(trimmed) ? trimmed : `${trimmed}/api`;
   };
@@ -35,9 +56,26 @@ function stableSerialize(value) {
   return `{${entries.join(',')}}`;
 }
 
+function toHex32(value) {
+  return (value >>> 0).toString(16).padStart(8, '0');
+}
+
+function hashTokenForCacheScope(token) {
+  const source = String(token || '');
+  if (!source) return 'anon';
+
+  // FNV-1a 32-bit hash avoids storing raw bearer tokens in cache keys.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < source.length; i += 1) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `auth:${toHex32(hash)}`;
+}
+
 function buildCacheKey(path, token, cacheKey) {
   if (cacheKey) return `${CACHE_PREFIX}${cacheKey}`;
-  return `${CACHE_PREFIX}${path}::${stableSerialize({ token: token || '' })}`;
+  return `${CACHE_PREFIX}${path}::${stableSerialize({ tokenScope: hashTokenForCacheScope(token) })}`;
 }
 
 function parseCachePathFromKey(cacheKey) {
@@ -81,14 +119,40 @@ export function setAuthExpiredHandler(handler) {
 }
 
 export async function getToken() {
+  try {
+    const secureToken = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (secureToken) return secureToken;
+  } catch {
+    // Fall back to AsyncStorage when SecureStore is unavailable.
+  }
+
   return AsyncStorage.getItem(TOKEN_KEY);
 }
 
 export async function setToken(token) {
-  return AsyncStorage.setItem(TOKEN_KEY, token);
+  const normalizedToken = String(token || '');
+  if (!normalizedToken) {
+    await clearToken();
+    return;
+  }
+
+  try {
+    await SecureStore.setItemAsync(TOKEN_KEY, normalizedToken);
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    return;
+  } catch {
+    // Fall back to AsyncStorage when SecureStore is unavailable.
+  }
+
+  return AsyncStorage.setItem(TOKEN_KEY, normalizedToken);
 }
 
 export async function clearToken() {
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  } catch {
+    // Keep clearing AsyncStorage even if SecureStore delete fails.
+  }
   return AsyncStorage.removeItem(TOKEN_KEY);
 }
 
@@ -113,7 +177,7 @@ export async function invalidateApiCache({
       if (!key.startsWith(CACHE_PREFIX)) return false;
       const cachePath = parseCachePathFromKey(key);
       if (!cachePath) return false;
-      const cacheTokenSuffix = `::${stableSerialize({ token: token || '' })}`;
+      const cacheTokenSuffix = `::${stableSerialize({ tokenScope: hashTokenForCacheScope(token) })}`;
       if (!key.endsWith(cacheTokenSuffix)) return false;
       if (targetPaths.has(cachePath)) return true;
       return targetPrefixes.some(prefix => cachePath.startsWith(prefix));

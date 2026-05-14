@@ -8,12 +8,12 @@ async function importFresh(path, tag) {
 test('insertEntry persists classifier string tags into tags and entry_tags tables', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
 
   const tagsTable = [];
   const entryTagsTable = [];
@@ -179,20 +179,20 @@ test('insertEntry persists classifier string tags into tags and entry_tags table
     assert.ok(entryTagsTable.every(row => row.entry_id === 42));
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });
 
 test('replaceEntryTags deletes user tags that are no longer referenced', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
 
   const userId = '11111111-1111-4111-8111-111111111111';
   const tagsTable = [
@@ -339,20 +339,20 @@ test('replaceEntryTags deletes user tags that are no longer referenced', async (
     );
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });
 
 test('replaceEntryTags enforces a maximum of 10 user tags', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
 
   const userId = '11111111-1111-4111-8111-111111111111';
   const tagsTable = Array.from({ length: 10 }, (_, i) => ({
@@ -435,20 +435,20 @@ test('replaceEntryTags enforces a maximum of 10 user tags', async () => {
     assert.equal(tagsTable.length, 10);
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });
 
 test('replaceEntryTags does not count globally permissive tags toward 10-tag limit', async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   };
 
-  process.env.SUPABASE_URL = 'https://example.supabase.co';
-  process.env.SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'test-publishable-key';
 
   const userId = '12111111-1111-4111-8111-111111111111';
   const tagsTable = Array.from({ length: 10 }, (_, i) => ({
@@ -533,7 +533,7 @@ test('replaceEntryTags does not count globally permissive tags toward 10-tag lim
     );
   } finally {
     global.fetch = originalFetch;
-    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
-    process.env.SUPABASE_PUBLISHABLE_KEY = originalEnv.SUPABASE_PUBLISHABLE_KEY;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });
