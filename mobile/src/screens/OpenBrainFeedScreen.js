@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, Share, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { apiRequest, invalidateApiCache, readCachedApiData, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { buildSharedThoughtUrl } from '../share';
+import { buildThoughtSharePayload } from '../share';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
@@ -55,14 +55,9 @@ function randomFrom(list, current = '') {
 }
 
 async function shareThought(thought) {
-  const text = String(thought?.text || '').trim();
-  if (!text) return;
-  const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
-  const message = sharedUrl || text;
-  await Share.share({
-    message,
-    ...(sharedUrl ? { url: sharedUrl } : {}),
-  });
+  const payload = buildThoughtSharePayload(thought);
+  if (!payload) return;
+  await Share.share(payload);
 }
 
 function isSameLocalDay(a, b) {
@@ -114,6 +109,21 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const [prompt, setPrompt] = useState(() => randomFrom(THOUGHT_FALLBACK_PROMPTS));
   const [saving, setSaving] = useState(false);
   const [composerError, setComposerError] = useState('');
+  const feedRef = useRef(feed);
+  const reactingKeyRef = useRef(reactingKey);
+  const followBusyUserIdRef = useRef(followBusyUserId);
+
+  useEffect(() => {
+    feedRef.current = feed;
+  }, [feed]);
+
+  useEffect(() => {
+    reactingKeyRef.current = reactingKey;
+  }, [reactingKey]);
+
+  useEffect(() => {
+    followBusyUserIdRef.current = followBusyUserId;
+  }, [followBusyUserId]);
 
   const todayLabel = useMemo(() => formatTodayLabel(new Date()), []);
   const timeLabel = useMemo(() => formatTimeLabel(), []);
@@ -222,10 +232,10 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   }, [isDraftOpen, loadComposerData, navigation]);
 
   const handleReact = useCallback(async (thoughtId, type, active) => {
-    if (!thoughtId || !type || reactingKey) return;
+    if (!thoughtId || !type || reactingKeyRef.current) return;
     const key = `${thoughtId}-${type}`;
     setReactingKey(key);
-    const previousFeed = feed;
+    const previousFeed = feedRef.current;
     setFeed(current => updateThoughtAcrossFeed(current, thoughtId, thought => {
       const mine = { ...(thought?.reactions?.mine || {}) };
       const counts = { ...(thought?.reactions || {}) };
@@ -257,12 +267,12 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     } finally {
       setReactingKey('');
     }
-  }, [feed, reactingKey, token]);
+  }, [token]);
 
   const handleToggleFollow = useCallback(async (targetUserId, isFollowing) => {
-    if (!targetUserId || followBusyUserId) return;
+    if (!targetUserId || followBusyUserIdRef.current) return;
     setFollowBusyUserId(targetUserId);
-    const previousFeed = feed;
+    const previousFeed = feedRef.current;
     setFeed(current => updateUserAcrossFeed(current, targetUserId, thought => ({
       ...thought,
       profile: thought?.profile ? { ...thought.profile, is_following: !isFollowing } : thought?.profile,
@@ -280,7 +290,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     } finally {
       setFollowBusyUserId('');
     }
-  }, [feed, followBusyUserId, token]);
+  }, [token]);
 
   async function postThought() {
     if (!draft.trim() || saving || hasPostedToday) return;

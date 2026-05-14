@@ -644,6 +644,30 @@ export default function SecondBrainScreen({ token }) {
     }
   }
 
+  const preparedEntries = useMemo(() => (
+    entries.map(entry => {
+      const normalizedTags = Array.isArray(entry.tags)
+        ? entry.tags.map(tag => String(tag).trim()).filter(Boolean)
+        : [];
+      const searchBlob = [
+        entry.title,
+        entry.summary,
+        entry.raw_text,
+        entry.content,
+        normalizedTags.join(' '),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return {
+        entry,
+        normalizedTags,
+        normalizedTagsLower: normalizedTags.map(tag => tag.toLowerCase()),
+        searchBlob,
+      };
+    })
+  ), [entries]);
+
   const derivedData = useMemo(() => {
     const categoryCounts = { reminder: 0, todo: 0, thought: 0, note: 0 };
     const usageCounts = new Map();
@@ -651,11 +675,8 @@ export default function SecondBrainScreen({ token }) {
     const selectedTag = activeTag.toLowerCase();
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    for (const entry of entries) {
+    for (const { entry, normalizedTags, normalizedTagsLower, searchBlob } of preparedEntries) {
       const isArchived = Boolean(entry.is_archived);
-      const normalizedTags = Array.isArray(entry.tags)
-        ? entry.tags.map(tag => String(tag).trim()).filter(Boolean)
-        : [];
 
       if (!isArchived) {
         const key = entry.category;
@@ -669,19 +690,9 @@ export default function SecondBrainScreen({ token }) {
       if (showArchived ? !isArchived : isArchived) continue;
       if (activeCategory && entry.category !== activeCategory) continue;
       if (activePriorityLevel && getPriorityLevel(entry.priority ?? 0) !== activePriorityLevel) continue;
-      if (selectedTag && !normalizedTags.some(tag => tag.toLowerCase() === selectedTag)) continue;
+      if (selectedTag && !normalizedTagsLower.includes(selectedTag)) continue;
       if (normalizedSearchQuery) {
-        const searchableText = [
-          entry.title,
-          entry.summary,
-          entry.raw_text,
-          entry.content,
-          normalizedTags.join(' '),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!searchableText.includes(normalizedSearchQuery)) continue;
+        if (!searchBlob.includes(normalizedSearchQuery)) continue;
       }
 
       filteredEntries.push(entry);
@@ -692,7 +703,7 @@ export default function SecondBrainScreen({ token }) {
       visibleEntries: filteredEntries,
       tagUsageCounts: usageCounts,
     };
-  }, [entries, showArchived, activeCategory, activePriorityLevel, activeTag, searchQuery]);
+  }, [preparedEntries, showArchived, activeCategory, activePriorityLevel, activeTag, searchQuery]);
 
   const { counts, visibleEntries, tagUsageCounts } = derivedData;
 

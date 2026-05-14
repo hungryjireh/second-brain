@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import OpenBrainThoughtCard from '../OpenBrainThoughtCard';
 
 function pressAddToSecondBrain(screen) {
@@ -62,6 +63,7 @@ describe('OpenBrainThoughtCard', () => {
   });
 
   it('shows confirmation before adding again when already added after first save', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 1,
@@ -82,10 +84,16 @@ describe('OpenBrainThoughtCard', () => {
     await waitFor(() => expect(screen.getByLabelText('Added to SecondBrain')).toBeTruthy());
     expect(screen.getByText('Added to SecondBrain.')).toBeTruthy();
     fireEvent.press(screen.getByLabelText('Added to SecondBrain'));
-    expect(screen.getByText('Add to SecondBrain again?')).toBeTruthy();
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Add to SecondBrain again?',
+      'This thought is already in your SecondBrain.',
+      expect.any(Array)
+    );
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByText('Add again'));
+    const [, addAgainAction] = alertSpy.mock.calls[0][2];
+    addAgainAction.onPress();
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(2);
+    alertSpy.mockRestore();
   });
 
   it('shows streak metric in feed metadata and uses thought-level save count', () => {
@@ -125,6 +133,7 @@ describe('OpenBrainThoughtCard', () => {
   });
 
   it('shows confirmation when viewer has already saved the thought', () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const onAddToSecondBrain = jest.fn();
     const item = {
       id: 3,
@@ -141,10 +150,16 @@ describe('OpenBrainThoughtCard', () => {
     );
 
     pressAddToSecondBrain(screen);
-    expect(screen.getByText('Add to SecondBrain again?')).toBeTruthy();
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Add to SecondBrain again?',
+      'This thought is already in your SecondBrain.',
+      expect.any(Array)
+    );
     expect(onAddToSecondBrain).not.toHaveBeenCalled();
-    fireEvent.press(screen.getByText('Add again'));
+    const [, addAgainAction] = alertSpy.mock.calls[0][2];
+    addAgainAction.onPress();
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
+    alertSpy.mockRestore();
   });
 
   it('shows follow button when is_self comes as string false', () => {

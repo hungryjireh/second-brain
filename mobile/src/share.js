@@ -18,3 +18,11 @@ export function buildSharedThoughtUrl(shareSlug) {
   if (!baseUrl) return '';
   return `${baseUrl}/shared-thought/${encodeURIComponent(slug)}`;
 }
+
+export function buildThoughtSharePayload(thought) {
+  const text = String(thought?.text || '').trim();
+  if (!text) return null;
+  const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
+  if (sharedUrl) return { url: sharedUrl };
+  return { message: text };
+}

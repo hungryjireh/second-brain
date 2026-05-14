@@ -1,6 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { Alert, Image, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
@@ -130,7 +129,6 @@ function OpenBrainThoughtCard({
   );
   const [addedToSecondBrain, setAddedToSecondBrain] = useState(initialAddedToSecondBrain);
   const [addToSecondBrainResponse, setAddToSecondBrainResponse] = useState('');
-  const [addAgainPayload, setAddAgainPayload] = useState(null);
 
   useEffect(() => {
     setExpanded(false);
@@ -142,7 +140,6 @@ function OpenBrainThoughtCard({
     setAddToSecondBrainResponse('');
     setIsActionDrawerOpen(false);
     setDrawerAnchor(null);
-    setAddAgainPayload(null);
   }, [item?.id, sourceText, initialAddedToSecondBrain]);
 
   function closeActionDrawer() {
@@ -182,11 +179,25 @@ function OpenBrainThoughtCard({
   }
 
   function requestAddToSecondBrain(payload) {
-    if (addedToSecondBrain) {
-      setAddAgainPayload(payload);
+    if (!addedToSecondBrain) {
+      handleAddToSecondBrain(payload);
       return;
     }
-    handleAddToSecondBrain(payload);
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined'
+        ? window.confirm('This thought is already in your SecondBrain. Add it again?')
+        : false;
+      if (confirmed) handleAddToSecondBrain(payload);
+      return;
+    }
+    Alert.alert(
+      'Add to SecondBrain again?',
+      'This thought is already in your SecondBrain.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Add again', onPress: () => handleAddToSecondBrain(payload) },
+      ]
+    );
   }
 
   if (item?.missing_today) {
@@ -437,7 +448,7 @@ function OpenBrainThoughtCard({
             </View>
           ) : null}
         </View>
-        {onShare && isSmallScreen ? (
+        {onShare && isSmallScreen && isActionDrawerOpen ? (
           <Modal transparent visible={isActionDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
             <Pressable style={styles.mobileActionDrawerBackdrop} onPress={closeActionDrawer}>
               <View style={[styles.mobileActionDrawer, styles.mobileActionDrawerPortal, { top: drawerTop, left: drawerLeft }]}>
@@ -475,36 +486,6 @@ function OpenBrainThoughtCard({
             </Pressable>
           </Modal>
         ) : null}
-        <Modal
-          transparent
-          visible={Boolean(addAgainPayload)}
-          animationType="fade"
-          onRequestClose={() => setAddAgainPayload(null)}
-        >
-          <View style={styles.confirmModalOverlay}>
-            <BlurView intensity={30} tint="dark" style={styles.confirmModalBlur} />
-            <Pressable style={styles.confirmModalBackdrop} onPress={() => setAddAgainPayload(null)} />
-            <View style={styles.confirmModalCard}>
-              <Text style={styles.confirmModalTitle}>Add to SecondBrain again?</Text>
-              <Text style={styles.confirmModalBody}>This thought is already in your SecondBrain.</Text>
-              <View style={styles.confirmModalActions}>
-                <Pressable style={styles.confirmModalButton} onPress={() => setAddAgainPayload(null)}>
-                  <Text style={styles.confirmModalButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
-                  onPress={() => {
-                    const payload = addAgainPayload;
-                    setAddAgainPayload(null);
-                    if (payload) handleAddToSecondBrain(payload);
-                  }}
-                >
-                  <Text style={[styles.confirmModalButtonText, styles.confirmModalButtonTextPrimary]}>Add again</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </View>
     );
   }
@@ -647,7 +628,7 @@ function OpenBrainThoughtCard({
           </View>
         </View>
       ) : null}
-      {onShare && isSmallScreen ? (
+      {onShare && isSmallScreen && isActionDrawerOpen ? (
         <Modal transparent visible={isActionDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
           <Pressable style={styles.mobileActionDrawerBackdrop} onPress={closeActionDrawer}>
             <View style={[styles.mobileActionDrawer, styles.mobileActionDrawerPortal, { top: drawerTop, left: drawerLeft }]}>
@@ -675,38 +656,44 @@ function OpenBrainThoughtCard({
           </Pressable>
         </Modal>
       ) : null}
-      <Modal
-        transparent
-        visible={Boolean(addAgainPayload)}
-        animationType="fade"
-        onRequestClose={() => setAddAgainPayload(null)}
-      >
-        <View style={styles.confirmModalOverlay}>
-          <BlurView intensity={30} tint="dark" style={styles.confirmModalBlur} />
-          <Pressable style={styles.confirmModalBackdrop} onPress={() => setAddAgainPayload(null)} />
-          <View style={styles.confirmModalCard}>
-            <Text style={styles.confirmModalTitle}>Add to SecondBrain again?</Text>
-            <Text style={styles.confirmModalBody}>This thought is already in your SecondBrain.</Text>
-            <View style={styles.confirmModalActions}>
-              <Pressable style={styles.confirmModalButton} onPress={() => setAddAgainPayload(null)}>
-                <Text style={styles.confirmModalButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
-                onPress={() => {
-                  const payload = addAgainPayload;
-                  setAddAgainPayload(null);
-                  if (payload) handleAddToSecondBrain(payload);
-                }}
-              >
-                <Text style={[styles.confirmModalButtonText, styles.confirmModalButtonTextPrimary]}>Add again</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </Container>
   );
 }
 
-export default memo(OpenBrainThoughtCard);
+function areThoughtCardPropsEqual(prevProps, nextProps) {
+  if (prevProps.item !== nextProps.item) return false;
+  if (prevProps.text !== nextProps.text) return false;
+  if (prevProps.authorPrefix !== nextProps.authorPrefix) return false;
+  if (prevProps.authorLabel !== nextProps.authorLabel) return false;
+  if (prevProps.topMeta !== nextProps.topMeta) return false;
+  if (prevProps.bottomMeta !== nextProps.bottomMeta) return false;
+  if (prevProps.date !== nextProps.date) return false;
+  if (prevProps.onPress !== nextProps.onPress) return false;
+  if (prevProps.onOpenProfile !== nextProps.onOpenProfile) return false;
+  if (prevProps.onToggleFollow !== nextProps.onToggleFollow) return false;
+  if (prevProps.onReact !== nextProps.onReact) return false;
+  if (prevProps.onShare !== nextProps.onShare) return false;
+  if (prevProps.onAddToSecondBrain !== nextProps.onAddToSecondBrain) return false;
+  if (prevProps.addToSecondBrainPayload !== nextProps.addToSecondBrainPayload) return false;
+  if (prevProps.largeBody !== nextProps.largeBody) return false;
+  if (prevProps.feedBody !== nextProps.feedBody) return false;
+  if (prevProps.transparentCard !== nextProps.transparentCard) return false;
+  if (prevProps.inlineActionWithDate !== nextProps.inlineActionWithDate) return false;
+
+  const prevItemId = prevProps.item?.id;
+  const nextItemId = nextProps.item?.id;
+  if (prevItemId !== nextItemId) return false;
+
+  // Ignore global busy-key churn when it does not target this specific card.
+  const prevReactionBusy = prevItemId ? prevProps.reactingKey.startsWith(`${prevItemId}-`) : false;
+  const nextReactionBusy = nextItemId ? nextProps.reactingKey.startsWith(`${nextItemId}-`) : false;
+  if (prevReactionBusy !== nextReactionBusy) return false;
+
+  const prevFollowBusy = prevProps.item?.user_id ? prevProps.followBusyUserId === prevProps.item.user_id : false;
+  const nextFollowBusy = nextProps.item?.user_id ? nextProps.followBusyUserId === nextProps.item.user_id : false;
+  if (prevFollowBusy !== nextFollowBusy) return false;
+
+  return true;
+}
+
+export default memo(OpenBrainThoughtCard, areThoughtCardPropsEqual);

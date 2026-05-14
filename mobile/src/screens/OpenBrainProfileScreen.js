@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, Share, Text, View } from 'react-native';
 import { apiRequest, invalidateApiCache, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { buildSharedThoughtUrl } from '../share';
+import { buildThoughtSharePayload } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
@@ -40,14 +40,9 @@ function coerceBoolean(value) {
 }
 
 async function shareThought(thought, username) {
-  const text = String(thought?.text || '').trim();
-  if (!text) return;
-  const sharedUrl = buildSharedThoughtUrl(thought?.share_slug);
-  const message = sharedUrl || text;
-  await Share.share({
-    message,
-    ...(sharedUrl ? { url: sharedUrl } : {}),
-  });
+  const payload = buildThoughtSharePayload(thought);
+  if (!payload) return;
+  await Share.share(payload);
 }
 
 export default function OpenBrainProfileScreen({ token, route, navigation }) {
