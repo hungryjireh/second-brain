@@ -34,6 +34,8 @@ export default function ResetPasswordScreen({ token, navigation }) {
     <OpenBrainSettingsLayout
       token={token}
       navigation={navigation}
+      backLabel="Back to settings"
+      onBackPress={() => navigation.navigate('OpenBrainSettings')}
       title="Reset your password"
       copy="Enter your account email and we'll send a reset link."
       headerStyle={styles.header}

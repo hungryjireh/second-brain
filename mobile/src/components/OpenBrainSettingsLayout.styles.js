@@ -15,6 +15,27 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
+  headerMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  headerTextWrap: {
+    flex: 1,
+    gap: 10,
+  },
+  backButton: {
+    alignSelf: 'center',
+    paddingVertical: 0,
+    paddingRight: 10,
+  },
+  backButtonText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 26,
+    lineHeight: 30,
+  },
   title: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.serif,

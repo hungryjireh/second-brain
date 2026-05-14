@@ -78,6 +78,8 @@ export default function UpdateProfileScreen({ token, navigation }) {
     <OpenBrainSettingsLayout
       token={token}
       navigation={navigation}
+      backLabel="Back to settings"
+      onBackPress={() => navigation.navigate('OpenBrainSettings')}
       title="Profile settings"
       copy="Edit how people see you on OpenBrain."
       headerStyle={styles.headerSection}

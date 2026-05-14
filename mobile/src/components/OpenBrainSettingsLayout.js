@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import OpenBrainBottomNav from './OpenBrainBottomNav';
 import OpenBrainTopMenu from './OpenBrainTopMenu';
 import styles from './OpenBrainSettingsLayout.styles';
@@ -14,6 +14,8 @@ export default function OpenBrainSettingsLayout({
   scroll = false,
   scrollStyle,
   scrollContentContainerStyle,
+  backLabel,
+  onBackPress,
   children,
 }) {
   return (
@@ -22,8 +24,17 @@ export default function OpenBrainSettingsLayout({
       <View style={[styles.content, contentStyle]}>
         {(title || copy) && (
           <View style={[styles.header, headerStyle]}>
-            {!!title && <Text style={styles.title}>{title}</Text>}
-            {!!copy && <Text style={styles.copy}>{copy}</Text>}
+            <View style={styles.headerMainRow}>
+              {!!backLabel && !!onBackPress && (
+                <Pressable style={styles.backButton} onPress={onBackPress} hitSlop={8}>
+                  <Text style={styles.backButtonText}>{'<'}</Text>
+                </Pressable>
+              )}
+              <View style={styles.headerTextWrap}>
+                {!!title && <Text style={styles.title}>{title}</Text>}
+                {!!copy && <Text style={styles.copy}>{copy}</Text>}
+              </View>
+            </View>
           </View>
         )}
         {scroll ? (
