@@ -145,12 +145,13 @@ export default function HomeScreen({ navigation, token }) {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
+  const stickyHeaderIndices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   return (
     <Animated.ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      stickyHeaderIndices={[0, 1, 2, 3, 4, 5, 6, 7]}
+      stickyHeaderIndices={stickyHeaderIndices}
       onScroll={Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
         { useNativeDriver: true },
@@ -216,39 +217,6 @@ and listen to each other breathe.`}
               <Text style={styles.buttonLabelText}>Try OpenBrain</Text>
             </Pressable>
           </View>
-        </View>
-        <View style={styles.eyebrowRow}>
-          <View style={styles.eyebrowLeft}>
-            <View style={styles.eyebrowLine} />
-            <Text style={styles.eyebrow}>Never forget what you don't want to</Text>
-          </View>
-        </View>
-        <View style={styles.heroTitleWrap}>
-          <Text style={styles.heroTitleScript}>Ideas that</Text>
-          <View style={styles.heroTitleRow}>
-            <Text style={styles.heroTitleBold}>move</Text>
-            <Text style={styles.heroTitleScript}>at</Text>
-          </View>
-          <Text style={styles.heroTitleScript}>your pace</Text>
-        </View>
-        <Text style={styles.heroSubcopy}>
-          <OpenBrainLogo style={[styles.openBrainLogoText, styles.heroLogoInline]} accentStyle={styles.openBrainLogoAccent} /> lets you share thoughts in real time. <SecondBrainLogo style={styles.heroLogoInline} /> turns
-          them into lasting
-          knowledge. Together, they close the loop between inspiration and clarity.
-        </Text>
-        <View style={[styles.heroActions, isSmallScreen ? styles.heroActionsSmallScreen : null]}>
-          <Pressable
-            style={[styles.heroButton, styles.openButton, isSmallScreen ? styles.heroButtonSmallScreen : null]}
-            onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
-          >
-            <Text style={styles.buttonLabelText}>Try Openbrain</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.heroButton, styles.secondButton, isSmallScreen ? styles.heroButtonSmallScreen : null]}
-            onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
-          >
-            <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -347,24 +315,28 @@ and listen to each other breathe.`}
       </View>
 
       <View style={styles.ctaSection}>
-        <View style={[styles.ctaBlock, styles.openCta]}>
-          <Text style={styles.ctaTitle}>Think out loud with the world</Text>
-          <Text style={styles.ctaBody}>
-            Join thousands of people sharing their foremost ponderings every day on <OpenBrainLogo style={[styles.openBrainLogoText, styles.ctaLogoInline]} accentStyle={styles.openBrainLogoAccent} />.
-          </Text>
-          <Pressable style={[styles.ctaButtonLight, styles.openAccentBg]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
-            <Text style={styles.buttonLabelText}>Try Openbrain</Text>
-          </Pressable>
+        <View style={styles.ctaSectionBlock}>
+          <View style={[styles.ctaBlock, styles.openCta]}>
+            <Text style={styles.ctaTitle}>Think out loud with the world</Text>
+            <Text style={styles.ctaBody}>
+              Join thousands of people sharing their foremost ponderings every day on <OpenBrainLogo style={[styles.openBrainLogoText, styles.ctaLogoInline]} accentStyle={styles.openBrainLogoAccent} />.
+            </Text>
+            <Pressable style={[styles.ctaButtonLight, styles.openAccentBg]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
+              <Text style={styles.buttonLabelText}>Try Openbrain</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={[styles.ctaBlock, styles.secondCta]}>
-          <Text style={styles.ctaTitle}>Build the brain you wish you had</Text>
-          <Text style={styles.ctaBody}>
-            Your notes, your insights, your decisions - all in one searchable, enduring archive with <SecondBrainLogo style={styles.ctaLogoInline} />.
-          </Text>
-          <Pressable style={[styles.ctaButtonLight, styles.secondAccentBg]} onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}>
-            <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
-          </Pressable>
+        <View style={styles.ctaSectionBlock}>
+          <View style={[styles.ctaBlock, styles.secondCta]}>
+            <Text style={styles.ctaTitle}>Build the brain you wish you had</Text>
+            <Text style={styles.ctaBody}>
+              Your notes, your insights, your decisions - all in one searchable, enduring archive with <SecondBrainLogo style={styles.ctaLogoInline} />.
+            </Text>
+            <Pressable style={[styles.ctaButtonLight, styles.secondAccentBg]} onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}>
+              <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 

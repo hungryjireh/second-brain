@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'crypto';
+import fs from 'fs';
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 process.env.EXPO_PUBLIC_SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://example.supabase.co';
@@ -213,6 +214,15 @@ test('bot handler: method guard and no-message noop', async () => {
   const noMessageRes = createRes();
   await botHandler(noMessageReq, noMessageRes);
   assert.equal(noMessageRes.statusCode, 200);
+});
+
+test('bot handler enforces and communicates 30-second voice note limit', () => {
+  const botSource = fs.readFileSync(new URL('../../api/bot.js', import.meta.url), 'utf8');
+
+  assert.match(botSource, /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*30/);
+  assert.match(botSource, /msg\.voice\.duration[\s\S]*>\s*MAX_VOICE_NOTE_DURATION_SECONDS/);
+  assert.match(botSource, /Voice notes must be[\s\S]*seconds or less/);
+  assert.match(botSource, /voice note \(max \$\{MAX_VOICE_NOTE_DURATION_SECONDS\} seconds\) or text/);
 });
 
 test('open-brain shared-thought handler: OPTIONS, method guard, and missing slug', async () => {

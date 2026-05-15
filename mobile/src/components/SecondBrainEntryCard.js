@@ -21,10 +21,10 @@ const TAG_STYLES = {
 };
 
 const CATEGORY_ICONS = {
-  reminder: '⏰',
-  todo: '✅',
-  thought: '💡',
-  note: '📝',
+  reminder: 'clock',
+  todo: 'check-square',
+  thought: 'zap',
+  note: 'edit-3',
 };
 
 function SecondBrainEntryCard({
@@ -49,7 +49,7 @@ function SecondBrainEntryCard({
   const actionTriggerRef = useRef(null);
   const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
-  const icon = CATEGORY_ICONS[entry.category] ?? '📝';
+  const icon = CATEGORY_ICONS[entry.category] ?? 'edit-3';
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
   const archiveLabel = entry.category === 'reminder'
     ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
@@ -98,7 +98,7 @@ function SecondBrainEntryCard({
           {isSmallScreen ? (
             <View style={styles.cardMetaRowMobile}>
               <View style={styles.cardMetaLead}>
-                <Text style={styles.cardIcon}>{icon}</Text>
+                <Feather name={icon} size={14} style={styles.cardIcon} color={theme.colors.brand} />
                 <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
                 <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
               </View>
@@ -131,7 +131,7 @@ function SecondBrainEntryCard({
             </View>
           ) : (
             <View style={styles.cardMetaRow}>
-              <Text style={styles.cardIcon}>{icon}</Text>
+              <Feather name={icon} size={14} style={styles.cardIcon} color={theme.colors.brand} />
               <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
               <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
             </View>
@@ -202,7 +202,10 @@ function SecondBrainEntryCard({
         {entry.remind_at ? (
           <>
             <View style={styles.reminderMetaPill}>
-              <Text style={styles.reminderMetaText}>⏰ {displayRemindAt || ''}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Feather name="clock" size={12} color={theme.colors.brand} />
+                <Text style={styles.reminderMetaText}> {displayRemindAt || ''}</Text>
+              </View>
             </View>
             <Text style={styles.metaDot}>•</Text>
           </>

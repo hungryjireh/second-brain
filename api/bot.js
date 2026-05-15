@@ -7,11 +7,13 @@ import {
 } from '../lib/db.js';
 import { TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
 import { classify } from '../lib/classify.js';
+import { extractCategoryOverride } from '../lib/category-override.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage } from '../lib/notify.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const DEFAULT_TIMEZONE = 'Asia/Singapore';
+const MAX_VOICE_NOTE_DURATION_SECONDS = 30;
 
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
@@ -44,30 +46,33 @@ function parseTags(input) {
 }
 
 async function processText(rawText, chatId, userId, authToken) {
+  const { category: forcedCategory, text: cleanedText } = extractCategoryOverride(rawText);
+  const textToClassify = cleanedText || String(rawText ?? '').trim();
   const timezone = await getUserTimezone(userId, authToken);
   const existingTags = await getUserTags(userId, authToken);
-  const { category, title, summary, content, remind_at, tags } = await classify(rawText, {
+  const { category, title, summary, content, remind_at, tags } = await classify(textToClassify, {
     timezone,
     existingTags,
   });
+  const finalCategory = forcedCategory ?? category;
   const normalizedTitle = typeof title === 'string' ? title.trim() : '';
   const normalizedSummary = typeof summary === 'string' ? summary.trim() : '';
   const normalizedContent = typeof content === 'string' ? content.trim() : '';
 
   await insertEntry({
     userId,
-    raw_text: rawText,
-    category,
-    title: normalizedTitle || normalizedContent || rawText,
-    summary: normalizedSummary || normalizedContent || rawText,
+    raw_text: textToClassify,
+    category: finalCategory,
+    title: normalizedTitle || normalizedContent || textToClassify,
+    summary: normalizedSummary || normalizedContent || textToClassify,
     remind_at,
     tags: parseTags(tags),
     authToken,
   });
 
-  let reply = `✅ Got it — saved as *${category}*.\n\n_${normalizedContent || rawText}_`;
+  let reply = `✅ Got it — saved as *${finalCategory}*.\n\n_${normalizedContent || textToClassify}_`;
 
-  if (category === 'reminder' && remind_at) {
+  if (finalCategory === 'reminder' && remind_at) {
     const when = new Date(remind_at * 1000).toLocaleString('en-SG', {
       timeZone: DEFAULT_TIMEZONE,
       weekday: 'short',
@@ -131,7 +136,10 @@ export default async function handler(req, res) {
         return res.status(200).end();
       }
       await linkTelegramChatToUser(chatId, linkKey);
-      await sendMessage('✅ Your Telegram is now linked to your secondbrain account. Send any text or voice note to continue.', chatId);
+      await sendMessage(
+        `✅ Your Telegram is now linked to your secondbrain account. Send any text or voice note (max ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds) to continue.`,
+        chatId
+      );
       return res.status(200).end();
     }
 
@@ -147,13 +155,20 @@ export default async function handler(req, res) {
 
     if (text?.startsWith('/start')) {
       await sendMessage(
-        `👋 *Second Brain* is ready.\n\nSend me a voice note or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes\n\nNeed to relink? Use /link <your-key>.`,
+        `👋 *Second Brain* is ready.\n\nSend me a voice note (max ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds) or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes\n\nNeed to relink? Use /link <your-key>.`,
         chatId
       );
     } else if (text) {
       await notifyTyping(chatId);
       await processText(text, chatId, linkedUser.userId, linkedUser.authToken);
     } else if (msg.voice) {
+      if ((msg.voice.duration || 0) > MAX_VOICE_NOTE_DURATION_SECONDS) {
+        await sendMessage(
+          `⏱️ Voice notes must be ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds or less. Please send a shorter voice note.`,
+          chatId
+        );
+        return res.status(200).end();
+      }
       await notifyTyping(chatId);
       const fileInfo = await telegramGetFile(msg.voice.file_id);
       const audioUrl = `https://api.telegram.org/file/bot${TOKEN}/${fileInfo.file_path}`;

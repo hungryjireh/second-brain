@@ -529,6 +529,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     gap: 0,
   },
+  ctaSectionBlock: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  ctaSectionDivider: {
+    height: 28,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+  },
   ctaBlock: {
     borderRadius: 0,
     paddingHorizontal: 28,

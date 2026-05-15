@@ -10,6 +10,7 @@ import {
   getUserTimezone,
 } from '../lib/db.js';
 import { classify } from '../lib/classify.js';
+import { extractCategoryOverride } from '../lib/category-override.js';
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
 import { GLOBALLY_PERMISSIVE_TAGS_NORMALIZED } from '../lib/constants/tags.js';
 
@@ -405,14 +406,16 @@ export default async function handler(req, res) {
 
     try {
       const normalizedDescription = sourceDescription.trim();
+      const { category: forcedCategory, text: cleanedText } = extractCategoryOverride(normalizedDescription);
+      const textToClassify = cleanedText || normalizedDescription;
       const timezone = await getUserTimezone(userId, token);
       const existingTags = await getUserTags(userId, token);
-      const { category, title, summary, content, remind_at, tags: classifiedTags } = await classify(normalizedDescription, {
+      const { category, title, summary, content, remind_at, tags: classifiedTags } = await classify(textToClassify, {
         timezone,
         existingTags,
       });
-      const finalCategory = requestedCategory ?? category;
-      const derived = deriveEntryFields(normalizedDescription, content);
+      const finalCategory = forcedCategory ?? requestedCategory ?? category;
+      const derived = deriveEntryFields(textToClassify, content);
       const normalizedClassifiedTags = parseTags(classifiedTags);
       const validatedClassifiedTags = filterClassifierTagsByPermittedUserTags(
         normalizedClassifiedTags ?? [],
@@ -421,7 +424,7 @@ export default async function handler(req, res) {
       const candidateTags = parsedTags !== undefined
         ? parsedTags
         : validatedClassifiedTags;
-      const finalTags = isOpenBrainImportedThought(normalizedDescription, finalCategory)
+      const finalTags = isOpenBrainImportedThought(textToClassify, finalCategory)
         ? enforceOpenBrainTags(candidateTags)
         : candidateTags;
       const entry = await insertEntry({
