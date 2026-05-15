@@ -170,7 +170,7 @@ function SecondBrainEntryCard({
                   }}
                   disabled={isBusy}
                 >
-                  <Text style={styles.secondaryButtonText}>.ics</Text>
+                  <Text style={styles.secondaryButtonText}>Add to Calendar</Text>
                 </Pressable>
               ) : null}
               <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
@@ -244,6 +244,18 @@ function SecondBrainEntryCard({
               >
                 <Text style={styles.mobileActionDrawerText}>{archiveLabel}</Text>
               </Pressable>
+              {entry.category === 'reminder' && entry.remind_at ? (
+                <Pressable
+                  style={styles.mobileActionDrawerItem}
+                  onPress={event => {
+                    event?.stopPropagation?.();
+                    closeActionDrawer();
+                    onDownloadIcs(entry.id);
+                  }}
+                >
+                  <Text style={styles.mobileActionDrawerText}>Add to Calendar</Text>
+                </Pressable>
+              ) : null}
               {isWeb ? (
                 <Pressable
                   style={styles.mobileActionDrawerItem}

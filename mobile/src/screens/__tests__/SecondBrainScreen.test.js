@@ -278,14 +278,15 @@ describe('SecondBrainScreen', () => {
     });
 
     global.fetch.mockResolvedValue({
-      ok: false,
-      status: 404,
+      ok: true,
+      status: 200,
+      text: jest.fn().mockResolvedValue('BEGIN:VCALENDAR\r\nEND:VCALENDAR'),
     });
 
     const { getByText } = render(<SecondBrainScreen token={token} />);
 
     await waitFor(() => expect(getByText('Doctor appointment')).toBeTruthy());
-    fireEvent.press(getByText('.ics'));
+    fireEvent.press(getByText('Add to Calendar'));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

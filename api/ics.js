@@ -74,7 +74,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const entry = await getEntry(userId, id);
+    const entry = await getEntry(userId, id, token);
     if (!entry) return res.status(404).json({ error: 'not found' });
     if (entry.category !== 'reminder' || !entry.remind_at) {
       return res.status(400).json({ error: 'entry is not a reminder with schedule' });

@@ -92,7 +92,7 @@ describe('SecondBrainEntryCard', () => {
 
     fireEvent.press(getByText('Edit'), { stopPropagation: jest.fn() });
     fireEvent.press(getByText('Mark Done'), { stopPropagation: jest.fn() });
-    fireEvent.press(getByText('.ics'), { stopPropagation: jest.fn() });
+    fireEvent.press(getByText('Add to Calendar'), { stopPropagation: jest.fn() });
 
     expect(onStartEdit).toHaveBeenCalledWith(entry);
     expect(onToggleArchive).toHaveBeenCalledWith(entry);

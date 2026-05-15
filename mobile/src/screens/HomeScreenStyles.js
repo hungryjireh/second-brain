@@ -25,6 +25,14 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 28,
   },
+  topLoginBar: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    alignItems: 'flex-end',
+    backgroundColor: theme.colors.bgBase,
+  },
   introHero: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -88,10 +96,50 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  dualProductSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 36,
+    minHeight: 220,
+  },
+  dualProductColumn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    gap: 14,
+  },
+  dualProductDividerWrap: {
+    width: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dualProductDivider: {
+    width: 1,
+    height: '50%',
+    backgroundColor: theme.colors.textSecondary,
+  },
+  dualProductLogo: {
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.6,
+  },
+  dualProductDescription: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    fontFamily: theme.fonts.regular,
+    minHeight: 44,
+  },
+  dualProductButton: {
+    ...HOME_BUTTON_BASE,
+    minWidth: 168,
+  },
   eyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: 26,
   },
   eyebrowLeft: {

@@ -157,6 +157,14 @@ export default function HomeScreen({ navigation, token }) {
       )}
       scrollEventThrottle={16}
     >
+      {!token ? (
+        <View style={styles.topLoginBar}>
+          <Pressable style={styles.eyebrowLoginButton} onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.eyebrowLoginText}>Login</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={[styles.introHero, { minHeight: height }]}>
         <Animated.Text style={[styles.introHeroText, { opacity: introOpacity }]}>
           what if you only had 1 thought a day?
@@ -178,16 +186,42 @@ and listen to each other breathe.`}
       </View>
 
       <View style={styles.hero}>
+        <View style={[styles.dualProductSection, { minHeight: height }]}>
+          <View style={styles.dualProductColumn}>
+            <SecondBrainLogo style={styles.dualProductLogo} />
+            <Text style={styles.dualProductDescription}>
+              Placeholder description for SecondBrain.
+            </Text>
+            <Pressable
+              style={[styles.dualProductButton, styles.secondAccentBg]}
+              onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
+            >
+              <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
+            </Pressable>
+          </View>
+          {!isSmallScreen ? (
+            <View style={styles.dualProductDividerWrap}>
+              <View style={styles.dualProductDivider} />
+            </View>
+          ) : null}
+          <View style={styles.dualProductColumn}>
+            <OpenBrainLogo style={[styles.openBrainLogoText, styles.dualProductLogo]} accentStyle={styles.openBrainLogoAccent} />
+            <Text style={styles.dualProductDescription}>
+              Placeholder description for OpenBrain.
+            </Text>
+            <Pressable
+              style={[styles.dualProductButton, styles.openAccentBg]}
+              onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
+            >
+              <Text style={styles.buttonLabelText}>Try OpenBrain</Text>
+            </Pressable>
+          </View>
+        </View>
         <View style={styles.eyebrowRow}>
           <View style={styles.eyebrowLeft}>
             <View style={styles.eyebrowLine} />
             <Text style={styles.eyebrow}>Never forget what you don't want to</Text>
           </View>
-          {!token ? (
-            <Pressable style={styles.eyebrowLoginButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.eyebrowLoginText}>Login</Text>
-            </Pressable>
-          ) : null}
         </View>
         <View style={styles.heroTitleWrap}>
           <Text style={styles.heroTitleScript}>Ideas that</Text>

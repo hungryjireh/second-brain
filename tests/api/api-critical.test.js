@@ -214,3 +214,64 @@ test('GET /api/ics rejects entries that are not scheduled reminders', async () =
   assert.equal(res.statusCode, 400);
   assert.deepEqual(jsonBody(res), { error: 'entry is not a reminder with schedule' });
 });
+
+test('GET /api/ics forwards caller bearer token when loading entry', async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  const callerToken = 'caller-access-token';
+  let seenEntriesAuthorization = null;
+
+  global.fetch = async (input, init = {}) => {
+    const url = new URL(input);
+    const method = init.method || 'GET';
+
+    if (url.pathname === '/auth/v1/user' && method === 'GET') {
+      return new Response(JSON.stringify({ id: '11111111-1111-4111-8111-111111111111' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url.pathname === '/rest/v1/entries' && method === 'GET') {
+      seenEntriesAuthorization = init.headers?.Authorization ?? init.headers?.authorization ?? null;
+      return new Response(JSON.stringify([{
+        id: 42,
+        category: 'reminder',
+        remind_at: 1767225600,
+        title: 'Token propagation check',
+        description: 'Ensures /api/ics uses caller token for row access',
+      }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
+  };
+
+  const { default: icsHandler } = await importFresh('../../api/ics.js', 'ics-forward-auth-token');
+  const req = createReq({
+    method: 'GET',
+    headers: { authorization: `Bearer ${callerToken}` },
+    query: { id: '42' },
+  });
+  const res = createRes();
+
+  try {
+    await icsHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(seenEntriesAuthorization, `Bearer ${callerToken}`);
+});

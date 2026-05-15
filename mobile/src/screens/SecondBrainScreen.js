@@ -428,7 +428,22 @@ export default function SecondBrainScreen({ token }) {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (!response.ok) {
-        throw new Error(`Request failed (${response.status})`);
+        let serverMessage = '';
+        try {
+          const raw = await response.text();
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              serverMessage = String(parsed?.error || parsed?.message || '').trim();
+            } catch {
+              serverMessage = raw.trim();
+            }
+          }
+        } catch {
+          // Ignore response body parsing errors and fall back to status code.
+        }
+        const normalizedMessage = serverMessage || `Request failed (${response.status})`;
+        throw new Error(normalizedMessage);
       }
 
       const fileName = `second-brain-reminder-${entryId}.ics`;
