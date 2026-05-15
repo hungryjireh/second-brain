@@ -25,6 +25,33 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 28,
   },
+  introHero: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  introHeroText: {
+    color: theme.colors.textPrimary,
+    fontSize: 34,
+    lineHeight: 42,
+    letterSpacing: -0.6,
+    textAlign: 'center',
+    fontFamily: theme.fonts.serif,
+    fontStyle: 'italic',
+    maxWidth: 420,
+  },
+  introHeroPoem: {
+    color: theme.colors.textPrimary,
+    fontSize: 24,
+    lineHeight: 36,
+    letterSpacing: -0.2,
+    textAlign: 'center',
+    fontFamily: theme.fonts.serif,
+    fontStyle: 'italic',
+    maxWidth: 680,
+  },
   nav: {
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -254,6 +281,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   productCard: {
+    backgroundColor: theme.colors.bgBase,
     paddingHorizontal: 24,
     paddingTop: 34,
     paddingBottom: 48,
@@ -463,6 +491,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   openCta: {
+    backgroundColor: theme.colors.bgBase,
   },
   secondCta: {
     backgroundColor: theme.colors.accentBg,

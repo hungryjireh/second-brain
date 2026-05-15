@@ -1,20 +1,22 @@
-import { ScrollView, Text, View, Pressable, useWindowDimensions } from 'react-native';
+import { useRef } from 'react';
+import { Animated, Text, View, Pressable, useWindowDimensions } from 'react-native';
 import styles from './HomeScreenStyles';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
+import OpenBrainLogo from '../components/OpenBrainLogo';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
 import { theme } from '../theme';
 import secondBrainCardStyles from './SecondBrainScreen.styles';
 
 const openBrainFeatures = [
-  'Publish short thoughts with tags and rich context - no friction, no drafts',
-  'Discover ideas through a live feed and powerful search by topic or person',
+  'No edits, no deletes - just one thing you want to share with the world each day',
+  'Discover what everyone else is thinking about daily, from the personal to the profound',
   'View profiles and follow the people whose thinking you want more of',
 ];
 
 const secondBrainFeatures = [
-  'Capture notes and insights in one consistent system - no more scattered docs',
-  'Organize entries so your knowledge stays searchable across years of work',
-  'Maintain a personal archive for projects, decisions, and what you learned',
+  'Our Telegram bot organizes your messy written and spoken thoughts instantly',
+  'View your knowledge dump on our platform, Markdown and all. Your knowledge stays beautiful and searchable forever',
+  'Your billion dollar idea, granny\'s secret recipe, LLM exported conversations and everything in between all in one place',
 ];
 
 const workflowSteps = [
@@ -33,8 +35,8 @@ const workflowSteps = [
   {
     num: 'STEP 03',
     title: 'Save what matters',
-    desc: 'Move the best ideas into ',
-    descSuffix: ' with context attached.',
+    desc: 'Move your favorite ideas into ',
+    descSuffix: ' for your own exploration.',
     icon: '📥',
   },
   {
@@ -89,7 +91,11 @@ function ProductCard({ number, tagline, description, features, buttonLabel, onPr
       <Text style={styles.productNumber}>{number}</Text>
       <View style={styles.productTitleWrap}>
         {isOpenBrain ? (
-          <OpenBrainLogo style={logoStyle} accentStyle={styles.productLogoAccent} textProps={styles.productLogoNoWrap} />
+          <OpenBrainLogo
+            style={[styles.openBrainLogoText, logoStyle]}
+            accentStyle={[styles.openBrainLogoAccent, styles.productLogoAccent]}
+            textProps={styles.productLogoNoWrap}
+          />
         ) : (
           <SecondBrainLogo style={logoStyle} accentStyle={styles.productSecondLogoAccent} textProps={styles.productLogoNoWrap} />
         )}
@@ -113,14 +119,6 @@ function ProductCard({ number, tagline, description, features, buttonLabel, onPr
   );
 }
 
-function OpenBrainLogo({ style, accentStyle, textProps }) {
-  return (
-    <Text style={[styles.openBrainLogoText, style, textProps]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
-      open<Text style={[styles.openBrainLogoAccent, accentStyle]}>brain</Text>
-    </Text>
-  );
-}
-
 function SecondBrainLogo({ style, accentStyle, textProps }) {
   return (
     <Text style={[styles.secondBrainLogoText, style, textProps]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
@@ -130,19 +128,60 @@ function SecondBrainLogo({ style, accentStyle, textProps }) {
 }
 
 export default function HomeScreen({ navigation, token }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const scrollY = useRef(new Animated.Value(0)).current;
   const compactLogo = width <= 390;
   const isSmallScreen = width <= 390;
   const primaryAction = token ? () => navigation.navigate('Apps') : () => navigation.navigate('Login');
   const currentYear = new Date().getFullYear();
+  const introOpacity = scrollY.interpolate({
+    inputRange: [0, Math.max(1, height * 0.45)],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const poemSectionStart = height;
+  const poemOpacity = scrollY.interpolate({
+    inputRange: [Math.max(0, poemSectionStart + (height * 0.15)), Math.max(1, poemSectionStart + (height * 0.95))],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <Animated.ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      stickyHeaderIndices={[0, 1, 2, 3, 4, 5, 6, 7]}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: true },
+      )}
+      scrollEventThrottle={16}
+    >
+      <View style={[styles.introHero, { minHeight: height }]}>
+        <Animated.Text style={[styles.introHeroText, { opacity: introOpacity }]}>
+          what if you only had 1 thought a day?
+        </Animated.Text>
+      </View>
+
+      <View style={[styles.introHero, { minHeight: height }]}>
+        <Animated.Text style={[styles.introHeroPoem, { opacity: poemOpacity }]}>
+          {`When she doesn’t respond,
+I know she’s used up all her words,
+so I slowly whisper I love you
+thirty-two and a third times.
+After that, we just sit on the line
+and listen to each other breathe.`}
+        </Animated.Text>
+      </View>
+
+      <View style={[styles.introHero, { minHeight: height }]}>
+      </View>
+
       <View style={styles.hero}>
         <View style={styles.eyebrowRow}>
           <View style={styles.eyebrowLeft}>
             <View style={styles.eyebrowLine} />
-            <Text style={styles.eyebrow}>Think faster. Build better.</Text>
+            <Text style={styles.eyebrow}>Never forget what you don't want to</Text>
           </View>
           {!token ? (
             <Pressable style={styles.eyebrowLoginButton} onPress={() => navigation.navigate('Login')}>
@@ -159,7 +198,7 @@ export default function HomeScreen({ navigation, token }) {
           <Text style={styles.heroTitleScript}>your pace</Text>
         </View>
         <Text style={styles.heroSubcopy}>
-          <OpenBrainLogo style={styles.heroLogoInline} /> lets you share thoughts in real time. <SecondBrainLogo style={styles.heroLogoInline} /> turns
+          <OpenBrainLogo style={[styles.openBrainLogoText, styles.heroLogoInline]} accentStyle={styles.openBrainLogoAccent} /> lets you share thoughts in real time. <SecondBrainLogo style={styles.heroLogoInline} /> turns
           them into lasting
           knowledge. Together, they close the loop between inspiration and clarity.
         </Text>
@@ -230,20 +269,22 @@ export default function HomeScreen({ navigation, token }) {
         </View>
       </View>
 
-      <View style={styles.productsSection}>
+      <View>
         <ProductCard
           number="01 / 02"
-          tagline="Social thinking for fast feedback"
-          description="Capture the half-formed idea before it escapes. Share it with a community of builders and thinkers who will push it further."
+          tagline="Put your best thought forward"
+          description="Find the best ideas in a world with minimal noise."
           features={openBrainFeatures}
           buttonLabel="Start sharing ideas"
           onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
           isOpenBrain
           compactLogo={compactLogo}
         />
+      </View>
+      <View>
         <ProductCard
           number="02 / 02"
-          tagline="Private workspace for long-term clarity"
+          tagline="Half-baked / fully formed knowledge, organized and searchable"
           description="Your personal knowledge system. Everything you've learned, decided, and built - organized so you can actually find it later."
           features={secondBrainFeatures}
           buttonLabel="Build your knowledge base"
@@ -275,7 +316,7 @@ export default function HomeScreen({ navigation, token }) {
         <View style={[styles.ctaBlock, styles.openCta]}>
           <Text style={styles.ctaTitle}>Think out loud with the world</Text>
           <Text style={styles.ctaBody}>
-            Join thousands of builders sharing their best half-baked ideas every day on <OpenBrainLogo style={styles.ctaLogoInline} />.
+            Join thousands of people sharing their foremost ponderings every day on <OpenBrainLogo style={[styles.openBrainLogoText, styles.ctaLogoInline]} accentStyle={styles.openBrainLogoAccent} />.
           </Text>
           <Pressable style={[styles.ctaButtonLight, styles.openAccentBg]} onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}>
             <Text style={styles.buttonLabelText}>Try Openbrain</Text>
@@ -283,7 +324,7 @@ export default function HomeScreen({ navigation, token }) {
         </View>
 
         <View style={[styles.ctaBlock, styles.secondCta]}>
-          <Text style={styles.ctaTitle}>Build the brain you always wanted</Text>
+          <Text style={styles.ctaTitle}>Build the brain you wish you had</Text>
           <Text style={styles.ctaBody}>
             Your notes, your insights, your decisions - all in one searchable, enduring archive with <SecondBrainLogo style={styles.ctaLogoInline} />.
           </Text>
@@ -295,9 +336,9 @@ export default function HomeScreen({ navigation, token }) {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          © {currentYear} <OpenBrainLogo style={styles.footerLogoInline} /> & <SecondBrainLogo style={styles.footerLogoInline} />
+          © {currentYear} <OpenBrainLogo style={[styles.openBrainLogoText, styles.footerLogoInline]} accentStyle={styles.openBrainLogoAccent} /> & <SecondBrainLogo style={styles.footerLogoInline} />
         </Text>
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
