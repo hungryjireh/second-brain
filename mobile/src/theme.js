@@ -25,6 +25,7 @@ export const theme = {
     bgBase: '#F3EEE4',
     bgSurface: '#EAE3D9',
     bgRaised: '#EAE3D9',
+    typebarSurface: '#E4DCCF',
     bgHover: '#8C3A1E',
     border: 'rgba(255,255,255,0.07)',
     borderStrong: 'rgba(255,255,255,0.12)',

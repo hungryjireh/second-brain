@@ -134,6 +134,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
+    backgroundColor: theme.colors.typebarSurface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 6,
   },
   typebarInput: {
     flex: 1,
