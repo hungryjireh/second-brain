@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
@@ -49,6 +49,18 @@ function coerceBoolean(value) {
   return false;
 }
 
+function formatRelativeTime(value) {
+  if (!value) return '';
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return '';
+  const deltaSeconds = Math.max(0, Math.floor((Date.now() - timestamp.getTime()) / 1000));
+  if (deltaSeconds < 60) return 'just now';
+  if (deltaSeconds < 3600) return `${Math.floor(deltaSeconds / 60)}m ago`;
+  if (deltaSeconds < 86400) return `${Math.floor(deltaSeconds / 3600)}h ago`;
+  if (deltaSeconds < 604800) return `${Math.floor(deltaSeconds / 86400)}d ago`;
+  return `${Math.floor(deltaSeconds / 604800)}w ago`;
+}
+
 export default function OpenBrainTopMenu({ navigation, token }) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width <= 420;
@@ -63,6 +75,20 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const [results, setResults] = useState({ users: [], thoughts: [] });
   const [didSearch, setDidSearch] = useState(false);
   const [followBusyUserId, setFollowBusyUserId] = useState('');
+
+  const fetchNotifications = useCallback(async () => {
+    if (!token || notificationsLoading) return;
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS } });
+      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+    } catch (err) {
+      setNotificationsError(err.message || 'Failed to load notifications.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [notificationsLoading, token]);
 
   async function handleSearch() {
     const value = query.trim().replace(/^@+/, '');
@@ -134,18 +160,18 @@ export default function OpenBrainTopMenu({ navigation, token }) {
 
   async function openNotifications() {
     setIsNotificationsOpen(true);
-    if (!token || notificationsLoading) return;
-    setNotificationsLoading(true);
-    setNotificationsError('');
-    try {
-      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS } });
-      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
-    } catch (err) {
-      setNotificationsError(err.message || 'Failed to load notifications.');
-    } finally {
-      setNotificationsLoading(false);
-    }
+    await fetchNotifications();
   }
+
+  useEffect(() => {
+    if (!token) {
+      setNotifications([]);
+      setNotificationsError('');
+      setNotificationsLoading(false);
+      return;
+    }
+    fetchNotifications();
+  }, [fetchNotifications, token]);
 
   async function markNotificationAsRead(id) {
     if (!token || !id) return;
@@ -310,13 +336,11 @@ export default function OpenBrainTopMenu({ navigation, token }) {
               ) : null}
               {!notificationsLoading && !notificationsError && notifications.length > 0 ? (
                 <View style={styles.notificationsTable}>
-                  <View style={styles.notificationsHeaderRow}>
-                    <Text style={styles.notificationsHeaderCellActor}>Actor</Text>
-                    <Text style={styles.notificationsHeaderCellType}>Type</Text>
-                    <Text style={styles.notificationsHeaderCellStatus}>Status</Text>
-                  </View>
                   {notifications.map(item => {
                     const unread = !item?.read_at;
+                    const timestamp = formatRelativeTime(item?.created_at || item?.inserted_at || item?.updated_at);
+                    const username = item?.profiles?.username || item?.actor_id || '';
+                    const isFollowType = item?.type === 'follow';
                     return (
                       <Pressable
                         key={item.id}
@@ -325,15 +349,20 @@ export default function OpenBrainTopMenu({ navigation, token }) {
                           if (unread) markNotificationAsRead(item.id);
                         }}
                       >
-                        <Text style={styles.notificationsActor} numberOfLines={1}>
-                          {item?.actor_id || 'Unknown'}
-                        </Text>
-                        <Text style={styles.notificationsType} numberOfLines={1}>
-                          {item?.type || 'notification'}
-                        </Text>
-                        <Text style={[styles.notificationsStatus, unread && styles.notificationsStatusUnread]}>
-                          {unread ? 'Unread' : 'Read'}
-                        </Text>
+                        <View style={styles.notificationsMain}>
+                          {unread ? <View style={styles.notificationsUnreadDot} /> : null}
+                          <Text style={styles.notificationsMessage} numberOfLines={2}>
+                            {username ? (
+                              <Text style={styles.notificationsLink} onPress={() => openProfile(username)}>
+                                @{username}
+                              </Text>
+                            ) : (
+                              'Someone'
+                            )}
+                            {isFollowType ? ' is now following your thoughts' : ` sent a ${item?.type || 'notification'}`}
+                          </Text>
+                        </View>
+                        {!!timestamp ? <Text style={styles.notificationsTime}>{timestamp}</Text> : null}
                       </Pressable>
                     );
                   })}

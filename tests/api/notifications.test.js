@@ -238,6 +238,16 @@ test('GET /api/open-brain/notifications lists notifications for auth user', asyn
       });
     }
 
+    if (url.pathname === '/rest/v1/profiles' && method === 'GET') {
+      return new Response(JSON.stringify([{
+        id: '22222222-2222-4222-8222-222222222222',
+        username: 'alice',
+      }]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     throw new Error(`Unexpected fetch call: ${method} ${url.pathname}`);
   };
 
@@ -259,4 +269,5 @@ test('GET /api/open-brain/notifications lists notifications for auth user', asyn
   assert.equal(res.statusCode, 200);
   assert.equal(Array.isArray(jsonBody(res)?.notifications), true);
   assert.equal(jsonBody(res)?.notifications?.[0]?.type, 'follow');
+  assert.equal(jsonBody(res)?.notifications?.[0]?.profiles?.username, 'alice');
 });
