@@ -116,6 +116,12 @@ export default function LandingScreen() {
     }
   }
 
+  function goToLearnMore() {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign('/learn-more');
+    }
+  }
+
   function SecondBrainLogo() {
     return (
       <Text style={styles.footerLogoText}>
@@ -170,6 +176,13 @@ export default function LandingScreen() {
             <Text style={[styles.buttonText, { color: theme.colors.textLight }]}>
               {loading ? 'submitting...' : 'notify me'}
             </Text>
+          </Pressable>
+          <Pressable
+            onPress={goToLearnMore}
+            style={styles.learnMoreButton}
+            accessibilityRole="button"
+          >
+            <Text style={styles.learnMoreButtonText}>learn more</Text>
           </Pressable>
 
           {success ? (

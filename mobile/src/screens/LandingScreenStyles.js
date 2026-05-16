@@ -66,6 +66,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
+  learnMoreButton: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  learnMoreButtonText: {
+    fontWeight: '600',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textDecorationLine: 'underline',
+  },
   helperText: {
     marginTop: 12,
     color: '#d9e9ff',
