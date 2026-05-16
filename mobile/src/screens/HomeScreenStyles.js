@@ -130,11 +130,20 @@ const styles = StyleSheet.create({
     marginBottom: 36,
     minHeight: 220,
   },
+  dualProductSectionSmallScreen: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 20,
+  },
   dualProductColumn: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 14,
     gap: 14,
+  },
+  dualProductColumnSmallScreen: {
+    width: '100%',
+    paddingHorizontal: 0,
   },
   dualProductDividerWrap: {
     width: 1,
@@ -160,9 +169,17 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     minHeight: 44,
   },
+  dualProductDescriptionSmallScreen: {
+    minHeight: 0,
+    maxWidth: 420,
+  },
   dualProductButton: {
     ...HOME_BUTTON_BASE,
     minWidth: 168,
+  },
+  dualProductButtonSmallScreen: {
+    width: '100%',
+    maxWidth: 420,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -399,12 +416,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 560,
-    overflow: 'hidden',
   },
   previewSecondImage: {
-    height: 500,
-    maxHeight: '100%',
     aspectRatio: 731 / 1695,
     borderRadius: 6,
     backgroundColor: 'transparent',
@@ -550,7 +563,7 @@ const styles = StyleSheet.create({
   },
   productDescription: {
     color: theme.colors.textSecondary,
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 26,
     marginBottom: 34,
     fontFamily: theme.fonts.regular,
@@ -565,23 +578,23 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   featureDot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 4,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   featureDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   featureText: {
     color: theme.colors.textSecondary,
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 26,
     fontFamily: theme.fonts.regular,
   },
@@ -614,6 +627,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     paddingVertical: 40,
   },
+  workflowSectionSmallScreen: {
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+  },
   workflowLabel: {
     color: theme.colors.textSecondary,
     fontSize: 11,
@@ -630,12 +647,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontFamily: theme.fonts.serif,
   },
+  workflowTitleSmallScreen: {
+    fontSize: 24,
+    lineHeight: 30,
+  },
   stepGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     columnGap: 10,
     rowGap: 10,
+  },
+  stepGridSmallScreen: {
+    columnGap: 8,
+    rowGap: 8,
   },
   stepCard: {
     backgroundColor: theme.colors.bgRaised,
@@ -644,6 +669,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     width: '47.5%',
+  },
+  stepCardSmallScreen: {
+    width: '48.5%',
+    padding: 12,
   },
   stepNum: {
     color: theme.colors.textMuted,
@@ -723,8 +752,8 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 62,
-    lineHeight: 68,
+    fontSize: 56,
+    lineHeight: 62,
     letterSpacing: -1,
     fontFamily: theme.fonts.serif,
     fontStyle: 'italic',
@@ -732,7 +761,7 @@ const styles = StyleSheet.create({
   },
   ctaBody: {
     color: theme.colors.textSecondary,
-    fontSize: 18,
+    fontSize: 14,
     lineHeight: 33,
     fontFamily: theme.fonts.regular,
     maxWidth: 360,

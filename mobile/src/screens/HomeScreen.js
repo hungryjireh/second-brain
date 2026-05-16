@@ -13,9 +13,9 @@ const openBrainFeatures = [
 ];
 
 const secondBrainFeatures = [
-  'Our Telegram bot organizes your messy written and spoken thoughts instantly',
-  'View your knowledge dump on our platform, Markdown and all. Your knowledge stays beautiful and searchable forever',
-  'Your billion dollar idea, granny\'s secret recipe, LLM exported conversations and everything in between all in one place',
+  'SecondBrain organizes your messy written and spoken thoughts instantly',
+  'View your knowledge dump, Markdown and all. Your knowledge stays beautiful and searchable forever',
+  'From your granny\'s secret recipe to ChatGPT conversations - all in one place',
 ];
 
 const workflowSteps = [
@@ -178,6 +178,11 @@ export default function HomeScreen({ navigation, token }) {
   );
   const compactLogo = width <= 390;
   const isSmallScreen = width <= 390;
+  const secondPreviewImageAspectRatio = 731 / 1695;
+  const secondPreviewMaxWidth = Math.max(180, Math.min(width - 84, 320));
+  const secondPreviewMaxHeight = Math.max(320, Math.min(height * 0.62, 520));
+  const secondPreviewImageWidth = Math.min(secondPreviewMaxWidth, secondPreviewMaxHeight * secondPreviewImageAspectRatio);
+  const secondPreviewImageHeight = secondPreviewImageWidth / secondPreviewImageAspectRatio;
   const [activeOpenBrainTooltipId, setActiveOpenBrainTooltipId] = useState(openBrainLiveFeedFeatureTooltips[0].id);
   const [activeSecondBrainTooltipId, setActiveSecondBrainTooltipId] = useState(secondBrainArchiveFeatureTooltips[0].id);
   const primaryAction = token ? () => navigation.navigate('Apps') : () => navigation.navigate('Login');
@@ -265,14 +270,20 @@ and listen to each other breathe.`}
       </View>
 
       <View style={styles.hero}>
-        <View style={[styles.dualProductSection, { minHeight: height }]}>
-          <View style={styles.dualProductColumn}>
+        <View
+          style={[
+            styles.dualProductSection,
+            isSmallScreen ? styles.dualProductSectionSmallScreen : null,
+            { minHeight: isSmallScreen ? undefined : height },
+          ]}
+        >
+          <View style={[styles.dualProductColumn, isSmallScreen ? styles.dualProductColumnSmallScreen : null]}>
             <SecondBrainLogo style={styles.dualProductLogo} />
-            <Text style={styles.dualProductDescription}>
+            <Text style={[styles.dualProductDescription, isSmallScreen ? styles.dualProductDescriptionSmallScreen : null]}>
               Your personal knowledge OS: capture notes, thoughts, todos, reminders, and even imported LLM conversations in one place. From quick brain-dumps to structured memory, automatically organize scattered inputs with SecondBrain.
             </Text>
             <Pressable
-              style={[styles.dualProductButton, styles.secondAccentBg]}
+              style={[styles.dualProductButton, isSmallScreen ? styles.dualProductButtonSmallScreen : null, styles.secondAccentBg]}
               onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
             >
               <Text style={styles.buttonLabelText}>Try SecondBrain</Text>
@@ -283,13 +294,13 @@ and listen to each other breathe.`}
               <View style={styles.dualProductDivider} />
             </View>
           ) : null}
-          <View style={styles.dualProductColumn}>
+          <View style={[styles.dualProductColumn, isSmallScreen ? styles.dualProductColumnSmallScreen : null]}>
             <OpenBrainLogo style={[styles.openBrainLogoText, styles.dualProductLogo]} accentStyle={styles.openBrainLogoAccent} />
-            <Text style={styles.dualProductDescription}>
+            <Text style={[styles.dualProductDescription, isSmallScreen ? styles.dualProductDescriptionSmallScreen : null]}>
               What if we only had one thought a day to share with the world? See the foremost thought on everyone's minds on the OpenBrain feed. When something resonates, save it straight into SecondBrain so inspiration turns into usable knowledge.
             </Text>
             <Pressable
-              style={[styles.dualProductButton, styles.openAccentBg]}
+              style={[styles.dualProductButton, isSmallScreen ? styles.dualProductButtonSmallScreen : null, styles.openAccentBg]}
               onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
             >
               <Text style={styles.buttonLabelText}>Try OpenBrain</Text>
@@ -365,7 +376,7 @@ and listen to each other breathe.`}
             <View style={styles.previewCardSecond}>
               <Image
                 source={require('../../assets/secondbrain-transparent-v2.png')}
-                style={styles.previewSecondImage}
+                style={[styles.previewSecondImage, { width: secondPreviewImageWidth, height: secondPreviewImageHeight }]}
                 resizeMode="contain"
               />
             </View>
@@ -398,9 +409,9 @@ and listen to each other breathe.`}
         <ProductCard
           number="01 / 02"
           tagline="Put your best thought forward"
-          description="Find the best ideas in a world with minimal noise."
+          description="Find the most exciting thoughts in a world with minimal noise."
           features={openBrainFeatures}
-          buttonLabel="Start sharing ideas"
+          buttonLabel="Start sharing"
           onPress={token ? () => navigation.navigate('OpenBrainFeed') : primaryAction}
           isOpenBrain
           compactLogo={compactLogo}
@@ -410,7 +421,7 @@ and listen to each other breathe.`}
         <ProductCard
           number="02 / 02"
           tagline="Half-baked / fully formed knowledge, organized and searchable"
-          description="Your personal knowledge system. Everything you've learned, decided, and built - organized so you can actually find it later."
+          description="Everything you've learned, decided, and built - organized so you can actually find it later."
           features={secondBrainFeatures}
           buttonLabel="Build your knowledge base"
           onPress={token ? () => navigation.navigate('SecondBrain') : primaryAction}
@@ -418,12 +429,14 @@ and listen to each other breathe.`}
         />
       </View>
 
-      <View style={styles.workflowSection}>
-        <Text style={styles.workflowLabel}>The workflow</Text>
-        <Text style={styles.workflowTitle}>From raw spark to refined knowledge</Text>
-        <View style={styles.stepGrid}>
+      <View style={[styles.workflowSection, isSmallScreen ? styles.workflowSectionSmallScreen : null]}>
+        <Text style={styles.workflowLabel}>What we offer</Text>
+        <Text style={[styles.workflowTitle, isSmallScreen ? styles.workflowTitleSmallScreen : null]}>
+          From raw spark to refined knowledge
+        </Text>
+        <View style={[styles.stepGrid, isSmallScreen ? styles.stepGridSmallScreen : null]}>
           {workflowSteps.map(step => (
-            <View key={step.num} style={styles.stepCard}>
+            <View key={step.num} style={[styles.stepCard, isSmallScreen ? styles.stepCardSmallScreen : null]}>
               <Text style={styles.stepNum}>{step.num}</Text>
               <Text style={styles.stepIcon}>{step.icon}</Text>
               <Text style={styles.stepTitle}>{step.title}</Text>
