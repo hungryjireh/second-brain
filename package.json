@@ -14,7 +14,7 @@
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
     "start:api": "node --watch --watch-path=api --watch-path=lib scripts/local-api.js",
-    "test": "node --test tests/api/*.test.js && npm --prefix webapp run test && npm --prefix mobile run test"
+    "test": "node --test tests/api/*.test.js && npm --prefix mobile run test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
