@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
-import { Animated, Image, Text, View, Pressable, useWindowDimensions } from 'react-native';
+import { Animated, Image, Text, View, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { Asset } from 'expo-asset';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import styles from './HomeScreenStyles';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainLogo from '../components/OpenBrainLogo';
@@ -164,6 +166,16 @@ function SecondBrainLogo({ style, accentStyle, textProps }) {
 export default function HomeScreen({ navigation, token }) {
   const { width, height } = useWindowDimensions();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const poemVideoSource = require('../../assets/ebony-forsyth-dupe.mp4');
+  const poemVideoWebUri = Asset.fromModule(poemVideoSource).uri;
+  const poemVideoPlayer = useVideoPlayer(
+    poemVideoSource,
+    (player) => {
+      player.loop = true;
+      player.muted = true;
+      player.play();
+    },
+  );
   const compactLogo = width <= 390;
   const isSmallScreen = width <= 390;
   const [activeOpenBrainTooltipId, setActiveOpenBrainTooltipId] = useState(openBrainLiveFeedFeatureTooltips[0].id);
@@ -210,11 +222,35 @@ export default function HomeScreen({ navigation, token }) {
 
       <View style={[styles.introHero, { minHeight: height }]}>
         <Animated.Text style={[styles.introHeroText, { opacity: introOpacity }]}>
-          what if you only had 1 thought a day?
+          If you could save just one thought before the day ends, what would it be?
         </Animated.Text>
       </View>
 
-      <View style={[styles.introHero, { minHeight: height }]}>
+      <View style={[styles.introHero, styles.introHeroPoemWrap, { minHeight: height }]}>
+        <View pointerEvents="none" style={styles.introHeroPoemMedia}>
+          {Platform.OS === 'web' ? (
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              src={poemVideoWebUri}
+              style={styles.introHeroPoemVideoWeb}
+            />
+          ) : (
+            <VideoView
+              player={poemVideoPlayer}
+              style={styles.introHeroPoemVideo}
+              nativeControls={false}
+              contentFit="cover"
+              surfaceType="textureView"
+              allowsFullscreen={false}
+              allowsPictureInPicture={false}
+            />
+          )}
+          <View style={styles.introHeroPoemOverlay} />
+        </View>
         <Animated.Text style={[styles.introHeroPoem, { opacity: poemOpacity }]}>
           {`When she doesn’t respond,
 I know she’s used up all her words,

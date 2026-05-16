@@ -39,6 +39,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.bgBase,
+    position: 'relative',
+  },
+  introHeroPoemWrap: {
+    overflow: 'hidden',
+    position: 'relative',
+    zIndex: 0,
+  },
+  introHeroPoemMedia: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+    zIndex: 0,
+  },
+  introHeroPoemVideo: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  introHeroPoemVideoWeb: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    objectFit: 'cover',
+  },
+  introHeroPoemOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(7, 10, 14, 0.48)',
   },
   introHeroText: {
     color: theme.colors.textPrimary,
@@ -51,7 +78,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
   },
   introHeroPoem: {
-    color: theme.colors.textPrimary,
+    color: '#f7f7f5',
     fontSize: 24,
     lineHeight: 36,
     letterSpacing: -0.2,
@@ -59,6 +86,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serif,
     fontStyle: 'italic',
     maxWidth: 680,
+    zIndex: 1,
   },
   nav: {
     paddingHorizontal: 18,
