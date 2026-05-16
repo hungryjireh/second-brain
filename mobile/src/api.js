@@ -86,6 +86,12 @@ function parseCachePathFromKey(cacheKey) {
   return payload.slice(0, separatorIndex);
 }
 
+function normalizeAuthToken(token) {
+  const value = String(token || '').trim();
+  if (!value) return '';
+  return value.replace(/^Bearer\s+/i, '').trim();
+}
+
 async function readCache(cacheKey) {
   try {
     const raw = await AsyncStorage.getItem(cacheKey);
@@ -213,7 +219,8 @@ export async function apiRequest(path, {
   }
 
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const normalizedToken = normalizeAuthToken(token);
+  if (normalizedToken) headers.Authorization = `Bearer ${normalizedToken}`;
 
   let response;
   let text = '';
@@ -284,7 +291,11 @@ export async function sendFollowNotification(token, followedUserId) {
         type: 'follow',
       },
     });
-  } catch {
+  } catch (err) {
+    console.warn('Follow notification failed', {
+      targetUserId,
+      error: err?.message || 'unknown error',
+    });
     // Follow should still succeed even if notification delivery fails.
   }
 }

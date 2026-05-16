@@ -99,7 +99,7 @@ test('POST /api/open-brain/notifications creates follow notification', async () 
     actor_id: '11111111-1111-4111-8111-111111111111',
     type: 'follow',
   }]);
-  assert.equal(insertHeaders.Prefer, 'return=representation');
+  assert.equal(insertHeaders.Prefer, 'return=minimal');
   assert.equal(jsonBody(res)?.notification?.type, 'follow');
 });
 
