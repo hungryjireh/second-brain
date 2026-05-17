@@ -3,15 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } fro
 import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtComposer.styles';
 import { theme } from '../theme';
-
-function normalizeThoughtText(text) {
-  if (typeof text !== 'string') return '';
-  return text
-    .replace(/\r\n?/g, '\n')
-    .replace(/\u2028|\u2029/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .trim();
-}
+import { normalizeThoughtText, parseThoughtBlocks } from '../utils/openBrainThoughtText';
 
 function parsePostedThought(text) {
   const normalized = normalizeThoughtText(text);
@@ -28,15 +20,7 @@ function parsePostedThought(text) {
   const title = lines[firstLineIndex].trim();
   const body = lines.slice(firstLineIndex + 1).join('\n').trim();
   if (!body) return { title: '', blocks: [{ text: title, isQuote: false }], hasTitle: false };
-  const blocks = body
-    .split(/\n\s*\n/)
-    .map(part => part.trim())
-    .filter(Boolean)
-    .map(part => {
-      const unwrapped = part.replace(/^>\s?/gm, '').trim();
-      const isQuote = /^>\s?/.test(part) || /^".+"$/.test(part) || /^“.+”$/.test(part) || /^'.+'$/.test(part);
-      return { text: isQuote ? unwrapped : part, isQuote };
-    });
+  const blocks = parseThoughtBlocks(body);
   return { title, blocks, hasTitle: true };
 }
 

@@ -156,25 +156,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    color: theme.colors.textMuted,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 0.72,
-    textTransform: 'uppercase',
-  },
-  sectionHeaderLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.borderStrong,
-  },
   error: {
     color: theme.colors.danger,
     fontFamily: theme.fonts.regular,

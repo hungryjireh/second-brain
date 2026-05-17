@@ -6,29 +6,20 @@ import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
+import { formatPublishedDateTime } from '../utils/openBrainDates';
+import { isRequiredFieldPresent, normalizeRequiredField } from '../utils/formFields';
 import styles from './SharedThoughtScreen.styles';
-
-function formatPublished(dateString) {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
 
 export default function SharedThoughtScreen({ navigation, route, token }) {
   const [slug, setSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [payload, setPayload] = useState(null);
-  const slugFromRoute = String(route?.params?.slug || '').trim();
+  const slugFromRoute = normalizeRequiredField(route?.params?.slug);
+  const canLoadSlug = isRequiredFieldPresent(slug);
 
   async function load(nextSlug = slug) {
-    const normalizedSlug = String(nextSlug || '').trim();
+    const normalizedSlug = normalizeRequiredField(nextSlug);
     if (!normalizedSlug) return;
     setLoading(true);
     setError('');
@@ -95,7 +86,7 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
             placeholder="share slug"
             buttonLabel={loading ? 'Loading...' : 'Load thought'}
             onSubmit={load}
-            disabled={loading || !slug.trim()}
+            disabled={loading || !canLoadSlug}
           />
         ) : null}
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -111,7 +102,7 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
                   item={sharedThoughtItem}
                   token={token}
                   onOpenProfile={payload?.author?.username ? openAuthorProfile : undefined}
-                  date={formatPublished(payload.thought.created_at)}
+                  date={formatPublishedDateTime(payload.thought.created_at)}
                 />
               </View>
             </ScrollView>

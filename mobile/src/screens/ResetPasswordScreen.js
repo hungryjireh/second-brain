@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
 import { theme } from '../theme';
+import { isRequiredFieldPresent, normalizeRequiredField } from '../utils/formFields';
 import styles from './ResetPasswordScreen.styles';
 
 export default function ResetPasswordScreen({ token, navigation }) {
@@ -10,9 +11,11 @@ export default function ResetPasswordScreen({ token, navigation }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const normalizedEmail = normalizeRequiredField(email);
+  const canSubmit = isRequiredFieldPresent(email);
 
   async function handleSendReset() {
-    if (!email.trim() || sending) return;
+    if (!canSubmit || sending) return;
     setSending(true);
     setError('');
     setSuccess('');
@@ -20,7 +23,7 @@ export default function ResetPasswordScreen({ token, navigation }) {
       await apiRequest('/auth/reset-password', {
         method: 'POST',
         token,
-        body: { email: email.trim() },
+        body: { email: normalizedEmail },
       });
       setSuccess('If that email exists, a password reset link has been sent.');
     } catch (err) {
@@ -55,11 +58,11 @@ export default function ResetPasswordScreen({ token, navigation }) {
 
         <View style={styles.actionsRow}>
           <Pressable
-            style={[styles.primaryButton, (sending || !email.trim()) && styles.buttonDisabled]}
+            style={[styles.primaryButton, (sending || !canSubmit) && styles.buttonDisabled]}
             onPress={handleSendReset}
-            disabled={sending || !email.trim()}
+            disabled={sending || !canSubmit}
           >
-            <Text style={[styles.primaryButtonText, (sending || !email.trim()) && styles.buttonDisabledText]}>
+            <Text style={[styles.primaryButtonText, (sending || !canSubmit) && styles.buttonDisabledText]}>
               {sending ? 'Sending reset link...' : 'Send reset link'}
             </Text>
           </Pressable>

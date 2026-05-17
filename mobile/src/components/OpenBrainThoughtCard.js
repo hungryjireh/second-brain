@@ -5,21 +5,14 @@ import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
 import ProfileAvatar from './ProfileAvatar';
 import SecondBrainMarkdownBody from './SecondBrainMarkdownBody';
+import { toBooleanLike } from '../utils/typeCoercion';
+import { normalizeThoughtText, parseThoughtBlocks } from '../utils/openBrainThoughtText';
 
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
   { key: 'me_too', label: 'me too' },
   { key: 'made_me_think', label: 'made me think' },
 ];
-
-function normalizeThoughtText(text) {
-  if (typeof text !== 'string') return '';
-  return text
-    .replace(/\r\n?/g, '\n')
-    .replace(/\u2028|\u2029/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
-    .trim();
-}
 
 const PREVIEW_CHAR_LIMIT = 220;
 const ACTION_ICON_ONLY_MAX_WIDTH = 768;
@@ -41,18 +34,7 @@ function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
 function parseThoughtForCard(text) {
   const normalized = normalizeThoughtText(text);
   if (!normalized) return { title: '', blocks: [], hasTitle: false };
-
-  const blocks = normalized
-    .split(/\n\s*\n/)
-    .map(part => part.trim())
-    .filter(Boolean)
-    .map(part => {
-      const unwrapped = part.replace(/^>\s?/gm, '').trim();
-      const isQuote = /^>\s?/.test(part) || /^".+"$/.test(part) || /^“.+”$/.test(part) || /^'.+'$/.test(part);
-      return { text: isQuote ? unwrapped : part, isQuote };
-    });
-
-  return { title: '', blocks, hasTitle: false };
+  return { title: '', blocks: parseThoughtBlocks(normalized), hasTitle: false };
 }
 
 function coerceCount(value) {
@@ -62,17 +44,6 @@ function coerceCount(value) {
 function getThoughtSaveCount(item) {
   if (!item || typeof item !== 'object') return 0;
   return coerceCount(item.save_count);
-}
-
-function coerceBoolean(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1') return true;
-    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
-  }
-  return false;
 }
 
 function OpenBrainThoughtCard({
@@ -263,8 +234,8 @@ function OpenBrainThoughtCard({
     const avatarUrl = item.profile?.avatar_url || '';
     const streak = coerceCount(item.profile?.streak_count);
     const saveCount = getThoughtSaveCount(item);
-    const isSelf = coerceBoolean(item.profile?.is_self);
-    const isFollowing = coerceBoolean(item.profile?.is_following);
+    const isSelf = toBooleanLike(item.profile?.is_self);
+    const isFollowing = toBooleanLike(item.profile?.is_following);
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
 

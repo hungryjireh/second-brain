@@ -3,31 +3,32 @@ import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { apiRequest } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
+import { isRequiredFieldPresent } from '../utils/formFields';
+import { runGuardedOpenBrainSearch } from '../utils/openBrainSearch';
 import styles from './OpenBrainUserSearchScreen.styles';
 
 export default function OpenBrainUserSearchScreen({ token, navigation }) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const canSearch = isRequiredFieldPresent(query);
 
   async function handleSearch() {
-    const username = query.trim().replace(/^@+/, '');
-    if (!username || loading) return;
-
-    setLoading(true);
-    setError('');
-    try {
-      const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(username)}`, {
-        token,
-        cache: { ttlMs: CACHE_TTL_MS.PROFILE },
-      });
-      const targetUsername = response?.profile?.username || username;
-      navigation.navigate('OpenBrainProfile', { username: targetUsername });
-    } catch (err) {
-      setError(err.message || 'Could not find that user.');
-    } finally {
-      setLoading(false);
-    }
+    await runGuardedOpenBrainSearch({
+      query,
+      loading,
+      setLoading,
+      setError,
+      fallbackErrorMessage: 'Could not find that user.',
+      onSearch: async username => {
+        const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(username)}`, {
+          token,
+          cache: { ttlMs: CACHE_TTL_MS.PROFILE },
+        });
+        const targetUsername = response?.profile?.username || username;
+        navigation.navigate('OpenBrainProfile', { username: targetUsername });
+      },
+    });
   }
 
   return (
@@ -56,11 +57,11 @@ export default function OpenBrainUserSearchScreen({ token, navigation }) {
         {!!error && <Text style={styles.error}>{error}</Text>}
         <Pressable
           onPress={handleSearch}
-          disabled={loading || !query.trim()}
+          disabled={loading || !canSearch}
           style={({ pressed }) => [
             styles.button,
-            (loading || !query.trim()) && styles.buttonDisabled,
-            pressed && !loading && query.trim() && styles.buttonPressed,
+            (loading || !canSearch) && styles.buttonDisabled,
+            pressed && !loading && canSearch && styles.buttonPressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel="Search for user"

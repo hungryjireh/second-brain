@@ -4,50 +4,15 @@ import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
+import { useOpenBrainSearch } from '../hooks/useOpenBrainSearch';
 import { theme } from '../theme';
-
-function fuzzyScoreUsername(username, query) {
-  const source = String(username || '').toLowerCase();
-  const needle = String(query || '').toLowerCase();
-  if (!source || !needle) return Number.NEGATIVE_INFINITY;
-  if (source === needle) return 1000;
-  if (source.startsWith(needle)) return 800 - (source.length - needle.length);
-  if (source.includes(needle)) return 600 - source.indexOf(needle);
-
-  let score = 0;
-  let cursor = 0;
-  let streakBonus = 0;
-  for (let i = 0; i < needle.length; i += 1) {
-    const ch = needle[i];
-    const found = source.indexOf(ch, cursor);
-    if (found === -1) return Number.NEGATIVE_INFINITY;
-    score += 20;
-    if (found === cursor) streakBonus += 10;
-    cursor = found + 1;
-  }
-
-  const gapPenalty = Math.max(0, source.length - needle.length);
-  return score + streakBonus - gapPenalty;
-}
-
-function fuzzySortUsers(users, query) {
-  return [...users]
-    .map(user => ({ user, score: fuzzyScoreUsername(user?.username, query) }))
-    .filter(item => item.score > Number.NEGATIVE_INFINITY)
-    .sort((a, b) => b.score - a.score)
-    .map(item => item.user);
-}
-
-function coerceBoolean(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1') return true;
-    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
-  }
-  return false;
-}
+import { sortUsersByQuery } from '../utils/searchRanking';
+import { toBooleanLike } from '../utils/typeCoercion';
+import {
+  buildOpenBrainSearchRows,
+  normalizeOpenBrainSearchInput,
+} from '../utils/openBrainSearch';
+import { executeOpenBrainFollowToggle } from '../utils/openBrainFollow';
 
 function formatRelativeTime(value) {
   if (!value) return '';
@@ -126,12 +91,24 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState('');
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [results, setResults] = useState({ users: [], thoughts: [] });
-  const [didSearch, setDidSearch] = useState(false);
   const [followBusyUserId, setFollowBusyUserId] = useState('');
+  const {
+    query,
+    setQuery,
+    loading,
+    error,
+    didSearch,
+    results,
+    setResults,
+    runSearch,
+    resetSearch,
+  } = useOpenBrainSearch({
+    token,
+    apiRequest,
+    cacheTtlMs: CACHE_TTL_MS.SEARCH,
+    sortUsersByQuery,
+    fallbackErrorMessage: 'Search failed.',
+  });
 
   const fetchNotifications = useCallback(async () => {
     if (!token || notificationsLoading) return;
@@ -148,34 +125,15 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   }, [notificationsLoading, token]);
 
   async function handleSearch() {
-    const value = query.trim().replace(/^@+/, '');
-    if (!value || loading) return;
-    setLoading(true);
-    setError('');
-    try {
-      const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(value)}`, {
-        token,
-        cache: { ttlMs: CACHE_TTL_MS.SEARCH },
-      });
-      setDidSearch(true);
-      const rawUsers = Array.isArray(data?.users) ? data.users : [];
-      setResults({
-        users: fuzzySortUsers(rawUsers, value),
-        thoughts: Array.isArray(data?.thoughts) ? data.thoughts : [],
-      });
-    } catch (err) {
-      setError(err.message || 'Search failed.');
-    } finally {
-      setLoading(false);
-    }
+    await runSearch();
   }
 
   async function toggleFollowFromSearch(user) {
     const targetUserId = user?.id;
     if (!token || !targetUserId || followBusyUserId) return;
-    const isSelf = coerceBoolean(user?.is_self);
+    const isSelf = toBooleanLike(user?.is_self);
     if (isSelf) return;
-    const currentlyFollowing = coerceBoolean(user?.is_following);
+    const currentlyFollowing = toBooleanLike(user?.is_following);
     setFollowBusyUserId(targetUserId);
     setResults(current => ({
       ...current,
@@ -184,12 +142,13 @@ export default function OpenBrainTopMenu({ navigation, token }) {
       )),
     }));
     try {
-      if (currentlyFollowing) {
-        await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`, { method: 'DELETE', token });
-      } else {
-        await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: targetUserId } });
-        await sendFollowNotification(token, targetUserId);
-      }
+      await executeOpenBrainFollowToggle({
+        token,
+        targetUserId,
+        isFollowing: currentlyFollowing,
+        apiRequest,
+        sendFollowNotification,
+      });
     } catch {
       setResults(current => ({
         ...current,
@@ -204,11 +163,8 @@ export default function OpenBrainTopMenu({ navigation, token }) {
 
   function closeSearch() {
     setIsSearchOpen(false);
-    setQuery('');
-    setError('');
-    setDidSearch(false);
+    resetSearch();
     setFollowBusyUserId('');
-    setResults({ users: [], thoughts: [] });
   }
 
   function closeNotifications() {
@@ -254,7 +210,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   }
 
   function openSeeMore() {
-    const value = query.trim().replace(/^@+/, '');
+    const value = normalizeOpenBrainSearchInput(query);
     if (!value) return;
     closeSearch();
     navigation.navigate('OpenBrainSearch', { query: value });
@@ -270,18 +226,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
   const unreadCount = notifications.filter(item => !item?.read_at).length;
-  const searchRows = useMemo(() => {
-    const rows = [];
-    if (results.users.length > 0) {
-      rows.push({ type: 'section', key: 'section-users', label: 'Users' });
-      results.users.forEach(user => rows.push({ type: 'user', key: `user-${user.id}`, user }));
-    }
-    if (results.thoughts.length > 0) {
-      rows.push({ type: 'section', key: 'section-thoughts', label: 'Thoughts' });
-      results.thoughts.forEach(thought => rows.push({ type: 'thought', key: `thought-${thought.id}`, thought }));
-    }
-    return rows;
-  }, [results]);
+  const searchRows = useMemo(() => buildOpenBrainSearchRows(results), [results]);
   const keyExtractor = useCallback(item => item.key, []);
   const renderSearchResultItem = useCallback(({ item }) => {
     if (item.type === 'section') {
@@ -293,8 +238,8 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     }
     if (item.type === 'user') {
       const user = item.user;
-      const isSelf = coerceBoolean(user?.is_self);
-      const isFollowing = coerceBoolean(user?.is_following);
+      const isSelf = toBooleanLike(user?.is_self);
+      const isFollowing = toBooleanLike(user?.is_following);
       const followBusy = followBusyUserId === user?.id;
       return (
         <View style={styles.resultRow}>

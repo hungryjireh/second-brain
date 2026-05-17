@@ -1,48 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, Share, Text, View } from 'react-native';
-import { apiRequest, invalidateApiCache, sendFollowNotification } from '../api';
+import { Pressable, Text, View } from 'react-native';
+import { apiRequest, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
-import { buildThoughtSharePayload } from '../share';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
+import OpenBrainSectionedThoughtList from '../components/OpenBrainSectionedThoughtList';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import styles from './OpenBrainProfileScreen.styles';
 import ProfileAvatar from '../components/ProfileAvatar';
-
-function formatThoughtDate(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function isSameLocalDay(a, b) {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
-}
-
-function coerceBoolean(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value === 1;
-  if (typeof value === 'string') {
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true' || normalized === '1') return true;
-    if (normalized === 'false' || normalized === '0' || normalized === '') return false;
-  }
-  return false;
-}
-
-async function shareThought(thought, username) {
-  const payload = buildThoughtSharePayload(thought);
-  if (!payload) return;
-  await Share.share(payload);
-}
+import {
+  addThoughtToSecondBrainWithAlert,
+  buildThoughtSectionRows,
+  groupThoughtsByDay,
+  shareThought,
+} from '../utils/secondBrainHelper';
+import { formatPublishedDateTime } from '../utils/openBrainDates';
+import { toBooleanLike } from '../utils/typeCoercion';
+import { executeOpenBrainFollowToggle } from '../utils/openBrainFollow';
 
 export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const username = route.params?.username;
@@ -53,38 +27,12 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const [followBusy, setFollowBusy] = useState(false);
   const thoughtDisplayItems = useMemo(() => {
     if (error || !profile) return [];
-
-    const today = new Date();
-    const todaysThoughts = [];
-    const otherThoughts = [];
-
-    thoughts.forEach(thought => {
-      const created = new Date(thought.created_at);
-      if (!Number.isNaN(created.getTime()) && isSameLocalDay(created, today)) {
-        todaysThoughts.push(thought);
-        return;
-      }
-      otherThoughts.push(thought);
+    const { todayItems, pastItems } = groupThoughtsByDay(thoughts, formatPublishedDateTime);
+    return buildThoughtSectionRows({
+      todayItems,
+      pastItems,
+      pastSectionId: 'section-other',
     });
-
-    const items = [];
-    if (todaysThoughts.length > 0) {
-      items.push({ type: 'section', id: 'section-today', title: "Today's Thoughts" });
-      todaysThoughts.forEach(thought => items.push({
-        type: 'thought',
-        thought,
-        dateLabel: formatThoughtDate(thought.created_at),
-      }));
-    }
-    if (otherThoughts.length > 0) {
-      items.push({ type: 'section', id: 'section-other', title: 'Past Thoughts' });
-      otherThoughts.forEach(thought => items.push({
-        type: 'thought',
-        thought,
-        dateLabel: formatThoughtDate(thought.created_at),
-      }));
-    }
-    return items;
   }, [error, profile, thoughts]);
 
   const load = useCallback(async () => {
@@ -115,17 +63,18 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [load]);
 
   async function toggleFollow() {
-    if (!profile || coerceBoolean(profile.is_self) || followBusy) return;
-    const currentlyFollowing = coerceBoolean(profile.is_following);
+    if (!profile || toBooleanLike(profile.is_self) || followBusy) return;
+    const currentlyFollowing = toBooleanLike(profile.is_following);
     setFollowBusy(true);
     setProfile(prev => (prev ? { ...prev, is_following: !currentlyFollowing } : prev));
     try {
-      if (currentlyFollowing) {
-        await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(profile.id)}`, { method: 'DELETE', token });
-      } else {
-        await apiRequest('/open-brain/follows', { method: 'POST', token, body: { following_id: profile.id } });
-        await sendFollowNotification(token, profile.id);
-      }
+      await executeOpenBrainFollowToggle({
+        token,
+        targetUserId: profile.id,
+        isFollowing: currentlyFollowing,
+        apiRequest,
+        sendFollowNotification,
+      });
     } catch {
       setProfile(prev => (prev ? { ...prev, is_following: currentlyFollowing } : prev));
     } finally {
@@ -134,53 +83,26 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }
 
   const addToSecondBrain = useCallback(async thought => {
-    const thoughtText = String(thought?.text || '').trim();
-    if (!thoughtText) return;
-    const thoughtId = thought?.id;
-    const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
-    const description = `Thought taken from @${username}:\n\n${thoughtText}`;
-    try {
-      await apiRequest('/entries', {
-        method: 'POST',
-        token,
-        body: { description, category: 'thought', tags: ['openbrain'] },
-      });
-      if (thoughtId) {
-        await apiRequest('/open-brain/add-to-second-brain-click', {
-          method: 'POST',
-          token,
-          body: { thought_id: thoughtId },
-        });
+    await addThoughtToSecondBrainWithAlert({
+      token,
+      thought,
+      onThoughtMarkedAdded: async thoughtId => {
         setThoughts(current => current.map(item => (
           item?.id === thoughtId
             ? { ...item, viewer_has_added_to_second_brain: true }
             : item
         )));
-      }
-      await invalidateApiCache({
-        token,
-        exactPaths: profile?.id ? [`/open-brain/public-thoughts?user_id=${encodeURIComponent(profile.id)}`] : [],
-        pathPrefixes: ['/open-brain/feed', '/open-brain/profile', '/entries'],
-      });
-      Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
-    } catch (err) {
-      Alert.alert('Add to SecondBrain', err.message || 'Unable to save thought.');
-    }
+      },
+      exactPaths: profile?.id ? [`/open-brain/public-thoughts?user_id=${encodeURIComponent(profile.id)}`] : [],
+      pathPrefixes: ['/open-brain/feed', '/open-brain/profile', '/entries'],
+    });
   }, [token]);
 
   const keyExtractor = useCallback(item => (item.type === 'section' ? item.id : String(item.thought.id)), []);
-  const isSelf = coerceBoolean(profile?.is_self);
-  const isFollowing = coerceBoolean(profile?.is_following);
+  const isSelf = toBooleanLike(profile?.is_self);
+  const isFollowing = toBooleanLike(profile?.is_following);
 
-  const renderItem = useCallback(({ item }) => {
-    if (item.type === 'section') {
-      return (
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeader}>{item.title}</Text>
-          <View style={styles.sectionHeaderLine} />
-        </View>
-      );
-    }
+  const renderThoughtItem = useCallback(({ item }) => {
     return (
       <OpenBrainThoughtCard
         text={item.thought.text}
@@ -189,11 +111,11 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         transparentCard
         inlineActionWithDate
         addToSecondBrainPayload={item.thought}
-        onShare={() => shareThought(item.thought, profile?.username)}
+        onShare={() => shareThought(item.thought)}
         onAddToSecondBrain={addToSecondBrain}
       />
     );
-  }, [addToSecondBrain, profile?.username]);
+  }, [addToSecondBrain]);
 
   return (
     <View style={styles.container}>
@@ -255,12 +177,13 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
           </View>
         ) : null}
       </View>
-      <FlatList
+      <OpenBrainSectionedThoughtList
         data={thoughtDisplayItems}
         style={styles.list}
         keyExtractor={keyExtractor}
+        renderThoughtItem={renderThoughtItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={!error && loading && !profile ? (
+        listEmptyComponent={!error && loading && !profile ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.muted}>Loading profile...</Text>
           </View>
@@ -269,12 +192,6 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
             <Text style={styles.empty}>No public thoughts yet.</Text>
           </View>
         ) : null}
-        renderItem={renderItem}
-        initialNumToRender={8}
-        maxToRenderPerBatch={6}
-        updateCellsBatchingPeriod={50}
-        windowSize={7}
-        removeClippedSubviews
       />
       <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrainProfile" />
     </View>

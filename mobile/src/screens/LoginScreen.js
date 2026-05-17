@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login, setToken } from '../api';
 import { theme } from '../theme';
+import { areRequiredFieldsPresent, normalizeRequiredField } from '../utils/formFields';
 import styles from './LoginScreenStyles';
 
 export default function LoginScreen({ onLoggedIn }) {
@@ -13,11 +14,12 @@ export default function LoginScreen({ onLoggedIn }) {
   const passwordRef = useRef('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const normalizedEmail = normalizeRequiredField(emailRef.current);
+  const normalizedPassword = passwordRef.current;
+  const canSubmit = areRequiredFieldsPresent([normalizedEmail, normalizedPassword]);
 
   async function handleLogin() {
-    const normalizedEmail = emailRef.current.trim();
-    const normalizedPassword = passwordRef.current;
-    if (!normalizedEmail || !normalizedPassword || loading) return;
+    if (!canSubmit || loading) return;
 
     setLoading(true);
     setError('');
@@ -68,7 +70,7 @@ export default function LoginScreen({ onLoggedIn }) {
             }}
             style={styles.input}
           />
-          <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
+          <Pressable style={[styles.button, (loading || !canSubmit) && styles.buttonDisabled]} onPress={handleLogin} disabled={loading || !canSubmit}>
             <Text style={[styles.buttonText, loading && styles.buttonTextDisabled]}>{loading ? 'Signing in...' : 'Sign In'}</Text>
           </Pressable>
         </View>

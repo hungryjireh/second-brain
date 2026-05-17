@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import { theme } from '../theme';
+import { areRequiredFieldsPresent, normalizeRequiredField } from '../utils/formFields';
 import styles from './CreateProfileScreenStyles';
 
 export default function CreateProfileScreen({ token, navigation }) {
@@ -12,9 +13,13 @@ export default function CreateProfileScreen({ token, navigation }) {
   const [timezone, setTimezone] = useState(defaultTimezone);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const normalizedUsername = normalizeRequiredField(username);
+  const normalizedAvatarUrl = normalizeRequiredField(avatarUrl);
+  const normalizedTimezone = normalizeRequiredField(timezone);
+  const canSubmit = areRequiredFieldsPresent([normalizedUsername, normalizedTimezone]);
 
   async function handleCreate() {
-    if (!username.trim() || !timezone.trim()) return;
+    if (!canSubmit) return;
     setLoading(true);
     setError('');
     try {
@@ -22,9 +27,9 @@ export default function CreateProfileScreen({ token, navigation }) {
         method: 'POST',
         token,
         body: {
-          username: username.trim(),
-          avatar_url: avatarUrl.trim(),
-          timezone: timezone.trim(),
+          username: normalizedUsername,
+          avatar_url: normalizedAvatarUrl,
+          timezone: normalizedTimezone,
         },
       });
       navigation.replace('OpenBrainFeed');
@@ -43,7 +48,7 @@ export default function CreateProfileScreen({ token, navigation }) {
         <TextInput value={username} onChangeText={setUsername} placeholder="Username" placeholderTextColor={theme.colors.textSecondary} style={styles.input} maxLength={24} autoCapitalize="none" />
         <TextInput value={avatarUrl} onChangeText={setAvatarUrl} placeholder="Avatar URL (optional)" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
         <TextInput value={timezone} onChangeText={setTimezone} placeholder="Timezone" placeholderTextColor={theme.colors.textSecondary} style={styles.input} autoCapitalize="none" />
-        <Pressable style={styles.button} onPress={handleCreate} disabled={loading || !username.trim() || !timezone.trim()}>
+        <Pressable style={styles.button} onPress={handleCreate} disabled={loading || !canSubmit}>
           <Text style={styles.buttonText}>{loading ? 'Saving profile...' : 'Create profile'}</Text>
         </Pressable>
         {!!error && <Text style={styles.error}>{error}</Text>}
