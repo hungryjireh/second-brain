@@ -107,6 +107,132 @@ const styles = StyleSheet.create({
   thoughtBlocks: {
     gap: 10,
   },
+  markdownBody: {
+    gap: 8,
+  },
+  markdownParagraph: {
+    color: theme.colors.textWarm,
+    fontFamily: theme.fonts.serif,
+    fontSize: 18,
+    lineHeight: 30,
+    flexShrink: 1,
+  },
+  markdownParagraphFeed: {
+    fontFamily: theme.fonts.regular,
+    fontSize: 16,
+    lineHeight: 23,
+    color: theme.colors.textSecondary,
+  },
+  markdownParagraphLarge: {
+    fontSize: 24,
+    lineHeight: 40,
+  },
+  markdownHeading: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.serif,
+    fontSize: 24,
+    lineHeight: 32,
+  },
+  markdownHeadingFeed: {
+    fontSize: 22,
+    lineHeight: 30,
+  },
+  markdownHeadingSmallScreen: {
+    fontSize: 20,
+    lineHeight: 28,
+  },
+  markdownBold: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.semibold,
+  },
+  markdownUnderline: {
+    color: theme.colors.textWarm,
+    textDecorationLine: 'underline',
+  },
+  markdownItalic: {
+    color: theme.colors.textWarm,
+    fontStyle: 'italic',
+  },
+  markdownCode: {
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.white09,
+  },
+  markdownLink: {
+    color: theme.colors.accent,
+    textDecorationLine: 'underline',
+  },
+  markdownCodeBlock: {
+    borderRadius: 8,
+    backgroundColor: theme.colors.white09,
+    padding: 10,
+    minWidth: 0,
+  },
+  markdownCodeScrollContent: {
+    minWidth: '100%',
+  },
+  markdownCodeBlockText: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: theme.fonts.mono,
+    flexShrink: 1,
+  },
+  markdownList: {
+    gap: 4,
+  },
+  markdownListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  markdownListBullet: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    minWidth: 14,
+  },
+  markdownQuote: {
+    borderLeftWidth: 2,
+    borderLeftColor: theme.colors.accent,
+    paddingLeft: 10,
+  },
+  markdownQuoteText: {
+    color: theme.colors.textSecondary,
+  },
+  markdownTableWrap: {
+    marginVertical: 2,
+  },
+  markdownTable: {
+    borderWidth: 1,
+    borderColor: theme.colors.white15,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  markdownTableRow: {
+    flexDirection: 'row',
+  },
+  markdownTableHeaderRow: {
+    backgroundColor: theme.colors.white03,
+  },
+  markdownTableCell: {
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.white15,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    minWidth: 92,
+    flexShrink: 1,
+  },
+  markdownTableHeaderCell: {
+    backgroundColor: theme.colors.white03,
+  },
+  markdownTableHeaderText: {
+    color: theme.colors.textPrimary,
+    fontFamily: theme.fonts.semibold,
+  },
+  markdownTableText: {
+    color: theme.colors.textSecondary,
+  },
   thoughtTitle: {
     color: theme.colors.textPrimary,
     fontFamily: theme.fonts.serif,

@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Text, View, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { Asset } from 'expo-asset';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import styles from './HomeScreenStyles';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainLogo from '../components/OpenBrainLogo';
+import { hasExpiredToken } from '../utils/jwt';
 
 const openBrainFeatures = [
   'No edits, no deletes - just one thing you want to share with the world each day',
@@ -166,6 +167,7 @@ function SecondBrainLogo({ style, accentStyle, textProps }) {
 export default function HomeScreen({ navigation, token }) {
   const { width, height } = useWindowDimensions();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const poemVideoRef = useRef(null);
   const poemVideoSource = require('../../assets/ebony-forsyth-dupe.mp4');
   const poemVideoWebUri = Asset.fromModule(poemVideoSource).uri;
   const poemVideoPlayer = useVideoPlayer(
@@ -185,7 +187,8 @@ export default function HomeScreen({ navigation, token }) {
   const secondPreviewImageHeight = secondPreviewImageWidth / secondPreviewImageAspectRatio;
   const [activeOpenBrainTooltipId, setActiveOpenBrainTooltipId] = useState(openBrainLiveFeedFeatureTooltips[0].id);
   const [activeSecondBrainTooltipId, setActiveSecondBrainTooltipId] = useState(secondBrainArchiveFeatureTooltips[0].id);
-  const primaryAction = token ? () => navigation.navigate('Apps') : () => navigation.navigate('Login');
+  const isLoggedOut = !token || hasExpiredToken(token);
+  const primaryAction = isLoggedOut ? () => navigation.navigate('Login') : () => navigation.navigate('Apps');
   const currentYear = new Date().getFullYear();
   const introOpacity = scrollY.interpolate({
     inputRange: [0, Math.max(1, height * 0.45)],
@@ -206,6 +209,27 @@ export default function HomeScreen({ navigation, token }) {
     (tooltip) => tooltip.id === activeSecondBrainTooltipId,
   ) || secondBrainArchiveFeatureTooltips[0];
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return undefined;
+
+    const element = poemVideoRef.current;
+    if (!element) return undefined;
+
+    const tryPlay = () => {
+      const playPromise = element.play?.();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    };
+
+    tryPlay();
+    element.addEventListener('canplay', tryPlay);
+
+    return () => {
+      element.removeEventListener('canplay', tryPlay);
+    };
+  }, []);
+
   return (
     <Animated.ScrollView
       style={styles.container}
@@ -217,7 +241,7 @@ export default function HomeScreen({ navigation, token }) {
       )}
       scrollEventThrottle={16}
     >
-      {!token ? (
+      {isLoggedOut ? (
         <View style={styles.topLoginBar}>
           <Pressable style={styles.eyebrowLoginButton} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.eyebrowLoginText}>Login</Text>
@@ -235,6 +259,7 @@ export default function HomeScreen({ navigation, token }) {
         <View pointerEvents="none" style={styles.introHeroPoemMedia}>
           {Platform.OS === 'web' ? (
             <video
+              ref={poemVideoRef}
               autoPlay
               muted
               loop
@@ -256,14 +281,31 @@ export default function HomeScreen({ navigation, token }) {
           )}
           <View style={styles.introHeroPoemOverlay} />
         </View>
-        <Animated.Text style={[styles.introHeroPoem, { opacity: poemOpacity }]}>
-          {`When she doesn’t respond,
+        <Animated.View style={[styles.introHeroPoemBlock, { opacity: poemOpacity }]}>
+          <Text style={[styles.introHeroPoem, isSmallScreen ? styles.introHeroPoemSmall : null]}>{`In an effort to get people to look
+into each other’s eyes more,
+and also to appease the mutes,
+the government has decided
+to allot each person exactly one hundred
+and sixty-seven words, per day.
+
+When the phone rings, I put it to my ear
+without saying hello. In the restaurant
+I point at chicken noodle soup.
+I am adjusting well to the new way.
+
+Late at night, I call my long distance lover,
+proudly say I only used fifty-nine today.
+I saved the rest for you.
+
+When she doesn’t respond,
 I know she’s used up all her words,
 so I slowly whisper I love you
 thirty-two and a third times.
 After that, we just sit on the line
-and listen to each other breathe.`}
-        </Animated.Text>
+and listen to each other breathe.`}</Text>
+          <Text style={[styles.introHeroPoemCitation, isSmallScreen ? styles.introHeroPoemCitationSmall : null]}>- A Quiet World by Jeffrey McDaniel</Text>
+        </Animated.View>
       </View>
 
       <View style={[styles.introHero, { minHeight: height }]}>

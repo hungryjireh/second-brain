@@ -78,7 +78,8 @@ create table if not exists public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   actor_id uuid not null references auth.users(id) on delete cascade,
-  type text not null check (type in ('follow')),
+  type text not null,
+  payload jsonb not null default '{}'::jsonb,
   read_at timestamptz,
   created_at timestamptz not null default now(),
   check (user_id <> actor_id)

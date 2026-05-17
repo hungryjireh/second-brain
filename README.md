@@ -180,6 +180,14 @@ EXPO_PUBLIC_API_URL=http://192.168.1.10:3000/api npm run start
 
 Use your machine's LAN IP (not `localhost`) when testing on a physical phone. `localhost` only works when the API is running on the same device as the app.
 
+OpenBrain share-link base URL precedence in `mobile/src/share.js` is:
+
+1. `EXPO_PUBLIC_SHARE_BASE_URL` (or `EXPO_PUBLIC_WEB_URL`)
+2. Browser origin at runtime (for web, e.g. `http://localhost:8081`)
+3. `EXPO_PUBLIC_API_URL` with trailing `/api` removed (fallback)
+
+This lets local web sharing use the active frontend origin (such as `localhost:8081`) even when the API runs on a different port (such as `localhost:3000`).
+
 ---
 
 ## Project structure

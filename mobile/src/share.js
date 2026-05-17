@@ -23,9 +23,16 @@ function trimTrailingSlash(value) {
   return normalizeTransportSecurity(value).replace(/\/+$/, '');
 }
 
+function resolveBrowserOrigin() {
+  const origin = globalThis?.window?.location?.origin;
+  return trimTrailingSlash(origin);
+}
+
 function deriveShareBaseUrl() {
   const explicit = trimTrailingSlash(EXPLICIT_SHARE_BASE);
   if (explicit) return explicit;
+  const browserOrigin = resolveBrowserOrigin();
+  if (browserOrigin) return browserOrigin;
   return trimTrailingSlash(API_BASE.replace(/\/api\/?$/, ''));
 }
 

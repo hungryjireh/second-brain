@@ -2,6 +2,14 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { apiRequest } from '../../api';
 import * as ImagePicker from 'expo-image-picker';
 
+jest.mock('expo-blur', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    BlurView: ({ children }) => React.createElement(View, null, children),
+  };
+});
+
 jest.mock('../../api', () => ({
   apiRequest: jest.fn(),
   invalidateApiCache: jest.fn().mockResolvedValue(undefined),
@@ -226,5 +234,121 @@ describe('UpdateProfileScreen upload', () => {
 
     expect(await findByText('Image is too large. Maximum allowed size is 5MB.')).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('requires confirmation before saving a changed username', async () => {
+    apiRequest
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'my-profile-id',
+          username: 'jireh',
+          bio: '',
+          avatar_url: '',
+          timezone: 'Asia/Singapore',
+          can_change_username: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'my-profile-id',
+          username: 'newhandle',
+        },
+      })
+      .mockResolvedValueOnce({ ok: true });
+
+    const { getByDisplayValue, getByText, findByText, queryByText } = render(
+      <UpdateProfileScreen token={token} navigation={navigation} />
+    );
+    await findByText('Identity');
+
+    fireEvent.changeText(getByDisplayValue('jireh'), 'newhandle');
+    fireEvent.press(getByText('Save changes'));
+
+    expect(await findByText('Confirm username change')).toBeTruthy();
+    expect(queryByText('Profile updated successfully.')).toBeNull();
+    expect(apiRequest).toHaveBeenCalledTimes(2);
+
+    fireEvent.press(getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        '/open-brain/profile',
+        expect.objectContaining({
+          method: 'PATCH',
+          token,
+          body: expect.objectContaining({
+            username: 'newhandle',
+          }),
+        })
+      );
+    });
+  });
+
+  it('closes the username confirmation without saving when cancelled', async () => {
+    apiRequest
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'my-profile-id',
+          username: 'jireh',
+          bio: '',
+          avatar_url: '',
+          timezone: 'Asia/Singapore',
+          can_change_username: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'my-profile-id',
+          username: 'newhandle',
+        },
+      });
+
+    const { getByDisplayValue, getByText, findByText, queryByText } = render(
+      <UpdateProfileScreen token={token} navigation={navigation} />
+    );
+    await findByText('Identity');
+
+    fireEvent.changeText(getByDisplayValue('jireh'), 'newhandle');
+    fireEvent.press(getByText('Save changes'));
+    await findByText('Confirm username change');
+
+    fireEvent.press(getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(queryByText('Confirm username change')).toBeNull();
+    });
+    expect(apiRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('blocks username change when username already exists in profiles table', async () => {
+    apiRequest
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'my-profile-id',
+          username: 'jireh',
+          bio: '',
+          avatar_url: '',
+          timezone: 'Asia/Singapore',
+          can_change_username: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        profile: {
+          id: 'other-profile-id',
+          username: 'takenname',
+        },
+      });
+
+    const { getByDisplayValue, getByText, findByText, queryByText } = render(
+      <UpdateProfileScreen token={token} navigation={navigation} />
+    );
+    await findByText('Identity');
+
+    fireEvent.changeText(getByDisplayValue('jireh'), 'takenname');
+    fireEvent.press(getByText('Save changes'));
+
+    expect(await findByText('That username is already taken. Please choose another one.')).toBeTruthy();
+    expect(queryByText('Confirm username change')).toBeNull();
+    expect(apiRequest).toHaveBeenCalledTimes(2);
   });
 });

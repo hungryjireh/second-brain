@@ -61,9 +61,66 @@ function formatRelativeTime(value) {
   return `${Math.floor(deltaSeconds / 604800)}w ago`;
 }
 
+function formatReactionLabel(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 'reaction';
+  return raw.replace(/_/g, ' ');
+}
+
+function notificationPayload(item) {
+  const payload = item?.payload;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {};
+  return payload;
+}
+
+function buildNotificationViewModel(item) {
+  const payload = notificationPayload(item);
+  const username = item?.profiles?.username || item?.actor_id || '';
+
+  if (item?.type === 'follow') {
+    return {
+      username,
+      segments: [
+        { type: 'actor', text: username ? `@${username}` : 'Someone' },
+        { type: 'text', text: ' is now following your thoughts' },
+      ],
+      action: null,
+    };
+  }
+
+  if (item?.type === 'reaction') {
+    const reactionLabel = formatReactionLabel(payload?.reaction_type || item?.reaction_type);
+    return {
+      username,
+      segments: [
+        { type: 'actor', text: username ? `@${username}` : 'Someone' },
+        { type: 'text', text: ` has reacted "${reactionLabel}" to your ` },
+        { type: 'thought', text: 'thought' },
+      ],
+      action: { type: 'open_thought', thought: item },
+    };
+  }
+
+  return {
+    username,
+    segments: [
+      { type: 'actor', text: username ? `@${username}` : 'Someone' },
+      { type: 'text', text: ` sent a ${item?.type || 'notification'}` },
+    ],
+    action: null,
+  };
+}
+
+export const __testables = {
+  buildNotificationViewModel,
+  formatReactionLabel,
+  notificationPayload,
+};
+
 export default function OpenBrainTopMenu({ navigation, token }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isSmallScreen = width <= 420;
+  const dropdownMaxHeight = Math.max(220, Math.floor(height * 0.5));
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -203,6 +260,13 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     navigation.navigate('OpenBrainSearch', { query: value });
   }
 
+  function openThoughtFromNotification(item) {
+    const slug = String(item?.thought?.share_slug || '').trim();
+    if (!slug) return;
+    closeNotifications();
+    navigation.navigate('SharedThought', { slug });
+  }
+
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
   const unreadCount = notifications.filter(item => !item?.read_at).length;
@@ -326,7 +390,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         onRequestClose={closeNotifications}
       >
         <Pressable style={styles.modalBackdrop} onPress={closeNotifications}>
-          <Pressable style={styles.dropdownModal} onPress={() => {}}>
+          <Pressable style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]} onPress={() => {}}>
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Notifications</Text>
               {notificationsLoading ? <Text style={styles.emptyText}>Loading...</Text> : null}
@@ -335,12 +399,15 @@ export default function OpenBrainTopMenu({ navigation, token }) {
                 <Text style={styles.emptyText}>No notifications yet.</Text>
               ) : null}
               {!notificationsLoading && !notificationsError && notifications.length > 0 ? (
-                <View style={styles.notificationsTable}>
+                <ScrollView
+                  style={styles.notificationsScroll}
+                  contentContainerStyle={styles.notificationsScrollContent}
+                  showsVerticalScrollIndicator
+                >
                   {notifications.map(item => {
                     const unread = !item?.read_at;
                     const timestamp = formatRelativeTime(item?.created_at || item?.inserted_at || item?.updated_at);
-                    const username = item?.profiles?.username || item?.actor_id || '';
-                    const isFollowType = item?.type === 'follow';
+                    const model = buildNotificationViewModel(item);
                     return (
                       <Pressable
                         key={item.id}
@@ -352,21 +419,38 @@ export default function OpenBrainTopMenu({ navigation, token }) {
                         <View style={styles.notificationsMain}>
                           {unread ? <View style={styles.notificationsUnreadDot} /> : null}
                           <Text style={styles.notificationsMessage} numberOfLines={2}>
-                            {username ? (
-                              <Text style={styles.notificationsLink} onPress={() => openProfile(username)}>
-                                @{username}
-                              </Text>
-                            ) : (
-                              'Someone'
-                            )}
-                            {isFollowType ? ' is now following your thoughts' : ` sent a ${item?.type || 'notification'}`}
+                            {model.segments.map((segment, index) => {
+                              if (segment.type === 'actor' && model.username) {
+                                return (
+                                  <Text
+                                    key={`segment-${item.id}-${index}`}
+                                    style={styles.notificationsLink}
+                                    onPress={() => openProfile(model.username)}
+                                  >
+                                    {segment.text}
+                                  </Text>
+                                );
+                              }
+                              if (segment.type === 'thought' && model.action?.type === 'open_thought') {
+                                return (
+                                  <Text
+                                    key={`segment-${item.id}-${index}`}
+                                    style={styles.notificationsLink}
+                                    onPress={() => openThoughtFromNotification(model.action.thought)}
+                                  >
+                                    {segment.text}
+                                  </Text>
+                                );
+                              }
+                              return <Text key={`segment-${item.id}-${index}`}>{segment.text}</Text>;
+                            })}
                           </Text>
                         </View>
                         {!!timestamp ? <Text style={styles.notificationsTime}>{timestamp}</Text> : null}
                       </Pressable>
                     );
                   })}
-                </View>
+                </ScrollView>
               ) : null}
             </View>
           </Pressable>
@@ -379,7 +463,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         onRequestClose={closeSearch}
       >
         <Pressable style={styles.modalBackdrop} onPress={closeSearch}>
-          <Pressable style={styles.dropdownModal} onPress={() => {}}>
+          <Pressable style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]} onPress={() => {}}>
             <TextInput
               value={query}
               onChangeText={setQuery}
@@ -408,7 +492,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             ) : null}
             <FlatList
               data={searchRows}
-              style={styles.resultsWrap}
+              style={[styles.resultsWrap, { maxHeight: dropdownMaxHeight }]}
               keyExtractor={keyExtractor}
               renderItem={renderSearchResultItem}
               keyboardShouldPersistTaps="handled"

@@ -37,7 +37,6 @@ describe('SharedThoughtScreen', () => {
         })
       );
       expect(getByText('A shared idea')).toBeTruthy();
-      expect(getByText('by')).toBeTruthy();
       expect(getByText('@jireh')).toBeTruthy();
     });
   });
@@ -60,7 +59,6 @@ describe('SharedThoughtScreen', () => {
         })
       );
       expect(getByText('URL shared idea')).toBeTruthy();
-      expect(getByText('by')).toBeTruthy();
       expect(getByText('@jireh')).toBeTruthy();
     });
 

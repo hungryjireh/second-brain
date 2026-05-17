@@ -67,6 +67,23 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
     }
   }
 
+  const sharedThoughtItem = payload?.thought
+    ? {
+      id: payload.thought.id || payload.thought.slug || slugFromRoute || 'shared-thought',
+      text: payload.thought.text || '',
+      created_at: payload.thought.created_at,
+      user_id: payload.author?.id || payload.author?.user_id || payload.author?.username || 'shared-author',
+      profile: {
+        username: payload.author?.username || 'anonymous',
+        avatar_url: payload.author?.avatar_url || '',
+        streak_count: payload.author?.streak_count,
+        save_count: payload.author?.save_count,
+        is_self: false,
+        is_following: false,
+      },
+    }
+    : null;
+
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} />
@@ -89,15 +106,14 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
               contentContainerStyle={styles.thoughtScrollContent}
               showsVerticalScrollIndicator
             >
-              <OpenBrainThoughtCard
-                text={payload.thought.text}
-                authorPrefix="by"
-                authorLabel={`@${payload.author?.username || 'anonymous'}`}
-                onAuthorPress={payload?.author?.username ? openAuthorProfile : undefined}
-                topMeta={formatPublished(payload.thought.created_at)}
-                feedBody
-                largeBody
-              />
+              <View style={styles.thoughtCardWrap}>
+                <OpenBrainThoughtCard
+                  item={sharedThoughtItem}
+                  token={token}
+                  onOpenProfile={payload?.author?.username ? openAuthorProfile : undefined}
+                  date={formatPublished(payload.thought.created_at)}
+                />
+              </View>
             </ScrollView>
           </View>
         ) : null}

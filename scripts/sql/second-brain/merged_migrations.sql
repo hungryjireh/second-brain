@@ -78,6 +78,32 @@ alter table public.settings
 
 commit;
 
+-- ===== open_brain_notification_payload.sql =====
+begin;
+
+alter table public.notifications
+  add column if not exists payload jsonb not null default '{}'::jsonb;
+
+alter table public.notifications
+  drop constraint if exists notifications_type_payload_check;
+
+alter table public.notifications
+  drop constraint if exists notifications_reaction_type_check;
+
+alter table public.notifications
+  drop constraint if exists notifications_type_check;
+
+alter table public.notifications
+  drop constraint if exists notifications_type_check1;
+
+alter table public.notifications
+  drop column if exists thought_id;
+
+alter table public.notifications
+  drop column if exists reaction_type;
+
+commit;
+
 -- ===== add_open_brain_user_thought_second_brain_saves.sql =====
 begin;
 

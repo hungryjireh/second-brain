@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Asset } from 'expo-asset';
 import { Animated, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainLogo from '../components/OpenBrainLogo';
@@ -6,22 +7,46 @@ import { theme } from '../theme';
 import styles from './LandingScreenStyles';
 
 function BackgroundVideo() {
+  const videoRef = useRef(null);
+
+  const videoSource = require('../../assets/landing-page.mp4');
+  const videoWebUri = Asset.fromModule(videoSource).uri;
+
+  useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return undefined;
+
+    const tryPlay = () => {
+      const playPromise = element.play?.();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    };
+
+    tryPlay();
+    element.addEventListener('canplay', tryPlay);
+
+    return () => {
+      element.removeEventListener('canplay', tryPlay);
+    };
+  }, []);
+
   if (Platform.OS !== 'web') {
     return null;
   }
 
   return (
     <video
+      ref={videoRef}
       style={styles.video}
       autoPlay
       loop
       muted
       playsInline
       preload="auto"
-      aria-hidden="true"
-    >
-      <source src={require('../../assets/landing-page.mp4')} type="video/mp4" />
-    </video>
+      src={videoWebUri}
+      aria-hidden
+    />
   );
 }
 

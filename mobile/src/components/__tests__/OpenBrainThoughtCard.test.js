@@ -48,7 +48,7 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText(longText)).toBeTruthy();
   });
 
-  it('treats first line as title and renders quoted paragraph text', () => {
+  it('renders multi-paragraph thoughts as body text instead of auto-promoting a title', () => {
     const text = 'Softer Hearts > Better Seeds\n\nPastor Tyler prayed this.\n\n"Lord, we do not want better seeds, we want softer hearts."';
     const { getByText } = render(
       <OpenBrainThoughtCard
@@ -60,6 +60,21 @@ describe('OpenBrainThoughtCard', () => {
     expect(getByText('Softer Hearts > Better Seeds')).toBeTruthy();
     expect(getByText('Pastor Tyler prayed this.')).toBeTruthy();
     expect(getByText('"Lord, we do not want better seeds, we want softer hearts."')).toBeTruthy();
+  });
+
+  it('renders inline markdown in thought text', () => {
+    const text = 'This is **bold** and *italic* and `code`.';
+    const { getByText, queryByText } = render(
+      <OpenBrainThoughtCard
+        text={text}
+        topMeta="Top"
+      />
+    );
+
+    expect(getByText('bold')).toBeTruthy();
+    expect(getByText('italic')).toBeTruthy();
+    expect(getByText('code')).toBeTruthy();
+    expect(queryByText(text)).toBeNull();
   });
 
   it('shows confirmation before adding again when already added after first save', async () => {

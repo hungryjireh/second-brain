@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
 import ProfileAvatar from './ProfileAvatar';
+import SecondBrainMarkdownBody from './SecondBrainMarkdownBody';
 
 const REACTIONS = [
   { key: 'felt_this', label: 'felt this' },
@@ -39,21 +40,9 @@ function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
 
 function parseThoughtForCard(text) {
   const normalized = normalizeThoughtText(text);
-  if (!normalized) return { title: '', blocks: [] };
-  const lines = normalized.split('\n');
-  let firstLineIndex = -1;
-  for (let i = 0; i < lines.length; i += 1) {
-    if (lines[i].trim()) {
-      firstLineIndex = i;
-      break;
-    }
-  }
-  if (firstLineIndex < 0) return { title: '', blocks: [], hasTitle: false };
-  const title = lines[firstLineIndex].trim();
-  const body = lines.slice(firstLineIndex + 1).join('\n').trim();
-  if (!body) return { title: '', blocks: [{ text: title, isQuote: false }], hasTitle: false };
+  if (!normalized) return { title: '', blocks: [], hasTitle: false };
 
-  const blocks = body
+  const blocks = normalized
     .split(/\n\s*\n/)
     .map(part => part.trim())
     .filter(Boolean)
@@ -63,7 +52,7 @@ function parseThoughtForCard(text) {
       return { text: isQuote ? unwrapped : part, isQuote };
     });
 
-  return { title, blocks, hasTitle: true };
+  return { title: '', blocks, hasTitle: false };
 }
 
 function coerceCount(value) {
@@ -119,11 +108,28 @@ function OpenBrainThoughtCard({
   const [drawerAnchor, setDrawerAnchor] = useState(null);
   const actionTriggerRef = useRef(null);
   const sourceText = item ? item.text : text;
+  const useFeedMarkdownTypography = Boolean(item || feedBody);
   const showInlineDateActions = !item && isSmallScreen && onShare && inlineActionWithDate;
   const thoughtContent = useMemo(() => getThoughtPreview(sourceText), [sourceText]);
   const [expanded, setExpanded] = useState(false);
   const displayedText = thoughtContent.isTruncated && !expanded ? thoughtContent.preview : thoughtContent.full;
   const parsedThought = useMemo(() => parseThoughtForCard(displayedText), [displayedText]);
+  const markdownStyles = useMemo(
+    () => ({
+      ...styles,
+      markdownParagraph: [
+        styles.markdownParagraph,
+        useFeedMarkdownTypography && styles.markdownParagraphFeed,
+        largeBody && styles.markdownParagraphLarge,
+      ],
+      markdownHeading: [
+        styles.markdownHeading,
+        useFeedMarkdownTypography && styles.markdownHeadingFeed,
+        useFeedMarkdownTypography && isSmallScreen && styles.markdownHeadingSmallScreen,
+      ],
+    }),
+    [useFeedMarkdownTypography, largeBody, isSmallScreen]
+  );
   const [isAddingToSecondBrain, setIsAddingToSecondBrain] = useState(false);
   const initialAddedToSecondBrain = Boolean(
     item?.viewer_has_added_to_second_brain || addToSecondBrainPayload?.viewer_has_added_to_second_brain
@@ -351,7 +357,7 @@ function OpenBrainThoughtCard({
             )}
             {parsedThought.blocks.map((block, index) => (
               <View key={`thought-${item.id}-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
-                <Text style={[styles.body, styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>{block.text}</Text>
+                <SecondBrainMarkdownBody text={block.text} styles={markdownStyles} />
               </View>
             ))}
           </View>
@@ -552,9 +558,7 @@ function OpenBrainThoughtCard({
           )}
           {parsedThought.blocks.map((block, index) => (
             <View key={`standalone-thought-block-${index}`} style={block.isQuote ? styles.quoteBlock : null}>
-              <Text style={[styles.body, feedBody && styles.bodyFeed, block.isQuote ? styles.quoteText : null]}>
-                {block.text}
-              </Text>
+              <SecondBrainMarkdownBody text={block.text} styles={markdownStyles} />
             </View>
           ))}
         </View>

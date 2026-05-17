@@ -35,3 +35,11 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn().mockResolvedValue(undefined),
   deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: {} },
+    manifest2: { extra: {} },
+  },
+}));

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { apiRequest, invalidateApiCache } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
@@ -24,13 +25,20 @@ export default function UpdateProfileScreen({ token, navigation }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [canChangeUsername, setCanChangeUsername] = useState(false);
+  const [originalUsername, setOriginalUsername] = useState('');
+  const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
+  const [profileId, setProfileId] = useState('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
-      setUsername(String(data.profile?.username || ''));
+      const nextUsername = String(data.profile?.username || '');
+      setUsername(nextUsername);
+      setOriginalUsername(nextUsername);
+      setProfileId(String(data.profile?.id || ''));
       setBio(String(data.profile?.bio || ''));
       setAvatarUrl(String(data.profile?.avatar_url || ''));
       setTimezone(String(data.profile?.timezone || defaultTimezone));
@@ -77,8 +85,26 @@ export default function UpdateProfileScreen({ token, navigation }) {
     }
   }
 
-  async function handleUpdateProfile() {
-    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar) return;
+  const usernameChanged = username.trim() !== originalUsername.trim();
+
+  async function isUsernameAvailable(nextUsername) {
+    try {
+      const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(nextUsername)}`, {
+        token,
+        cache: { enabled: false },
+      });
+      const matchingProfileId = String(response?.profile?.id || '').trim();
+      if (!matchingProfileId) return true;
+      return matchingProfileId === profileId;
+    } catch (err) {
+      if (String(err?.message || '').includes('404')) return true;
+      throw err;
+    }
+  }
+
+  async function submitProfileUpdate() {
+    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar || checkingUsername) return;
+    const nextUsername = username.trim();
     setSaving(true);
     setError('');
     setSuccess('');
@@ -87,7 +113,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
         method: 'PATCH',
         token,
         body: {
-          username: username.trim(),
+          username: nextUsername,
           bio: bio.trim(),
           avatar_url: avatarUrl,
           timezone,
@@ -98,6 +124,9 @@ export default function UpdateProfileScreen({ token, navigation }) {
         exactPaths: ['/open-brain/profile'],
         pathPrefixes: ['/open-brain/feed'],
       });
+      setUsername(nextUsername);
+      setOriginalUsername(nextUsername);
+      if (usernameChanged) setCanChangeUsername(false);
       setSuccess('Profile updated successfully.');
     } catch (err) {
       setError(err.message || 'Failed to update your profile.');
@@ -106,118 +135,177 @@ export default function UpdateProfileScreen({ token, navigation }) {
     }
   }
 
+  async function handleUpdateProfile() {
+    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar || checkingUsername) return;
+    if (canChangeUsername && usernameChanged) {
+      setCheckingUsername(true);
+      setError('');
+      setSuccess('');
+      try {
+        const available = await isUsernameAvailable(username.trim());
+        if (!available) {
+          setError('That username is already taken. Please choose another one.');
+          return;
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to verify username availability.');
+        return;
+      } finally {
+        setCheckingUsername(false);
+      }
+      setShowUsernameConfirm(true);
+      return;
+    }
+    submitProfileUpdate();
+  }
+
+  function handleConfirmUsernameChange() {
+    setShowUsernameConfirm(false);
+    submitProfileUpdate();
+  }
+
   return (
-    <OpenBrainSettingsLayout
-      token={token}
-      navigation={navigation}
-      backLabel="Back to settings"
-      onBackPress={() => navigation.navigate('OpenBrainSettings')}
-      title="Profile settings"
-      copy="Edit how people see you on OpenBrain."
-      headerStyle={styles.headerSection}
-      scroll
-      scrollStyle={styles.formScroll}
-      scrollContentContainerStyle={styles.formContentContainer}
-    >
-      {loading ? (
-        <View style={styles.sectionCard}>
-          <Text style={styles.muted}>Loading profile...</Text>
-        </View>
-      ) : (
-        <>
+    <>
+      <OpenBrainSettingsLayout
+        token={token}
+        navigation={navigation}
+        backLabel="Back to settings"
+        onBackPress={() => navigation.navigate('OpenBrainSettings')}
+        title="Profile settings"
+        copy="Edit how people see you on OpenBrain."
+        headerStyle={styles.headerSection}
+        scroll
+        scrollStyle={styles.formScroll}
+        scrollContentContainerStyle={styles.formContentContainer}
+      >
+        {loading ? (
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Identity</Text>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              value={username}
-              editable={canChangeUsername}
-              onChangeText={setUsername}
-              placeholder="e.g. jireh"
-              placeholderTextColor={theme.colors.textMuted}
-              style={[styles.input, !canChangeUsername && styles.inputDisabled]}
-              maxLength={24}
-              autoCapitalize="none"
-            />
-            <Text style={styles.fieldHint}>
-              {canChangeUsername ? 'You can change your username once.' : 'You already used your one username change.'}
-            </Text>
-            <Text style={[styles.label, styles.bioLabel]}>Bio</Text>
-            <TextInput
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Tell people a little about you"
-              placeholderTextColor={theme.colors.textMuted}
-              style={[styles.input, styles.textArea]}
-              multiline
-              textAlignVertical="top"
-              maxLength={280}
-            />
-            <Text style={styles.fieldHint}>{bio.length}/280</Text>
+            <Text style={styles.muted}>Loading profile...</Text>
           </View>
-
-        <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Profile photo</Text>
-            <Pressable
-              style={[styles.uploadButton, uploadingAvatar && styles.buttonDisabled]}
-              onPress={handleUploadAvatar}
-              disabled={uploadingAvatar || saving}
-            >
-              <Text style={[styles.uploadButtonText, uploadingAvatar && styles.buttonDisabledText]}>
-                {uploadingAvatar ? 'Uploading photo...' : 'Upload from device'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
-            <Text style={styles.sectionTitle}>Regional settings</Text>
-            <Text style={styles.label}>Timezone</Text>
-            <View style={styles.timezoneDropdownWrapper}>
-              <TimezoneDropdown
-                value={timezone}
-                onChange={setTimezone}
+        ) : (
+          <>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Identity</Text>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                value={username}
+                editable={canChangeUsername}
+                onChangeText={setUsername}
+                placeholder="e.g. jireh"
                 placeholderTextColor={theme.colors.textMuted}
-                onOpenChange={setTimezoneMenuOpen}
-                styles={{
-                  dropdown: styles.timezoneDropdown,
-                  dropdownText: styles.timezoneDropdownText,
-                  dropdownChevronIcon: styles.timezoneDropdownChevronIcon,
-                  dropdownList: styles.timezoneDropdownList,
-                  dropdownListContent: styles.timezoneDropdownListContent,
-                  searchInput: styles.timezoneSearchInput,
-                  dropdownOption: styles.timezoneDropdownOption,
-                  dropdownOptionSelected: styles.timezoneDropdownOptionSelected,
-                  dropdownOptionText: styles.timezoneDropdownOptionText,
-                  dropdownOptionTextSelected: styles.timezoneDropdownOptionTextSelected,
-                  noResults: styles.timezoneNoResults,
-                }}
+                style={[styles.input, !canChangeUsername && styles.inputDisabled]}
+                maxLength={24}
+                autoCapitalize="none"
               />
+              <Text style={styles.fieldHint}>
+                {canChangeUsername ? 'You can change your username once.' : 'You already used your one username change.'}
+              </Text>
+              <Text style={[styles.label, styles.bioLabel]}>Bio</Text>
+              <TextInput
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Tell people a little about you"
+                placeholderTextColor={theme.colors.textMuted}
+                style={[styles.input, styles.textArea]}
+                multiline
+                textAlignVertical="top"
+                maxLength={280}
+              />
+              <Text style={styles.fieldHint}>{bio.length}/280</Text>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Profile photo</Text>
+              <Pressable
+                style={[styles.uploadButton, uploadingAvatar && styles.buttonDisabled]}
+                onPress={handleUploadAvatar}
+                disabled={uploadingAvatar || saving}
+              >
+                <Text style={[styles.uploadButtonText, uploadingAvatar && styles.buttonDisabledText]}>
+                  {uploadingAvatar ? 'Uploading photo...' : 'Upload from device'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
+              <Text style={styles.sectionTitle}>Regional settings</Text>
+              <Text style={styles.label}>Timezone</Text>
+              <View style={styles.timezoneDropdownWrapper}>
+                <TimezoneDropdown
+                  value={timezone}
+                  onChange={setTimezone}
+                  placeholderTextColor={theme.colors.textMuted}
+                  onOpenChange={setTimezoneMenuOpen}
+                  styles={{
+                    dropdown: styles.timezoneDropdown,
+                    dropdownText: styles.timezoneDropdownText,
+                    dropdownChevronIcon: styles.timezoneDropdownChevronIcon,
+                    dropdownList: styles.timezoneDropdownList,
+                    dropdownListContent: styles.timezoneDropdownListContent,
+                    searchInput: styles.timezoneSearchInput,
+                    dropdownOption: styles.timezoneDropdownOption,
+                    dropdownOptionSelected: styles.timezoneDropdownOptionSelected,
+                    dropdownOptionText: styles.timezoneDropdownOptionText,
+                    dropdownOptionTextSelected: styles.timezoneDropdownOptionTextSelected,
+                    noResults: styles.timezoneNoResults,
+                  }}
+                />
+              </View>
+            </View>
+
+            {!!error && <Text style={styles.error}>{error}</Text>}
+            {!!success && <Text style={styles.success}>{success}</Text>}
+
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={[styles.primaryButton, (saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabled]}
+                onPress={handleUpdateProfile}
+                disabled={saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()}
+              >
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    (saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabledText,
+                  ]}
+                >
+                  {saving ? 'Saving profile...' : (checkingUsername ? 'Checking username...' : 'Save changes')}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainSettings')}>
+                <Text style={styles.secondaryButtonText}>Back to settings</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+      </OpenBrainSettingsLayout>
+      <Modal
+        visible={showUsernameConfirm}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowUsernameConfirm(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <BlurView intensity={30} tint="dark" style={styles.confirmModalBlur} />
+          <Pressable style={styles.confirmModalBackdrop} onPress={() => setShowUsernameConfirm(false)} />
+          <View style={styles.confirmModalCard}>
+            <Text style={styles.confirmModalTitle}>Confirm username change</Text>
+            <Text style={styles.confirmModalBody}>
+              Your username will change to @{username.trim()}. You can only change your username once.
+            </Text>
+            <View style={styles.confirmModalActions}>
+              <Pressable style={styles.confirmModalButton} onPress={() => setShowUsernameConfirm(false)}>
+                <Text style={styles.confirmModalButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
+                onPress={handleConfirmUsernameChange}
+              >
+                <Text style={[styles.confirmModalButtonText, styles.confirmModalButtonTextPrimary]}>Confirm</Text>
+              </Pressable>
             </View>
           </View>
-
-          {!!error && <Text style={styles.error}>{error}</Text>}
-          {!!success && <Text style={styles.success}>{success}</Text>}
-
-          <View style={styles.actionsRow}>
-            <Pressable
-              style={[styles.primaryButton, (saving || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabled]}
-              onPress={handleUpdateProfile}
-              disabled={saving || uploadingAvatar || !username.trim() || !timezone.trim()}
-            >
-              <Text
-                style={[
-                  styles.primaryButtonText,
-                  (saving || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabledText,
-                ]}
-              >
-                {saving ? 'Saving profile...' : 'Save changes'}
-              </Text>
-            </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainSettings')}>
-              <Text style={styles.secondaryButtonText}>Back to settings</Text>
-            </Pressable>
-          </View>
-        </>
-      )}
-    </OpenBrainSettingsLayout>
+        </View>
+      </Modal>
+    </>
   );
 }

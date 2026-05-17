@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   resultsWrap: {
     width: '100%',
-    maxHeight: 380,
+    flexGrow: 0,
   },
   section: {
     width: '100%',
@@ -218,9 +218,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textDecorationLine: 'underline',
   },
-  notificationsTable: {
+  notificationsScroll: {
     width: '100%',
     marginTop: 2,
+    flexGrow: 0,
+  },
+  notificationsScrollContent: {
+    paddingBottom: 2,
   },
   notificationsRow: {
     flexDirection: 'row',
