@@ -1,5 +1,40 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonFollowStyles } from '../styles/commonStyles';
+
+const absoluteFill = {
+  ...StyleSheet.absoluteFillObject,
+};
+
+const pillActionButton = {
+  borderRadius: 999,
+  backgroundColor: theme.colors.white09,
+  borderWidth: 1,
+  borderColor: theme.colors.textSecondary,
+  paddingHorizontal: 12,
+  paddingVertical: 7,
+  position: 'relative',
+};
+
+const secondaryMetaButtonText = {
+  color: theme.colors.textSecondary,
+  fontFamily: theme.fonts.regular,
+  fontSize: 12,
+};
+
+const hoverTooltip = {
+  position: 'absolute',
+  bottom: '100%',
+  left: 0,
+  marginBottom: 8,
+  backgroundColor: theme.colors.surfaceOverlay,
+  borderRadius: 8,
+  paddingHorizontal: 8,
+  paddingVertical: 5,
+  borderWidth: 1,
+  borderColor: theme.colors.white15,
+  zIndex: 20,
+};
 
 const styles = StyleSheet.create({
   card: {
@@ -294,27 +329,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   followButton: {
-    borderColor: theme.colors.textSecondary,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    ...commonFollowStyles.buttonBase,
     position: 'relative',
   },
   followButtonActive: {
-    backgroundColor: theme.colors.white09,
+    ...commonFollowStyles.buttonActive,
   },
   followButtonFollowing: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.textSecondary,
+    ...commonFollowStyles.buttonFollowing,
   },
   followButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...commonFollowStyles.textBase,
   },
   followButtonTextFollowing: {
-    color: theme.colors.textSecondary,
+    ...commonFollowStyles.textFollowing,
   },
   reactions: {
     flexDirection: 'row',
@@ -386,10 +414,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   confirmModalBlur: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
   },
   confirmModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...absoluteFill,
   },
   confirmModalCard: {
     width: '100%',
@@ -487,31 +515,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   shareButton: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.white09,
-    borderWidth: 1,
-    borderColor: theme.colors.textSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    position: 'relative',
+    ...pillActionButton,
   },
   secondaryActionButton: {
-    borderRadius: 999,
-    backgroundColor: theme.colors.white09,
-    borderWidth: 1,
-    borderColor: theme.colors.textSecondary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    position: 'relative',
+    ...pillActionButton,
   },
   secondaryActionButtonAdded: {
     backgroundColor: theme.colors.accentSoft,
     borderColor: theme.colors.textPrimary,
   },
   secondaryActionButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...secondaryMetaButtonText,
   },
   secondaryActionButtonTextAdded: {
     color: theme.colors.textPrimary,
@@ -528,22 +542,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   shareButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...secondaryMetaButtonText,
   },
   actionTooltip: {
-    position: 'absolute',
-    bottom: '100%',
-    left: 0,
-    marginBottom: 8,
-    backgroundColor: theme.colors.surfaceOverlay,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: theme.colors.white15,
-    zIndex: 20,
+    ...hoverTooltip,
   },
   actionTooltipText: {
     color: theme.colors.textLight,
@@ -552,17 +554,7 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   metricTooltip: {
-    position: 'absolute',
-    bottom: '100%',
-    left: 0,
-    marginBottom: 8,
-    backgroundColor: theme.colors.surfaceOverlay,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: theme.colors.white15,
-    zIndex: 20,
+    ...hoverTooltip,
   },
 });
 

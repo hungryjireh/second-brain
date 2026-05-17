@@ -1,10 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonLayoutStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: theme.colors.bgBase,
+    ...commonLayoutStyles.screenBase,
   },
   content: {
     flex: 1,

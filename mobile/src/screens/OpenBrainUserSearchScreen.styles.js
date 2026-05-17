@@ -1,10 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonLayoutStyles, commonSearchStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
-    backgroundColor: theme.colors.bgBase,
+    ...commonLayoutStyles.screenBase,
   },
   content: {
     paddingHorizontal: 16,
@@ -46,15 +46,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
   },
   buttonDisabled: {
-    opacity: 0.45,
+    ...commonSearchStyles.submitButtonDisabled,
   },
   buttonPressed: {
     opacity: 0.86,
   },
   buttonText: {
+    ...commonSearchStyles.submitLabel,
     color: theme.colors.accentOnSolid,
     fontSize: 15,
-    fontFamily: theme.fonts.semibold,
   },
   error: {
     color: theme.colors.dangerSoft,

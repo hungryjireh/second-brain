@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonFollowStyles, commonSearchStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   outer: {
@@ -119,12 +120,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   submitButtonDisabled: {
-    opacity: 0.45,
+    ...commonSearchStyles.submitButtonDisabled,
   },
   submitLabel: {
-    color: theme.colors.textLight,
-    fontSize: 14,
-    fontFamily: theme.fonts.semibold,
+    ...commonSearchStyles.submitLabel,
   },
   resultsWrap: {
     width: '100%',
@@ -135,13 +134,7 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   sectionLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    fontFamily: theme.fonts.semibold,
-    marginBottom: 6,
+    ...commonSearchStyles.sectionLabel,
   },
   resultRow: {
     flexDirection: 'row',
@@ -159,36 +152,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultPrimary: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 18,
-    fontFamily: theme.fonts.semibold,
+    ...commonSearchStyles.resultPrimary,
   },
   resultSecondary: {
-    marginTop: 2,
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: theme.fonts.regular,
+    ...commonSearchStyles.resultSecondary,
   },
   followButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.textSecondary,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    ...commonFollowStyles.buttonBase,
   },
   followButtonActive: {
-    backgroundColor: theme.colors.white09,
+    ...commonFollowStyles.buttonActive,
   },
   followButtonFollowing: {
-    backgroundColor: theme.colors.accentSoft,
+    ...commonFollowStyles.buttonFollowing,
   },
   followButtonText: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
+    ...commonFollowStyles.textBase,
     lineHeight: 16,
-    fontFamily: theme.fonts.regular,
   },
   errorText: {
     width: '100%',

@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonFollowStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   container: {
@@ -120,27 +121,20 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgHover,
   },
   followButton: {
+    ...commonFollowStyles.buttonBase,
     alignSelf: 'center',
-    borderRadius: 999,
-    borderColor: theme.colors.textSecondary,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
   },
   followActiveButton: {
-    backgroundColor: theme.colors.white09,
+    ...commonFollowStyles.buttonActive,
   },
   followingButton: {
-    backgroundColor: theme.colors.accentSoft,
-    borderColor: theme.colors.textSecondary,
+    ...commonFollowStyles.buttonFollowing,
   },
   followButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...commonFollowStyles.textBase,
   },
   followButtonTextFollowing: {
-    color: theme.colors.textSecondary,
+    ...commonFollowStyles.textFollowing,
   },
   muted: {
     color: theme.colors.textSecondary,

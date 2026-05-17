@@ -3,6 +3,14 @@ import { theme } from '../theme';
 
 export const SWIPE_ACTION_WIDTH = 88;
 
+const uppercaseLabel = {
+  fontSize: 11,
+  color: theme.colors.textMuted,
+  letterSpacing: 0.66,
+  textTransform: 'uppercase',
+  fontWeight: '500',
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -38,7 +46,7 @@ const styles = StyleSheet.create({
   },
   filterDropdownChevron: { color: theme.colors.textMuted, fontSize: 10, fontWeight: '700' },
   filterDropdownChevronIcon: { color: theme.colors.textMuted },
-  filterLabel: { fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.66, textTransform: 'uppercase', fontWeight: '500' },
+  filterLabel: { ...uppercaseLabel },
   archivedToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   archivedToggleDropdown: {
     width: '100%',
@@ -50,7 +58,7 @@ const styles = StyleSheet.create({
   },
   archivedToggleText: { color: theme.colors.textSecondary, fontSize: 11 },
   filterRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  filterRowLabel: { fontSize: 11, color: theme.colors.textMuted, letterSpacing: 0.66, textTransform: 'uppercase', fontWeight: '500' },
+  filterRowLabel: { ...uppercaseLabel },
   filterSearchInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
