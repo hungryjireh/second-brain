@@ -9,15 +9,11 @@ import {
   getUserTags,
   getUserTimezone,
 } from '../lib/db.js';
+import { json } from '../lib/open-brain/helpers.js';
 import { classify } from '../lib/classify.js';
 import { extractCategoryOverride } from '../lib/category-override.js';
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
 import { GLOBALLY_PERMISSIVE_TAGS_NORMALIZED } from '../lib/constants/tags.js';
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
 
 function parsePriority(value, { defaultValue } = { defaultValue: 0 }) {
   if (value === undefined) return defaultValue;

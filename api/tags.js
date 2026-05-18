@@ -1,10 +1,6 @@
 import { getUserTags } from '../lib/db.js';
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
+import { json } from '../lib/open-brain/helpers.js';
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();

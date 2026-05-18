@@ -1,10 +1,6 @@
 import { getUserTimezone, setSetting } from '../lib/db.js';
 import { getBearerToken, verifyAuthToken, resolveAuthUserId } from '../lib/auth.js';
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
+import { json } from '../lib/open-brain/helpers.js';
 
 function isValidTimezone(value) {
   if (typeof value !== 'string' || !value.trim()) return false;

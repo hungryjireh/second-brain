@@ -1,9 +1,5 @@
 import { insertLaunchSignup } from '../lib/db.js';
-
-function json(res, status, body) {
-  res.status(status).setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(body));
-}
+import { json } from '../lib/open-brain/helpers.js';
 
 function isValidEmail(value) {
   const email = String(value || '').trim();
