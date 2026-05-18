@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking, useWindowDimensions } from 'react-native';
+import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking, Keyboard, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
-import { apiRequest, getApiBase } from '../api';
+import { apiRequest, buildApiUrl, createAuthHeaders } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
-import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
 import SwipeToDeleteRow from '../components/SwipeToDeleteRow';
 import TimezoneDropdown from '../components/TimezoneDropdown';
 import {
@@ -35,28 +34,6 @@ const STATS = [
 
 const TYPEBAR_MIN_HEIGHT = 38;
 const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
-
-function parseImportedConversationFromEntry(entry) {
-  const rawText = String(entry?.raw_text ?? '').trim();
-  if (!rawText.startsWith('{')) return null;
-
-  try {
-    const parsed = JSON.parse(rawText);
-    if (parsed?._format !== 'chat_conversation_v1') return null;
-    if (!Array.isArray(parsed.messages) || parsed.messages.length === 0) return null;
-    return {
-      messages: parsed.messages
-        .map(msg => ({
-          sender: msg?.sender === 'human' ? 'human' : 'assistant',
-          text: String(msg?.text ?? '').trim(),
-        }))
-        .filter(msg => msg.text),
-    };
-  } catch {
-    return null;
-  }
-}
-
 
 function tagsToInput(tags) {
   if (!Array.isArray(tags)) return '';
@@ -198,7 +175,7 @@ function groupByDate(entries) {
   return groups;
 }
 
-export default function SecondBrainScreen({ token }) {
+export default function SecondBrainScreen({ token, navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isSmallScreen = width <= SMALL_SCREEN_FILTER_BREAKPOINT;
@@ -228,7 +205,6 @@ export default function SecondBrainScreen({ token }) {
   const [typebarInputHeight, setTypebarInputHeight] = useState(TYPEBAR_MIN_HEIGHT);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [openSwipeId, setOpenSwipeId] = useState(null);
-  const [selectedEntry, setSelectedEntry] = useState(null);
   const [importingConversations, setImportingConversations] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
@@ -240,14 +216,10 @@ export default function SecondBrainScreen({ token }) {
   const [telegramLinkError, setTelegramLinkError] = useState('');
   const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
   const [actionTooltip, setActionTooltip] = useState('');
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const confirmDeleteTimeoutRef = useRef(null);
   const openActionDrawerIdRef = useRef(null);
-  const selectedImportedConversation = useMemo(
-    () => (selectedEntry ? parseImportedConversationFromEntry(selectedEntry) : null),
-    [selectedEntry]
-  );
-
-  const typebarBottom = 10 + Math.max(insets.bottom, 0);
+  const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
   const isWeb = Platform.OS === 'web';
   const typebarPlaceholder = isSmallScreen ? 'Type here' : 'Type a note, reminder or thought...';
@@ -309,6 +281,28 @@ export default function SecondBrainScreen({ token }) {
     }
     setIsFilterDropdownOpen(true);
   }, [isSmallScreen]);
+
+  useEffect(() => {
+    if (isWeb) return undefined;
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const handleKeyboardShow = event => {
+      const keyboardHeight = event?.endCoordinates?.height ?? 0;
+      const nextOffset = Math.max(0, keyboardHeight - Math.max(insets.bottom, 0));
+      setKeyboardOffset(nextOffset);
+    };
+    const handleKeyboardHide = () => {
+      setKeyboardOffset(0);
+    };
+    const showSub = Keyboard.addListener(showEvent, handleKeyboardShow);
+    const hideSub = Keyboard.addListener(hideEvent, handleKeyboardHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom, isWeb]);
 
   async function createEntry() {
     if (!draft.trim()) return;
@@ -424,8 +418,8 @@ export default function SecondBrainScreen({ token }) {
 
   const downloadIcs = useCallback(async entryId => {
     try {
-      const response = await fetch(`${getApiBase()}/ics?id=${encodeURIComponent(entryId)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      const response = await fetch(`${buildApiUrl('/ics')}?id=${encodeURIComponent(entryId)}`, {
+        headers: createAuthHeaders(token),
       });
       if (!response.ok) {
         let serverMessage = '';
@@ -476,15 +470,13 @@ export default function SecondBrainScreen({ token }) {
       }
 
       const icsContent = await response.text();
-      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
-      await FileSystem.writeAsStringAsync(fileUri, icsContent, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const file = new File(Paths.cache, fileName);
+      file.write(icsContent);
       const canShare = await Sharing.isAvailableAsync();
       if (!canShare) {
         throw new Error('Sharing is not available on this device');
       }
-      await Sharing.shareAsync(fileUri, {
+      await Sharing.shareAsync(file.uri, {
         mimeType: 'text/calendar',
         dialogTitle: 'Share reminder',
         UTI: 'public.calendar-event',
@@ -495,17 +487,11 @@ export default function SecondBrainScreen({ token }) {
   }, [token]);
 
   const startEdit = useCallback(entry => {
-    setEditingEntry(entry);
-    setEditCategory(entry.category || 'note');
-    setEditTitle(entry.title || '');
-    setEditSummary(entry.summary || '');
-    setEditText(entry.raw_text || entry.summary || '');
-    setEditRemindAt(entry.remind_at ? unixToDatetimeLocal(entry.remind_at) : '');
-    setEditPriority(String(Number.isInteger(entry.priority) ? entry.priority : 0));
-    setEditTags(tagsToInput(entry.tags));
-    setEditTagDraft('');
-    setEditTagError('');
-  }, []);
+    navigation.navigate('SecondBrainEditEntry', {
+      entry,
+      token,
+    });
+  }, [navigation, token]);
 
   const closeEdit = useCallback(() => {
     setEditingEntry(null);
@@ -521,12 +507,8 @@ export default function SecondBrainScreen({ token }) {
   }, []);
 
   const openEntry = useCallback(entry => {
-    setSelectedEntry(entry);
-  }, []);
-
-  const closeEntry = useCallback(() => {
-    setSelectedEntry(null);
-  }, []);
+    navigation.navigate('SecondBrainEntryDetails', { entry, token });
+  }, [navigation, token]);
 
   const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
   const handleActionDrawerChange = useCallback((entryId, isOpen) => {
@@ -821,6 +803,16 @@ export default function SecondBrainScreen({ token }) {
     }
     return rows;
   }, [dateFormatters, groupedEntries]);
+  const hasActiveFilters = useMemo(() => (
+    Boolean(activeCategory || activePriorityLevel || activeTag || searchQuery.trim() || showArchived)
+  ), [activeCategory, activePriorityLevel, activeTag, searchQuery, showArchived]);
+  const clearFilters = useCallback(() => {
+    setActiveCategory('');
+    setActivePriorityLevel('');
+    setActiveTag('');
+    setSearchQuery('');
+    setShowArchived(false);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -854,7 +846,7 @@ export default function SecondBrainScreen({ token }) {
           {isSmallScreen ? (
             <Pressable
               testID="filter-dropdown-toggle"
-              style={styles.filterDropdownToggle}
+              style={[styles.filterDropdownToggle, isFilterDropdownOpen && styles.filterDropdownToggleOpen]}
               onPress={() => setIsFilterDropdownOpen(prev => !prev)}
             >
               <Text style={styles.filterLabel}>FILTER</Text>
@@ -882,7 +874,16 @@ export default function SecondBrainScreen({ token }) {
         </View>
 
         {isFilterDropdownOpen ? (
-          <View style={styles.filterDropdownContent}>
+          <View style={[styles.filterDropdownContent, styles.filterDropdownContentOpen]}>
+            <Pressable
+              style={[styles.clearFiltersButton, !hasActiveFilters && styles.clearFiltersButtonDisabled]}
+              onPress={clearFilters}
+              disabled={!hasActiveFilters}
+            >
+              <Text style={[styles.clearFiltersButtonText, !hasActiveFilters && styles.clearFiltersButtonTextDisabled]}>
+                Clear filters
+              </Text>
+            </Pressable>
             {isSmallScreen ? (
               <View style={[styles.archivedToggle, styles.archivedToggleDropdown]}>
                 <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
@@ -945,95 +946,6 @@ export default function SecondBrainScreen({ token }) {
       </View>
 
       {!!error && <Text style={styles.error}>{error}</Text>}
-
-      <Modal
-        visible={!!editingEntry}
-        transparent
-        animationType="fade"
-        onRequestClose={closeEdit}
-      >
-        <Pressable style={styles.editOverlay} onPress={closeEdit}>
-          <Pressable style={styles.editPanel} onPress={event => event.stopPropagation()}>
-            <ScrollView style={styles.editScroll} contentContainerStyle={styles.editScrollContent}>
-              <Text style={styles.editTitle}>Edit entry</Text>
-              <Text style={styles.editLabel}>Category</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryRow}
-              >
-                {CATEGORIES.map(category => {
-                  const isActive = editCategory === category;
-                  return (
-                    <Pressable
-                      key={category}
-                      style={[styles.pill, isActive && styles.pillActive]}
-                      onPress={() => setEditCategory(category)}
-                    >
-                      <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{category}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-              <Text style={styles.editLabel}>Title</Text>
-              <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.editField} placeholder="Title" placeholderTextColor={theme.colors.textSecondary} />
-              <Text style={styles.editLabel}>Summary</Text>
-              <TextInput value={editSummary} onChangeText={setEditSummary} multiline style={styles.editInputCompact} placeholder="Summary" placeholderTextColor={theme.colors.textSecondary} />
-              <Text style={styles.editLabel}>Description</Text>
-              <TextInput value={editText} onChangeText={setEditText} multiline style={styles.editInput} placeholder="Description" placeholderTextColor={theme.colors.textSecondary} />
-              {editCategory === 'reminder' ? (
-                <>
-                  <Text style={styles.editLabel}>Reminder date and time</Text>
-                  <TextInput
-                    value={editRemindAt}
-                    onChangeText={setEditRemindAt}
-                    style={styles.editField}
-                    placeholder="Select reminder date and time"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    {...(Platform.OS === 'web' ? { type: 'datetime-local' } : {})}
-                  />
-                </>
-              ) : null}
-              <Text style={styles.editLabel}>Priority (0-10)</Text>
-              <TextInput value={editPriority} onChangeText={setEditPriority} style={styles.editField} keyboardType="numeric" placeholder="0" placeholderTextColor={theme.colors.textSecondary} />
-              <Text style={styles.editLabel}>Tags</Text>
-              <View style={styles.tagInputRow}>
-                <TextInput
-                  value={editTagDraft}
-                  onChangeText={value => {
-                    setEditTagDraft(value);
-                    setEditTagError('');
-                  }}
-                  style={[styles.editField, styles.tagInput]}
-                  placeholder={parsedEditTags.length >= MAX_ENTRY_TAGS ? `Maximum ${MAX_ENTRY_TAGS} tags reached` : 'Type a tag'}
-                  placeholderTextColor={theme.colors.textSecondary}
-                  editable={parsedEditTags.length < MAX_ENTRY_TAGS}
-                />
-                <Pressable style={styles.secondaryButton} onPress={addEditTag}>
-                  <Text style={styles.secondaryButtonText}>Add</Text>
-                </Pressable>
-              </View>
-              {editTagError ? <Text style={[styles.tagCountText, { color: theme.colors.danger }]}>{editTagError}</Text> : null}
-              <Text style={styles.tagCountText}>{`${parsedEditTags.length}/${MAX_ENTRY_TAGS} tags`}</Text>
-              <View style={styles.tagsRow}>
-                {parsedEditTags.map(tag => (
-                  <Pressable key={tag} style={styles.itemTagPill} onPress={() => removeEditTag(tag)}>
-                    <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <View style={styles.editActionRow}>
-                <Pressable style={styles.secondaryButton} onPress={closeEdit}>
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
-                <Pressable style={styles.editSaveButton} onPress={saveEdit}>
-                  <Text style={styles.buttonText}>Save changes</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <Modal
         visible={settingsOpen}
@@ -1135,6 +1047,7 @@ export default function SecondBrainScreen({ token }) {
         keyExtractor={keyExtractor}
         CellRendererComponent={renderCell}
         renderItem={renderListItem}
+        ListEmptyComponent={hasActiveFilters ? <Text style={styles.listEmptyText}>No matching entries</Text> : null}
         initialNumToRender={10}
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
@@ -1142,58 +1055,17 @@ export default function SecondBrainScreen({ token }) {
         removeClippedSubviews={false}
       />
 
-      {selectedEntry ? (
-        <Pressable style={styles.entryOverlay} onPress={closeEntry}>
-          <Pressable style={styles.entryPanel} onPress={event => event.stopPropagation()}>
-            <Text style={styles.entryPanelTitle}>{selectedEntry.title || selectedEntry.content || 'Untitled'}</Text>
-            <Text style={styles.entryPanelSummary}>{selectedEntry.summary || selectedEntry.content || ''}</Text>
-            {Array.isArray(selectedEntry.tags) && selectedEntry.tags.length > 0 ? (
-              <View style={styles.entryPanelTags}>
-                {selectedEntry.tags.map(tagName => (
-                  <View key={tagName} style={styles.itemTagPill}>
-                    <Text style={styles.itemTagText}>#{tagName}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-            <View style={styles.entryPanelBodyWrap}>
-              <ScrollView style={styles.entryPanelBodyScroll} contentContainerStyle={styles.entryPanelBodyContent}>
-              {selectedImportedConversation ? (
-                <View style={styles.conversationWrap}>
-                  {selectedImportedConversation.messages.map((msg, idx) => {
-                    const fromHuman = msg.sender === 'human';
-                    return (
-                      <View key={`${msg.sender}-${idx}`} style={[styles.conversationRow, fromHuman ? styles.conversationRowHuman : styles.conversationRowAssistant]}>
-                        <View style={[styles.conversationBubble, fromHuman ? styles.conversationBubbleHuman : styles.conversationBubbleAssistant]}>
-                          <Text style={styles.conversationSender}>{fromHuman ? 'You' : 'Assistant'}</Text>
-                          <SecondBrainMarkdownBody text={msg.text} styles={styles} />
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                <SecondBrainMarkdownBody text={selectedEntry.description || selectedEntry.raw_text || selectedEntry.content || ''} styles={styles} />
-              )}
-              </ScrollView>
-            </View>
-            <View style={styles.entryPanelActions}>
-              <Pressable style={styles.secondaryButton} onPress={closeEntry}>
-                <Text style={styles.secondaryButtonText}>Close</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      ) : null}
-
       <View style={[styles.typebarRow, { bottom: typebarBottom }]}>
         <TextInput
           value={draft}
           onChangeText={setDraft}
+          onSubmitEditing={createEntry}
           placeholder={typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
           style={[styles.typebarInput, isSmallScreen && styles.typebarInputSmall, { height: typebarInputHeight }]}
           multiline
+          returnKeyType="send"
+          enablesReturnKeyAutomatically
           scrollEnabled={false}
           textAlignVertical="top"
           onContentSizeChange={event => {

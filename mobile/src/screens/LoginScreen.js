@@ -10,6 +10,7 @@ export default function LoginScreen({ onLoggedIn }) {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const passwordInputRef = useRef(null);
   const emailRef = useRef('');
   const passwordRef = useRef('');
   const [error, setError] = useState('');
@@ -55,6 +56,9 @@ export default function LoginScreen({ onLoggedIn }) {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordInputRef.current?.focus()}
             value={email}
             onChangeText={value => {
               emailRef.current = value;
@@ -63,6 +67,7 @@ export default function LoginScreen({ onLoggedIn }) {
             style={styles.input}
           />
           <TextInput
+            ref={passwordInputRef}
             placeholder="Password"
             placeholderTextColor={theme.colors.textMuted}
             secureTextEntry

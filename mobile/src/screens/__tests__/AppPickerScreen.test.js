@@ -66,4 +66,23 @@ describe('AppPickerScreen', () => {
     });
     expect(apiRequest).not.toHaveBeenCalled();
   });
+
+  it('blocks unauthenticated app selection and redirects to login', async () => {
+    const navigate = jest.fn();
+    const reset = jest.fn();
+    const { getByText } = render(
+      <AppPickerScreen token={null} navigation={{ navigate, reset }} />
+    );
+
+    fireEvent.press(getByText('secondbrain'));
+    fireEvent.press(getByText('openbrain'));
+
+    await waitFor(() => {
+      expect(reset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    });
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });

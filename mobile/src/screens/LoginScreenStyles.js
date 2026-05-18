@@ -18,10 +18,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 16,
     padding: 24,
-    shadowColor: theme.colors.shadow,
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
+    boxShadow: `0px 18px 20px ${theme.colors.shadow}`,
     elevation: 10,
   },
   eyebrow: {
@@ -73,7 +70,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonDisabled: {
-    backgroundColor: theme.colors.bgHover,
+    backgroundColor: theme.colors.brand,
+    opacity: 0.55,
   },
   buttonText: {
     color: theme.colors.buttonTextOnBrand,

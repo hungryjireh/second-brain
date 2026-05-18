@@ -91,4 +91,19 @@ describe('LoginScreen', () => {
       expect(mockReplace).toHaveBeenCalledWith('Apps');
     });
   });
+
+  it('does not submit when enter is pressed on the email input', async () => {
+    login.mockResolvedValueOnce({ token: 'token-email-enter' });
+    const onLoggedIn = jest.fn();
+
+    const { getByPlaceholderText } = render(<LoginScreen onLoggedIn={onLoggedIn} />);
+    const emailInput = getByPlaceholderText('Email');
+    const passwordInput = getByPlaceholderText('Password');
+
+    fireEvent.changeText(emailInput, 'jireh@example.com');
+    fireEvent.changeText(passwordInput, 'password123');
+    fireEvent(emailInput, 'submitEditing');
+
+    expect(login).not.toHaveBeenCalled();
+  });
 });

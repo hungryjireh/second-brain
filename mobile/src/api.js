@@ -92,6 +92,19 @@ function normalizeAuthToken(token) {
   return value.replace(/^Bearer\s+/i, '').trim();
 }
 
+export function buildApiUrl(path) {
+  const normalizedPath = String(path || '').trim();
+  if (!normalizedPath) return API_BASE;
+  const withLeadingSlash = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+  return `${API_BASE}${withLeadingSlash}`;
+}
+
+export function createAuthHeaders(token) {
+  const normalizedToken = normalizeAuthToken(token);
+  if (!normalizedToken) return undefined;
+  return { Authorization: `Bearer ${normalizedToken}` };
+}
+
 async function readCache(cacheKey) {
   try {
     const raw = await AsyncStorage.getItem(cacheKey);
@@ -219,14 +232,14 @@ export async function apiRequest(path, {
   }
 
   const headers = { 'Content-Type': 'application/json' };
-  const normalizedToken = normalizeAuthToken(token);
-  if (normalizedToken) headers.Authorization = `Bearer ${normalizedToken}`;
+  const authHeaders = createAuthHeaders(token);
+  if (authHeaders?.Authorization) headers.Authorization = authHeaders.Authorization;
 
   let response;
   let text = '';
   let data = {};
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetch(buildApiUrl(path), {
       method: normalizedMethod,
       headers,
       body: body ? JSON.stringify(body) : undefined,

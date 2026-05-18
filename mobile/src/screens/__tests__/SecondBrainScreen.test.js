@@ -1,10 +1,13 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import fs from 'node:fs';
+import path from 'node:path';
 import SecondBrainScreen from '../SecondBrainScreen';
 import { apiRequest } from '../../api';
 
 jest.mock('../../api', () => ({
   apiRequest: jest.fn(),
-  getApiBase: jest.fn(() => 'http://localhost:3000/api'),
+  buildApiUrl: jest.fn((path) => `http://localhost:3000/api${path}`),
+  createAuthHeaders: jest.fn((token) => (token ? { Authorization: `Bearer ${token}` } : undefined)),
 }));
 
 describe('SecondBrainScreen', () => {
@@ -28,7 +31,7 @@ describe('SecondBrainScreen', () => {
       .mockResolvedValueOnce({ entries: [entry] })
       .mockResolvedValueOnce(archived);
 
-    const { getByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
     fireEvent.press(getByText('Archive'));
@@ -49,7 +52,7 @@ describe('SecondBrainScreen', () => {
       .mockResolvedValueOnce({ entries: [entry] })
       .mockResolvedValueOnce({});
 
-    const { getByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
+    const { getByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
     fireEvent.press(getByTestId('entry-swipe-delete-42'));
@@ -63,29 +66,23 @@ describe('SecondBrainScreen', () => {
     });
   });
 
-  it('opens edit panel and saves edited text', async () => {
+  it('navigates to entry edit screen on edit action', async () => {
     const entry = { id: 42, title: 'Ship tests', summary: 'Write behavior checks', raw_text: 'Write behavior checks', is_archived: false };
-    const updated = { ...entry, summary: 'Updated text', raw_text: 'Updated text' };
+    apiRequest.mockResolvedValueOnce({ entries: [entry] });
+    const navigate = jest.fn();
 
-    apiRequest
-      .mockResolvedValueOnce({ entries: [entry] })
-      .mockResolvedValueOnce(updated);
-
-    const { getByText, getAllByDisplayValue, getByPlaceholderText } = render(<SecondBrainScreen token={token} />);
-
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate }} />);
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
+
     fireEvent.press(getByText('Edit'));
 
-    expect(getAllByDisplayValue('Write behavior checks').length).toBeGreaterThan(0);
-    fireEvent.changeText(getByPlaceholderText('Description'), 'Updated text');
-    fireEvent.press(getByText('Save changes'));
-
-    await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith('/entries?id=42', expect.objectContaining({ method: 'PATCH' }));
-    });
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', expect.objectContaining({
+      entry,
+      token,
+    }));
   });
 
-  it('opens entry detail view on card press and closes it', async () => {
+  it('navigates to entry detail screen on card press', async () => {
     const entry = {
       id: 42,
       title: 'Ship tests',
@@ -95,18 +92,17 @@ describe('SecondBrainScreen', () => {
     };
 
     apiRequest.mockResolvedValueOnce({ entries: [entry] });
+    const navigate = jest.fn();
 
-    const { getByText, getAllByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate }} />);
 
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
     fireEvent.press(getByText('Ship tests'));
 
-    expect(getByText('Full detail content')).toBeTruthy();
-    fireEvent.press(getByText('Close'));
-    expect(queryByText('Close')).toBeNull();
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', { entry, token });
   });
 
-  it('renders imported LLM conversations with speaker labels in entry detail', async () => {
+  it('navigates to entry detail screen for imported LLM conversations', async () => {
     const entry = {
       id: 77,
       title: 'Claude thread',
@@ -123,17 +119,14 @@ describe('SecondBrainScreen', () => {
     };
 
     apiRequest.mockResolvedValueOnce({ entries: [entry] });
+    const navigate = jest.fn();
 
-    const { getByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate }} />);
 
     await waitFor(() => expect(getByText('Claude thread')).toBeTruthy());
     fireEvent.press(getByText('Claude thread'));
 
-    expect(getByText('You')).toBeTruthy();
-    expect(getByText('Assistant')).toBeTruthy();
-    expect(getByText('Please summarize ')).toBeTruthy();
-    expect(getByText('this')).toBeTruthy();
-    expect(getByText('Here is a summary.')).toBeTruthy();
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', { entry, token });
   });
 
   it('creates an entry from composer input and reloads list', async () => {
@@ -156,7 +149,7 @@ describe('SecondBrainScreen', () => {
       return {};
     });
 
-    const { getByPlaceholderText, getByText, getByLabelText } = render(<SecondBrainScreen token={token} />);
+    const { getByPlaceholderText, getByText, getByLabelText } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/entries?limit=60', expect.objectContaining({ token }));
@@ -187,7 +180,7 @@ describe('SecondBrainScreen', () => {
       return {};
     });
 
-    const { getByText, getAllByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} />);
+    const { getByText, getAllByText, queryByText, getByTestId } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => expect(getByText('Work item')).toBeTruthy());
     expect(getByText('Home item')).toBeTruthy();
@@ -213,7 +206,7 @@ describe('SecondBrainScreen', () => {
       return {};
     });
 
-    const { getByText, queryByText, getByPlaceholderText } = render(<SecondBrainScreen token={token} />);
+    const { getByText, queryByText, getByPlaceholderText } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => expect(getByText('Budget planning')).toBeTruthy());
     expect(getByText('Workout plan')).toBeTruthy();
@@ -227,38 +220,6 @@ describe('SecondBrainScreen', () => {
     expect(getByText('Workout plan')).toBeTruthy();
   });
 
-  it('shows validation error and skips PATCH when priority is out of range', async () => {
-    const entry = {
-      id: 42,
-      title: 'Ship tests',
-      summary: 'Write behavior checks',
-      raw_text: 'Write behavior checks',
-      is_archived: false,
-      priority: 5,
-      category: 'note',
-    };
-
-    apiRequest.mockImplementation(async (url) => {
-      if (url === '/entries?limit=60') return { entries: [entry] };
-      if (url === '/settings') return {};
-      return {};
-    });
-
-    const { getByText, getAllByDisplayValue, getByPlaceholderText, findByText } = render(<SecondBrainScreen token={token} />);
-
-    await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
-    fireEvent.press(getByText('Edit'));
-    expect(getAllByDisplayValue('Write behavior checks').length).toBeGreaterThan(0);
-
-    fireEvent.changeText(getByPlaceholderText('0'), '11');
-    fireEvent.press(getByText('Save changes'));
-
-    expect(await findByText('Priority must be an integer from 0 to 10.')).toBeTruthy();
-    expect(apiRequest).not.toHaveBeenCalledWith(
-      '/entries?id=42',
-      expect.objectContaining({ method: 'PATCH' })
-    );
-  });
 
   it('downloads .ics via absolute API base path', async () => {
     const reminderEntry = {
@@ -283,19 +244,25 @@ describe('SecondBrainScreen', () => {
       text: jest.fn().mockResolvedValue('BEGIN:VCALENDAR\r\nEND:VCALENDAR'),
     });
 
-    const { getByText } = render(<SecondBrainScreen token={token} />);
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
 
     await waitFor(() => expect(getByText('Doctor appointment')).toBeTruthy());
     fireEvent.press(getByText('Add to Calendar'));
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3000/api/ics?id=42',
-        expect.objectContaining({
-          headers: { Authorization: `Bearer ${token}` },
-        })
-      );
-    });
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    const [requestUrl, requestOptions] = global.fetch.mock.calls[0];
+    expect(requestUrl).toBe('http://localhost:3000/api/ics?id=42');
+    expect(requestOptions?.headers?.Authorization).toBe(`Bearer ${token}`);
+  });
+
+  it('uses the non-legacy expo filesystem File API for calendar export', () => {
+    const screenPath = path.resolve(__dirname, '../SecondBrainScreen.js');
+    const source = fs.readFileSync(screenPath, 'utf8');
+
+    expect(source).toContain("import { File, Paths } from 'expo-file-system';");
+    expect(source).toContain('const file = new File(Paths.cache, fileName);');
+    expect(source).toContain('file.write(icsContent);');
+    expect(source).not.toContain('writeAsStringAsync');
   });
 
 });

@@ -26,6 +26,13 @@ function formatRelativeTime(value) {
   return `${Math.floor(deltaSeconds / 604800)}w ago`;
 }
 
+function blurFocusedElementOnWeb() {
+  if (typeof document === 'undefined') return;
+  const activeElement = document.activeElement;
+  if (!activeElement || typeof activeElement.blur !== 'function') return;
+  activeElement.blur();
+}
+
 function formatReactionLabel(value) {
   const raw = String(value || '').trim();
   if (!raw) return 'reaction';
@@ -168,12 +175,14 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   }
 
   function closeSearch() {
+    blurFocusedElementOnWeb();
     setIsSearchOpen(false);
     resetSearch();
     setFollowBusyUserId('');
   }
 
   function closeNotifications() {
+    blurFocusedElementOnWeb();
     setIsNotificationsOpen(false);
   }
 

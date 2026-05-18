@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 import {
   NavigationContainer,
@@ -22,6 +22,8 @@ import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import OpenBrainUserSearchScreen from './src/screens/OpenBrainUserSearchScreen';
 import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
+import SecondBrainEntryDetailsScreen from './src/screens/SecondBrainEntryDetailsScreen';
+import SecondBrainEditEntryScreen from './src/screens/SecondBrainEditEntryScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
 import { shouldApplyIOSInputZoomFix, shouldShowSecondBrainHeaderDate } from './src/utils/responsive';
@@ -57,7 +59,7 @@ function HeaderBackToApps({ navigation }) {
       onPress={() => navigation.replace('Apps')}
       accessibilityRole="button"
       accessibilityLabel="Back to Apps"
-      style={{ minWidth: 72, paddingVertical: 6, justifyContent: 'center' }}
+      style={{ minWidth: 72, paddingVertical: 6, marginLeft: 12, justifyContent: 'center' }}
     >
       <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
     </Pressable>
@@ -75,41 +77,47 @@ const navTheme = {
   },
 };
 
-const linking = {
-  config: {
-    screens: {
-      Login: 'login',
-      Apps: 'apps',
-      OpenBrainFeed: 'open-brain',
-      OpenBrain: 'open-brain/write',
-      CreateOpenBrainProfile: 'open-brain/create-profile',
-      OpenBrainProfile: {
-        path: 'open-brain/profile/:username?',
-      },
-      UpdateOpenBrainProfile: 'open-brain/update-profile',
-      OpenBrainSettings: 'open-brain/settings',
-      OpenBrainResetPassword: 'open-brain/settings/reset-password',
-      OpenBrainUserSearch: 'open-brain/user-search',
-      OpenBrainSearch: 'open-brain/search',
-      SharedThought: 'shared-thought/:slug',
-      SecondBrain: 'second-brain',
-    },
-  },
-  getStateFromPath(path, options) {
-    const rawPath = String(path || '');
-    const normalizedPath = (
-      rawPath === '' || rawPath === '/' ? '/apps' : rawPath
-    ).replace(/^\/?open-brain\/u\//, '/open-brain/profile/');
-    return getStateFromPathDefault(normalizedPath, options);
-  },
-};
-
 export default function App() {
   const { width } = useWindowDimensions();
   const hideSecondBrainHeaderDate = !shouldShowSecondBrainHeaderDate(width);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fontsLoaded] = useFonts(theme.fonts.loadMap);
+  const isAuthenticated = Boolean(token);
+
+  const linking = useMemo(() => ({
+    config: {
+      screens: {
+        Login: 'login',
+        Apps: 'apps',
+        OpenBrainFeed: 'open-brain',
+        OpenBrain: 'open-brain/write',
+        CreateOpenBrainProfile: 'open-brain/create-profile',
+        OpenBrainProfile: {
+          path: 'open-brain/profile/:username?',
+        },
+        UpdateOpenBrainProfile: 'open-brain/update-profile',
+        OpenBrainSettings: 'open-brain/settings',
+        OpenBrainResetPassword: 'open-brain/settings/reset-password',
+        OpenBrainUserSearch: 'open-brain/user-search',
+        OpenBrainSearch: 'open-brain/search',
+        SharedThought: 'shared-thought/:slug',
+        SecondBrain: 'second-brain',
+        SecondBrainEntryDetails: 'second-brain/entry',
+        SecondBrainEditEntry: 'second-brain/edit',
+      },
+    },
+    getStateFromPath(path, options) {
+      const rawPath = String(path || '');
+      const defaultPath = isAuthenticated ? '/apps' : '/login';
+      const normalizedPath = (
+        rawPath === '' || rawPath === '/' ? defaultPath : rawPath
+      )
+        .replace(/^\/?open-brain\/u\//, '/open-brain/profile/')
+        .replace(/^\/apps(?:\/|$)/, isAuthenticated ? '/apps' : '/login');
+      return getStateFromPathDefault(normalizedPath, options);
+    },
+  }), [isAuthenticated]);
 
   useEffect(() => {
     (async () => {
@@ -208,7 +216,31 @@ export default function App() {
                   headerShadowVisible: false,
                 })}
               >
-                {() => <SecondBrainScreen token={token} />}
+                {props => <SecondBrainScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen
+                name="SecondBrainEntryDetails"
+                options={{
+                  headerTitle: () => <HeaderBrand />,
+                  headerTitleAlign: 'center',
+                  headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
+                  headerStyle: { backgroundColor: theme.colors.bgBase },
+                  headerShadowVisible: false,
+                }}
+              >
+                {props => <SecondBrainEntryDetailsScreen {...props} />}
+              </Stack.Screen>
+              <Stack.Screen
+                name="SecondBrainEditEntry"
+                options={{
+                  headerTitle: () => <HeaderBrand />,
+                  headerTitleAlign: 'center',
+                  headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
+                  headerStyle: { backgroundColor: theme.colors.bgBase },
+                  headerShadowVisible: false,
+                }}
+              >
+                {props => <SecondBrainEditEntryScreen {...props} />}
               </Stack.Screen>
               <Stack.Screen name="CreateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <CreateProfileScreen {...props} token={token} />}
