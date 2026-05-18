@@ -63,4 +63,26 @@ describe('SecondBrainEditEntryScreen', () => {
     expect(apiRequest).not.toHaveBeenCalledWith('/entries?id=42', expect.objectContaining({ method: 'PATCH' }));
     expect(goBack).not.toHaveBeenCalled();
   });
+
+  it('disables description input and renders markdown preview when toggle is enabled', async () => {
+    const goBack = jest.fn();
+    apiRequest.mockResolvedValueOnce({ tags: ['work'] });
+    const markdownEntry = {
+      ...entry,
+      raw_text: '**Bold** line',
+    };
+
+    const { getByTestId, getByText, queryByTestId } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: markdownEntry, token } }}
+        navigation={{ goBack }}
+      />
+    );
+
+    fireEvent(getByTestId('description-markdown-toggle'), 'valueChange', true);
+
+    expect(queryByTestId('description-input')).toBeNull();
+    expect(getByTestId('description-markdown-preview')).toBeTruthy();
+    expect(getByText('Bold')).toBeTruthy();
+  });
 });

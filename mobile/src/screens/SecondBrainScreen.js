@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking, Keyboard, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { File, Paths } from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
@@ -34,6 +35,14 @@ const STATS = [
 
 const TYPEBAR_MIN_HEIGHT = 38;
 const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
+
+function formatElapsedTime(elapsedMs) {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const paddedSeconds = String(seconds).padStart(2, '0');
+  return `${minutes}:${paddedSeconds}`;
+}
 
 function tagsToInput(tags) {
   if (!Array.isArray(tags)) return '';
@@ -216,6 +225,13 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [telegramLinkError, setTelegramLinkError] = useState('');
   const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
   const [actionTooltip, setActionTooltip] = useState('');
+  const [typebarFocused, setTypebarFocused] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceCaptureStartedAtMs, setVoiceCaptureStartedAtMs] = useState(null);
+  const [voiceElapsedMs, setVoiceElapsedMs] = useState(0);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
+  const recording = recorderState?.isRecording;
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const confirmDeleteTimeoutRef = useRef(null);
   const openActionDrawerIdRef = useRef(null);
@@ -223,6 +239,8 @@ export default function SecondBrainScreen({ token, navigation }) {
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
   const isWeb = Platform.OS === 'web';
   const typebarPlaceholder = isSmallScreen ? 'Type here' : 'Type a note, reminder or thought...';
+  const voiceElapsedLabel = useMemo(() => formatElapsedTime(voiceElapsedMs), [voiceElapsedMs]);
+  const hideTypebarSideActions = typebarFocused && !recording;
 
   const loadEntries = useCallback(async () => {
     try {
@@ -283,6 +301,31 @@ export default function SecondBrainScreen({ token, navigation }) {
   }, [isSmallScreen]);
 
   useEffect(() => {
+    if (!recording) {
+      setVoiceCaptureStartedAtMs(null);
+      setVoiceElapsedMs(0);
+      return undefined;
+    }
+
+    if (voiceCaptureStartedAtMs === null) {
+      const now = Date.now();
+      setVoiceCaptureStartedAtMs(now);
+      setVoiceElapsedMs(0);
+      return undefined;
+    }
+
+    const updateElapsed = () => {
+      setVoiceElapsedMs(Date.now() - voiceCaptureStartedAtMs);
+    };
+    updateElapsed();
+    const intervalId = setInterval(updateElapsed, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [recording, voiceCaptureStartedAtMs]);
+
+  useEffect(() => {
     if (isWeb) return undefined;
 
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -313,6 +356,86 @@ export default function SecondBrainScreen({ token, navigation }) {
       await loadEntries();
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function startVoiceCapture() {
+    if (voiceBusy || recording) return;
+    if (Platform.OS === 'web') {
+      setError('Voice capture is available on native app only.');
+      return;
+    }
+    try {
+      setError('');
+      const permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        setError('Microphone permission is required.');
+        return;
+      }
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      await audioRecorder.prepareToRecordAsync(RecordingPresets.HIGH_QUALITY);
+      audioRecorder.record();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function stopVoiceCaptureAndSubmit() {
+    if (!recording || voiceBusy) return;
+    setVoiceBusy(true);
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      if (!uri) throw new Error('Failed to read recording');
+
+      const recordedAudio = new File(uri);
+      const audioBase64 = await recordedAudio.base64();
+      if (!audioBase64) {
+        throw new Error('Failed to encode recording');
+      }
+
+      const response = await apiRequest('/voice', {
+        method: 'POST',
+        token,
+        body: {
+          audio_base64: audioBase64,
+          extension: 'm4a',
+        },
+      });
+      if (response?.entry) {
+        setEntries(prev => [response.entry, ...prev]);
+      } else {
+        await loadEntries();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setVoiceBusy(false);
+      try {
+        await setAudioModeAsync({ allowsRecording: false });
+      } catch {
+        // Ignore audio mode reset failures.
+      }
+    }
+  }
+
+  async function cancelVoiceCapture() {
+    if (!recording || voiceBusy) return;
+    setVoiceBusy(true);
+    try {
+      await audioRecorder.stop();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setVoiceBusy(false);
+      try {
+        await setAudioModeAsync({ allowsRecording: false });
+      } catch {
+        // Ignore audio mode reset failures.
+      }
     }
   }
 
@@ -558,7 +681,7 @@ export default function SecondBrainScreen({ token, navigation }) {
         onActionDrawerChange={handleActionDrawerChange}
       />
     );
-    if (isWeb) return cardContent;
+    if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
     return (
       <SwipeToDeleteRow
         id={entry.id}
@@ -842,7 +965,7 @@ export default function SecondBrainScreen({ token, navigation }) {
       </View>
 
       <View style={styles.filterSection}>
-        <View style={styles.filterHeaderRow}>
+        <View style={[styles.filterHeaderRow, !isSmallScreen && styles.filterHeaderRowWithSpacing]}>
           {isSmallScreen ? (
             <Pressable
               testID="filter-dropdown-toggle"
@@ -1060,6 +1183,8 @@ export default function SecondBrainScreen({ token, navigation }) {
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={createEntry}
+          onFocus={() => setTypebarFocused(true)}
+          onBlur={() => setTypebarFocused(false)}
           placeholder={typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
           style={[styles.typebarInput, isSmallScreen && styles.typebarInputSmall, { height: typebarInputHeight }]}
@@ -1074,6 +1199,54 @@ export default function SecondBrainScreen({ token, navigation }) {
             setTypebarInputHeight(prev => (prev === nextHeight ? prev : nextHeight));
           }}
         />
+        {!hideTypebarSideActions ? (
+          <View style={styles.typebarActionWrap}>
+            {actionTooltip === 'mic' ? (
+              <View style={styles.typebarTooltip}>
+                <Text style={styles.typebarTooltipText}>{recording ? 'Stop & submit voice note' : 'Record voice note'}</Text>
+              </View>
+            ) : null}
+            {recording ? (
+              <View style={styles.typebarRecordingMeta}>
+                <Text style={styles.typebarRecordingTimer} accessibilityLabel={`Voice memo running time ${voiceElapsedLabel}`}>
+                  {voiceElapsedLabel}
+                </Text>
+                <Pressable
+                  style={[styles.typebarCancelRecordingButton, voiceBusy && styles.typebarButtonDisabled]}
+                  onPress={cancelVoiceCapture}
+                  disabled={voiceBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel voice note recording"
+                >
+                  <Feather
+                    name="trash-2"
+                    size={13}
+                    style={[styles.typebarCancelRecordingIcon, voiceBusy && styles.typebarButtonIconDisabled]}
+                  />
+                </Pressable>
+              </View>
+            ) : null}
+            <Pressable
+              style={[styles.typebarButton, (voiceBusy || loadingTelegramLinkKey) && styles.typebarButtonDisabled]}
+              onPress={recording ? stopVoiceCaptureAndSubmit : startVoiceCapture}
+              disabled={voiceBusy}
+              accessibilityRole="button"
+              accessibilityLabel={recording ? 'Stop and submit voice note' : 'Record voice note'}
+              onHoverIn={() => setActionTooltip('mic')}
+              onHoverOut={() => setActionTooltip('')}
+              onLongPress={() => setActionTooltip('mic')}
+              onPressOut={() => {
+                if (!isWeb) setActionTooltip('');
+              }}
+            >
+              <Feather
+                name={recording ? 'square' : 'mic'}
+                size={15}
+                style={[styles.typebarButtonIcon, voiceBusy && styles.typebarButtonIconDisabled]}
+              />
+            </Pressable>
+          </View>
+        ) : null}
         <View style={styles.typebarActionWrap}>
           {actionTooltip === 'enter' ? (
             <View style={styles.typebarTooltip}>
@@ -1100,27 +1273,29 @@ export default function SecondBrainScreen({ token, navigation }) {
             />
           </Pressable>
         </View>
-        <View style={styles.typebarActionWrap}>
-          {actionTooltip === 'settings' ? (
-            <View style={styles.typebarTooltip}>
-              <Text style={styles.typebarTooltipText}>Open settings</Text>
-            </View>
-          ) : null}
-          <Pressable
-            style={[styles.typebarButton, styles.typebarUploadButton]}
-            onPress={openSettings}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            onHoverIn={() => setActionTooltip('settings')}
-            onHoverOut={() => setActionTooltip('')}
-            onLongPress={() => setActionTooltip('settings')}
-            onPressOut={() => {
-              if (!isWeb) setActionTooltip('');
-            }}
-          >
-            <Feather name="settings" style={styles.typebarUploadButtonIcon} size={15} />
-          </Pressable>
-        </View>
+        {!hideTypebarSideActions ? (
+          <View style={styles.typebarActionWrap}>
+            {actionTooltip === 'settings' ? (
+              <View style={styles.typebarTooltip}>
+                <Text style={styles.typebarTooltipText}>Open settings</Text>
+              </View>
+            ) : null}
+            <Pressable
+              style={[styles.typebarButton, styles.typebarUploadButton]}
+              onPress={openSettings}
+              accessibilityRole="button"
+              accessibilityLabel="Open settings"
+              onHoverIn={() => setActionTooltip('settings')}
+              onHoverOut={() => setActionTooltip('')}
+              onLongPress={() => setActionTooltip('settings')}
+              onPressOut={() => {
+                if (!isWeb) setActionTooltip('');
+              }}
+            >
+              <Feather name="settings" style={styles.typebarUploadButtonIcon} size={15} />
+            </Pressable>
+          </View>
+        ) : null}
       </View>
     </View>
   );

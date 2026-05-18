@@ -114,6 +114,8 @@ export default function App() {
         rawPath === '' || rawPath === '/' ? defaultPath : rawPath
       )
         .replace(/^\/?open-brain\/u\//, '/open-brain/profile/')
+        .replace(/^\/?secondbrain\/microphone-flow(?:\/|$)/, '/second-brain')
+        .replace(/^\/?second-brain\/microphone-flow(?:\/|$)/, '/second-brain')
         .replace(/^\/apps(?:\/|$)/, isAuthenticated ? '/apps' : '/login');
       return getStateFromPathDefault(normalizedPath, options);
     },

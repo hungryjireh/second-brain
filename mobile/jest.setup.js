@@ -30,6 +30,24 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('expo-audio', () => {
+  const requestRecordingPermissionsAsync = jest.fn().mockResolvedValue({ granted: true });
+  const setAudioModeAsync = jest.fn().mockResolvedValue(undefined);
+  const recorder = {
+    uri: 'file:///tmp/mock-recording.m4a',
+    prepareToRecordAsync: jest.fn().mockResolvedValue(undefined),
+    record: jest.fn(),
+    stop: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    requestRecordingPermissionsAsync,
+    setAudioModeAsync,
+    RecordingPresets: { HIGH_QUALITY: {} },
+    useAudioRecorder: jest.fn(() => recorder),
+    useAudioRecorderState: jest.fn(() => ({ isRecording: false })),
+  };
+});
+
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn().mockResolvedValue(null),
   setItemAsync: jest.fn().mockResolvedValue(undefined),

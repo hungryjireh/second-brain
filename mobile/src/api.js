@@ -244,8 +244,6 @@ export async function apiRequest(path, {
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-    text = await response.text();
-    data = text ? JSON.parse(text) : {};
   } catch (err) {
     if (hasUsableCache && staleOnError) {
       const cached = await readCache(cacheKey);
@@ -254,7 +252,16 @@ export async function apiRequest(path, {
     const baseHint = API_BASE.includes('localhost')
       ? ` (${API_BASE} is only reachable from the same device).`
       : '';
+    const reason = String(err?.message || '').trim();
+    if (reason) throw new Error(`Failed to fetch API: ${reason}${baseHint}`);
     throw new Error(`Failed to fetch API${baseHint}`);
+  }
+
+  try {
+    text = await response.text();
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
   }
 
   if (!response.ok) {
@@ -263,7 +270,11 @@ export async function apiRequest(path, {
       if (cached?.data) return cached.data;
     }
 
-    const errorMessage = String(data.error || `Request failed (${response.status})`);
+    const fallbackError =
+      text && !data?.error
+        ? text.slice(0, 200).trim()
+        : `Request failed (${response.status})`;
+    const errorMessage = String(data.error || fallbackError);
     const lowerMessage = errorMessage.toLowerCase();
     const authExpired =
       response.status === 401 ||

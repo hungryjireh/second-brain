@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { apiRequest } from '../api';
 import SecondBrainEntryPageLayout from '../components/SecondBrainEntryPageLayout';
+import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
 import { CACHE_TTL_MS } from '../constants/cache';
 import {
   CATEGORIES,
@@ -78,6 +79,7 @@ export default function SecondBrainEditEntryScreen({ route, navigation }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [globalTags, setGlobalTags] = useState([]);
+  const [isMarkdownPreviewEnabled, setIsMarkdownPreviewEnabled] = useState(false);
 
   useEffect(() => {
     async function loadTags() {
@@ -193,8 +195,35 @@ export default function SecondBrainEditEntryScreen({ route, navigation }) {
         <TextInput value={editTitle} onChangeText={setEditTitle} style={styles.editField} placeholder="Title" placeholderTextColor={theme.colors.textSecondary} />
         <Text style={styles.editLabel}>Summary</Text>
         <TextInput value={editSummary} onChangeText={setEditSummary} multiline style={styles.editInputCompact} placeholder="Summary" placeholderTextColor={theme.colors.textSecondary} />
-        <Text style={styles.editLabel}>Description</Text>
-        <TextInput value={editText} onChangeText={setEditText} multiline style={styles.editInput} placeholder="Description" placeholderTextColor={theme.colors.textSecondary} />
+        <View style={styles.editLabelRow}>
+          <Text style={styles.editLabel}>Description</Text>
+          <View style={styles.editLabelToggleRow}>
+            <Text style={styles.editToggleText}>Render Markdown</Text>
+            <Switch
+              testID="description-markdown-toggle"
+              value={isMarkdownPreviewEnabled}
+              onValueChange={setIsMarkdownPreviewEnabled}
+              trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
+              thumbColor={theme.colors.bg}
+              ios_backgroundColor={theme.colors.border}
+            />
+          </View>
+        </View>
+        {isMarkdownPreviewEnabled ? (
+          <View testID="description-markdown-preview" style={styles.editMarkdownPreview}>
+            <SecondBrainMarkdownBody text={editText} styles={styles} />
+          </View>
+        ) : (
+          <TextInput
+            testID="description-input"
+            value={editText}
+            onChangeText={setEditText}
+            multiline
+            style={styles.editInput}
+            placeholder="Description"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+        )}
         {editCategory === 'reminder' ? (
           <>
             <Text style={styles.editLabel}>Reminder date and time</Text>
