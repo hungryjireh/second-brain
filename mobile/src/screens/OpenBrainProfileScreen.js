@@ -14,7 +14,7 @@ import {
   groupThoughtsByDay,
   shareThought,
 } from '../utils/secondBrainHelper';
-import { formatPublishedDateTime } from '../utils/openBrainDates';
+import { formatPublishedDateTime } from '../utils/dateUtils';
 import { executeOpenBrainFollowToggle } from '../utils/openBrainFollow';
 
 export default function OpenBrainProfileScreen({ token, route, navigation }) {

@@ -36,3 +36,17 @@ export function formatPublishedDateTime(value) {
     minute: '2-digit',
   });
 }
+
+export function unixToDatetimeLocal(unixTs) {
+  if (!unixTs) return '';
+  const date = new Date(unixTs * 1000);
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function datetimeLocalToUnix(value) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return Math.floor(parsed.getTime() / 1000);
+}

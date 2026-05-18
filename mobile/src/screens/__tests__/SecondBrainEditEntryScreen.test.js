@@ -23,8 +23,8 @@ describe('SecondBrainEditEntryScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('saves edited text and navigates back', async () => {
-    const goBack = jest.fn();
+  it('saves edited text and navigates to entry details', async () => {
+    const navigate = jest.fn();
     apiRequest
       .mockResolvedValueOnce({ tags: ['work'] })
       .mockResolvedValueOnce({ ...entry, raw_text: 'Updated text', summary: 'Updated text' });
@@ -32,7 +32,7 @@ describe('SecondBrainEditEntryScreen', () => {
     const { getByPlaceholderText, getByText } = render(
       <SecondBrainEditEntryScreen
         route={{ params: { entry, token } }}
-        navigation={{ goBack }}
+        navigation={{ navigate }}
       />
     );
 
@@ -42,7 +42,10 @@ describe('SecondBrainEditEntryScreen', () => {
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith('/entries?id=42', expect.objectContaining({ method: 'PATCH' }));
     });
-    expect(goBack).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', expect.objectContaining({
+      entryId: 42,
+      entry: expect.objectContaining({ id: 42 }),
+    }));
   });
 
   it('shows validation error and skips PATCH when priority is out of range', async () => {

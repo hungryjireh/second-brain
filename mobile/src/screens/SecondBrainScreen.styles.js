@@ -100,6 +100,15 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 13,
   },
+  creatingStatusList: {
+    marginTop: 6,
+    gap: 2,
+  },
+  creatingStatusText: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   pill: {
     borderWidth: 1,
     borderColor: theme.colors.border,

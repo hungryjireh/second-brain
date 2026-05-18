@@ -103,8 +103,8 @@ export default function App() {
         OpenBrainSearch: 'open-brain/search',
         SharedThought: 'shared-thought/:slug',
         SecondBrain: 'second-brain',
-        SecondBrainEntryDetails: 'second-brain/entry',
-        SecondBrainEditEntry: 'second-brain/edit',
+        SecondBrainEntryDetails: 'second-brain/entry/:entryId',
+        SecondBrainEditEntry: 'second-brain/edit/:entryId',
       },
     },
     getStateFromPath(path, options) {

@@ -16,10 +16,16 @@ import TimezoneDropdown from '../components/TimezoneDropdown';
 import {
   CATEGORIES,
   GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
-  MAX_ENTRY_TAGS,
   MAX_USER_TAGS,
 } from '../constants/tags';
 import styles, { SWIPE_ACTION_WIDTH } from './SecondBrainScreen.styles';
+import {
+  countBillableGlobalTags,
+  normalizeTagValue,
+  parseTagInput,
+  tagsToInput,
+} from '../utils/secondBrainTagUtils';
+import { datetimeLocalToUnix, unixToDatetimeLocal } from '../utils/dateUtils';
 
 const PRIORITY_LEVELS = [
   { key: 'high', label: 'High (8-10)' },
@@ -48,33 +54,6 @@ function formatElapsedTime(elapsedMs) {
   return `${minutes}:${paddedSeconds}`;
 }
 
-function tagsToInput(tags) {
-  if (!Array.isArray(tags)) return '';
-  return tags.map(tag => String(tag).trim()).filter(Boolean).join(',');
-}
-
-function parseTagInput(input) {
-  const seen = new Set();
-  return String(input || '')
-    .split(',')
-    .map(part => normalizeTagValue(part))
-    .filter(tag => {
-      if (!tag || seen.has(tag)) return false;
-      seen.add(tag);
-      return true;
-    })
-    .slice(0, MAX_ENTRY_TAGS);
-}
-
-function normalizeTagValue(input) {
-  return String(input || '')
-    .trim()
-    .replace(/^#+/, '')
-    .toLowerCase()
-    .replace(/[\s_-]+/g, '')
-    .replace(/[^a-z0-9]/g, '')
-    .slice(0, 32);
-}
 
 function sortTagsByUsage(tags, usageCounts) {
   return [...tags].sort((a, b) => {
@@ -83,14 +62,6 @@ function sortTagsByUsage(tags, usageCounts) {
     if (aHasEntries !== bHasEntries) return aHasEntries ? -1 : 1;
     return a.localeCompare(b, 'en', { sensitivity: 'base' });
   });
-}
-
-function countBillableGlobalTags(tags) {
-  return new Set(
-    tags
-      .map(tag => normalizeTagValue(tag))
-      .filter(tag => tag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag))
-  ).size;
 }
 
 function getPriorityLevel(priority) {
@@ -153,18 +124,13 @@ function formatRemindAtWithFormatters(unixTs, formatters) {
   return `${formatters.remindDateFormatter.format(d)} · ${time}`;
 }
 
-function unixToDatetimeLocal(unixTs) {
-  if (!unixTs) return '';
-  const date = new Date(unixTs * 1000);
-  const pad = value => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function datetimeLocalToUnix(value) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return Math.floor(parsed.getTime() / 1000);
+function formatCreatingTitle(description) {
+  const firstLine = String(description || '')
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean);
+  if (!firstLine) return 'entry';
+  return firstLine.slice(0, 80);
 }
 
 function groupByDate(entries) {
@@ -215,6 +181,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [activePriorityLevel, setActivePriorityLevel] = useState('');
   const [activeTag, setActiveTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [creatingEntries, setCreatingEntries] = useState([]);
   const [typebarInputHeight, setTypebarInputHeight] = useState(TYPEBAR_MIN_HEIGHT);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [openSwipeId, setOpenSwipeId] = useState(null);
@@ -344,7 +311,7 @@ export default function SecondBrainScreen({ token, navigation }) {
     });
   }
 
-  const loadEntries = useCallback(async () => {
+  async function loadEntries() {
     try {
       setError('');
       setOfflineMode(false);
@@ -377,11 +344,11 @@ export default function SecondBrainScreen({ token, navigation }) {
       }
       setError(err.message);
     }
-  }, [entries, token, userTags]);
+  }
 
   useEffect(() => {
     loadEntries();
-  }, [loadEntries]);
+  }, [token]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -471,34 +438,40 @@ export default function SecondBrainScreen({ token, navigation }) {
   }, [insets.bottom, isWeb]);
 
   async function createEntry() {
-    if (!draft.trim()) return;
+    const description = draft.trim();
+    if (!description) return;
+    const creatingId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const creatingTitle = formatCreatingTitle(description);
+    setCreatingEntries(prev => [...prev, { id: creatingId, title: creatingTitle }]);
+    setDraft('');
+    setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
     try {
       setOfflineMode(false);
-      await apiRequest('/entries', { method: 'POST', token, body: { description: draft.trim() } });
-      setDraft('');
-      setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
+      await apiRequest('/entries', { method: 'POST', token, body: { description } });
       await loadEntries();
     } catch (err) {
       if (isLikelyOfflineError(err)) {
         const localId = `offline-${Date.now()}`;
         const optimisticEntry = {
           id: localId,
-          description: draft.trim(),
+          description,
           category: 'note',
           is_archived: false,
           created_at: Math.floor(Date.now() / 1000),
         };
         const nextEntries = [optimisticEntry, ...entries];
         setEntries(nextEntries);
-        setDraft('');
-        setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
         setOfflineMode(true);
         setError('Offline mode: changes will sync automatically.');
         await enqueueOfflineAction({ type: 'create', description: optimisticEntry.description });
         await persistCurrentOfflineState(nextEntries, userTags);
         return;
       }
+      setDraft(prev => (prev.trim() ? prev : description));
+      setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
       setError(err.message);
+    } finally {
+      setCreatingEntries(prev => prev.filter(item => item.id !== creatingId));
     }
   }
 
@@ -792,10 +765,10 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   const startEdit = useCallback(entry => {
     navigation.navigate('SecondBrainEditEntry', {
+      entryId: entry?.id,
       entry,
-      token,
     });
-  }, [navigation, token]);
+  }, [navigation]);
 
   const closeEdit = useCallback(() => {
     setEditingEntry(null);
@@ -811,8 +784,11 @@ export default function SecondBrainScreen({ token, navigation }) {
   }, []);
 
   const openEntry = useCallback(entry => {
-    navigation.navigate('SecondBrainEntryDetails', { entry, token });
-  }, [navigation, token]);
+    navigation.navigate('SecondBrainEntryDetails', {
+      entryId: entry?.id,
+      entry,
+    });
+  }, [navigation]);
 
   const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
   const handleActionDrawerChange = useCallback((entryId, isOpen) => {
@@ -1247,6 +1223,13 @@ export default function SecondBrainScreen({ token, navigation }) {
           returnKeyType="search"
           clearButtonMode="while-editing"
         />
+        {creatingEntries.length ? (
+          <View style={styles.creatingStatusList}>
+            {creatingEntries.map(item => (
+              <Text key={item.id} style={styles.creatingStatusText}>{`Creating ${item.title}...`}</Text>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {!!error && <Text style={styles.error}>{error}</Text>}

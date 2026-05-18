@@ -9,7 +9,7 @@ import {
   groupThoughtsByDay,
   shareThought,
 } from '../utils/secondBrainHelper';
-import { formatShortDateTime } from '../utils/openBrainDates';
+import { formatShortDateTime } from '../utils/dateUtils';
 import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainSectionedThoughtList from '../components/OpenBrainSectionedThoughtList';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';

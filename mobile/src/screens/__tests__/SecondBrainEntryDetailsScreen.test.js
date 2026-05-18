@@ -1,11 +1,16 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import SecondBrainEntryDetailsScreen from '../SecondBrainEntryDetailsScreen';
+import { apiRequest } from '../../api';
 
 jest.mock('../../api', () => ({
   apiRequest: jest.fn(),
 }));
 
 describe('SecondBrainEntryDetailsScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders entry details content', () => {
     const entry = {
       id: 42,
@@ -104,6 +109,69 @@ describe('SecondBrainEntryDetailsScreen', () => {
     fireEvent.press(getByLabelText('Open entry actions'));
     fireEvent.press(getByText('Edit'));
 
-    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', { entry, token: null });
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', {
+      entryId: 7,
+      entry: { id: 7, title: 'Entry' },
+    });
+  });
+
+  it('replaces with edit entry screen when replace is available', () => {
+    const navigate = jest.fn();
+    const replace = jest.fn();
+    const entry = { id: 9, title: 'Entry 9' };
+    const { getByLabelText, getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} navigation={{ navigate, replace }} />
+    );
+
+    fireEvent.press(getByLabelText('Open entry actions'));
+    fireEvent.press(getByText('Edit'));
+
+    expect(replace).toHaveBeenCalledWith('SecondBrainEditEntry', {
+      entryId: 9,
+      entry: { id: 9, title: 'Entry 9' },
+    });
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('loads entry by route entryId and renders fetched title', async () => {
+    apiRequest.mockResolvedValueOnce({
+      entries: [
+        { id: 10, title: 'Other entry' },
+        { id: 42, title: 'Loaded entry title', summary: 'Loaded summary', raw_text: 'Loaded body' },
+      ],
+    });
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entryId: 42 } }}
+        token="token"
+      />
+    );
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith('/entries?limit=60', { token: 'token' });
+      expect(getByText('Loaded entry title')).toBeTruthy();
+    });
+  });
+
+  it('renders clicked entry title immediately while entryId fetch is still pending', () => {
+    const entry = {
+      id: 42,
+      title: 'Clicked entry title',
+      summary: 'Clicked summary',
+      raw_text: 'Clicked body',
+    };
+
+    apiRequest.mockImplementation(() => new Promise(() => {}));
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entryId: 42, entry } }}
+        token="token"
+      />
+    );
+
+    expect(getByText('Clicked entry title')).toBeTruthy();
+    expect(queryByText('Untitled')).toBeNull();
   });
 });

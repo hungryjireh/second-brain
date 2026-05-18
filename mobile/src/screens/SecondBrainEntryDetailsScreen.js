@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import SecondBrainMarkdownBody from '../components/SecondBrainMarkdownBody';
 import SecondBrainEntryPageLayout from '../components/SecondBrainEntryPageLayout';
 import { apiRequest } from '../api';
@@ -26,9 +26,12 @@ function parseImportedConversationFromEntry(entry) {
   }
 }
 
+const MAX_WEB_RENDERED_MESSAGES = 200;
+
 export default function SecondBrainEntryDetailsScreen({ route, navigation, token: tokenFromProps }) {
   const entryFromRoute = route?.params?.entry ?? null;
-  const token = route?.params?.token ?? tokenFromProps ?? null;
+  const entryId = route?.params?.entryId ?? entryFromRoute?.id ?? null;
+  const token = tokenFromProps ?? null;
   const [entry, setEntry] = useState(entryFromRoute);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   const [drawerAnchor, setDrawerAnchor] = useState(null);
@@ -37,7 +40,16 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation, token
   const actionTriggerRef = useRef(null);
   const deleteConfirmTimeoutRef = useRef(null);
   const { width } = useWindowDimensions();
-  const importedConversation = parseImportedConversationFromEntry(entry);
+  const importedConversation = useMemo(() => parseImportedConversationFromEntry(entry), [entry?.raw_text]);
+  const isWeb = Platform.OS === 'web';
+  const renderedMessages = useMemo(() => {
+    if (!importedConversation?.messages) return [];
+    if (!isWeb || importedConversation.messages.length <= MAX_WEB_RENDERED_MESSAGES) return importedConversation.messages;
+    return importedConversation.messages.slice(0, MAX_WEB_RENDERED_MESSAGES);
+  }, [importedConversation, isWeb]);
+  const hasHiddenMessages = Boolean(
+    isWeb && importedConversation?.messages?.length > renderedMessages.length
+  );
   const title = entry?.title || entry?.content || 'Untitled';
   const summary = entry?.summary || entry?.content || '';
   const body = entry?.description || entry?.raw_text || entry?.content || '';
@@ -52,6 +64,22 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation, token
   useEffect(() => {
     setEntry(entryFromRoute);
   }, [entryFromRoute]);
+
+  useEffect(() => {
+    async function loadEntryById() {
+      if (!entryId || !token) return;
+      if (entry?.id === entryId) return;
+      try {
+        const data = await apiRequest('/entries?limit=60', { token });
+        const list = Array.isArray(data?.entries) ? data.entries : Array.isArray(data) ? data : [];
+        const nextEntry = list.find(item => String(item?.id) === String(entryId));
+        if (nextEntry) setEntry(nextEntry);
+      } catch {
+        // Keep existing entry state when fetch fails.
+      }
+    }
+    loadEntryById();
+  }, [entry?.id, entryId, token]);
 
   useEffect(() => () => {
     if (deleteConfirmTimeoutRef.current) clearTimeout(deleteConfirmTimeoutRef.current);
@@ -73,7 +101,11 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation, token
 
   function handleEditEntry() {
     closeActionDrawer();
-    navigation?.navigate?.('SecondBrainEditEntry', { entry, token });
+    if (navigation?.replace) {
+      navigation.replace('SecondBrainEditEntry', { entryId, entry });
+      return;
+    }
+    navigation?.navigate?.('SecondBrainEditEntry', { entryId, entry });
   }
 
   async function handleToggleArchive() {
@@ -160,7 +192,7 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation, token
           <ScrollView style={styles.entryPanelBodyScroll} contentContainerStyle={styles.entryPanelBodyContent}>
             {importedConversation ? (
               <View style={styles.conversationWrap}>
-                {importedConversation.messages.map((msg, idx) => {
+                {renderedMessages.map((msg, idx) => {
                   const fromHuman = msg.sender === 'human';
                   return (
                     <View key={`${msg.sender}-${idx}`} style={[styles.conversationRow, fromHuman ? styles.conversationRowHuman : styles.conversationRowAssistant]}>
@@ -171,6 +203,11 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation, token
                     </View>
                   );
                 })}
+                {hasHiddenMessages ? (
+                  <Text style={styles.entryPanelSummary}>
+                    {`Showing first ${MAX_WEB_RENDERED_MESSAGES} messages on web for performance.`}
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <SecondBrainMarkdownBody text={body} styles={styles} />

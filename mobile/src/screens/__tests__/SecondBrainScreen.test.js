@@ -46,6 +46,24 @@ describe('SecondBrainScreen', () => {
 
   });
 
+  it('loads entries once on mount without re-fetch loop', async () => {
+    const entries = [{ id: 1, title: 'One', summary: 'first', is_archived: false }];
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === '/entries?limit=60') return { entries };
+      if (url === '/tags') return { tags: ['work'] };
+      if (url === '/settings') return {};
+      return {};
+    });
+
+    const { getByText } = render(<SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />);
+
+    await waitFor(() => expect(getByText('One')).toBeTruthy());
+
+    const entryLoadCalls = apiRequest.mock.calls.filter(([url]) => url === '/entries?limit=60');
+    expect(entryLoadCalls).toHaveLength(1);
+  });
+
   it('requires delete confirmation before deleting an entry', async () => {
     const entry = { id: 42, title: 'Ship tests', summary: 'Write behavior checks', is_archived: false };
 
@@ -82,10 +100,10 @@ describe('SecondBrainScreen', () => {
 
     fireEvent.press(getByText('Edit'));
 
-    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', expect.objectContaining({
-      entry,
-      token,
-    }));
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', {
+      entryId: 42,
+      entry: expect.objectContaining({ id: 42 }),
+    });
   });
 
   it('navigates to entry detail screen on card press', async () => {
@@ -108,7 +126,10 @@ describe('SecondBrainScreen', () => {
     await waitFor(() => expect(getByText('Ship tests')).toBeTruthy());
     fireEvent.press(getByText('Ship tests'));
 
-    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', { entry, token });
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', {
+      entryId: 42,
+      entry: expect.objectContaining({ id: 42 }),
+    });
   });
 
   it('navigates to entry detail screen for imported LLM conversations', async () => {
@@ -138,7 +159,10 @@ describe('SecondBrainScreen', () => {
     await waitFor(() => expect(getByText('Claude thread')).toBeTruthy());
     fireEvent.press(getByText('Claude thread'));
 
-    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', { entry, token });
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEntryDetails', {
+      entryId: 77,
+      entry: expect.objectContaining({ id: 77 }),
+    });
   });
 
   it('creates an entry from composer input and reloads list', async () => {

@@ -5,7 +5,7 @@ import {
   THANK_YOU_PROMPTS,
   THOUGHT_FALLBACK_PROMPTS,
 } from '../utils/openBrainComposer';
-import { formatTimeLabel, formatTodayLabel } from '../utils/openBrainDates';
+import { formatTimeLabel, formatTodayLabel } from '../utils/dateUtils';
 
 export function useOpenBrainComposer({
   token,

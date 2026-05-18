@@ -6,7 +6,7 @@ import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
 import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
 import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
 import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
-import { formatPublishedDateTime } from '../utils/openBrainDates';
+import { formatPublishedDateTime } from '../utils/dateUtils';
 import { isRequiredFieldPresent, normalizeRequiredField } from '../utils/formFields';
 import styles from './SharedThoughtScreen.styles';
 
