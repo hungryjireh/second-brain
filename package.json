@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "vercel dev",
+    "webapp:dev": "npm --prefix webapp run dev",
+    "webapp:build": "npm --prefix webapp run build",
+    "webapp:preview": "npm --prefix webapp run preview",
     "mobile:start": "npm --prefix mobile run start",
     "mobile:android": "npm --prefix mobile run android",
     "mobile:ios": "npm --prefix mobile run ios",

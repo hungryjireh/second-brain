@@ -21,12 +21,27 @@ function AppLogo({ name }) {
 }
 
 export default function AppPickerScreen({ navigation, token, onLogout }) {
-  useEffect(() => {
+  function getLoggedOutRoute() {
+    return 'Login';
+  }
+
+  function navigateToSelectedApp(routeName) {
     if (!token) {
-      const loggedOutRoute = Platform.OS === 'web' ? 'Home' : 'Login';
       navigation.reset({
         index: 0,
-        routes: [{ name: loggedOutRoute }],
+        routes: [{ name: getLoggedOutRoute() }],
+      });
+      return;
+    }
+
+    navigation.navigate(routeName);
+  }
+
+  useEffect(() => {
+    if (!token) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: getLoggedOutRoute() }],
       });
       return;
     }
@@ -52,10 +67,9 @@ export default function AppPickerScreen({ navigation, token, onLogout }) {
     if (typeof onLogout === 'function') {
       await onLogout();
     }
-    const loggedOutRoute = Platform.OS === 'web' ? 'Home' : 'Login';
     navigation.reset({
       index: 0,
-      routes: [{ name: loggedOutRoute }],
+      routes: [{ name: getLoggedOutRoute() }],
     });
   }
 
@@ -64,10 +78,10 @@ export default function AppPickerScreen({ navigation, token, onLogout }) {
       <View style={styles.panel}>
         <Text style={styles.kicker}>Choose app</Text>
         <Text style={styles.title}>Where do you want to go?</Text>
-        <Pressable style={styles.card} onPress={() => navigation.navigate('SecondBrain')}>
+        <Pressable style={styles.card} onPress={() => navigateToSelectedApp('SecondBrain')}>
           <AppLogo name="second-brain" />
         </Pressable>
-        <Pressable style={styles.card} onPress={() => navigation.navigate('OpenBrainFeed')}>
+        <Pressable style={styles.card} onPress={() => navigateToSelectedApp('OpenBrainFeed')}>
           <AppLogo name="open-brain" />
         </Pressable>
         <Pressable style={styles.logoutButton} onPress={handleLogout}>

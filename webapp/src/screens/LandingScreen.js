@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Asset } from 'expo-asset';
-import { Animated, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { apiRequest } from '../api';
 import OpenBrainLogo from '../components/OpenBrainLogo';
 import { theme } from '../theme';
-import styles from './LandingScreenStyles';
+import './LandingScreen.css';
 
 function BackgroundVideo() {
   const videoRef = useRef(null);
@@ -31,14 +30,10 @@ function BackgroundVideo() {
     };
   }, []);
 
-  if (Platform.OS !== 'web') {
-    return null;
-  }
-
   return (
     <video
       ref={videoRef}
-      style={styles.video}
+      className="ls-video"
       autoPlay
       loop
       muted
@@ -60,7 +55,7 @@ const NEVER_FORGET = [
 ];
 
 export default function LandingScreen() {
-  const { width } = useWindowDimensions();
+  const [width, setWidth] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth));
   const [currentItem, setCurrentItem] = useState(
     NEVER_FORGET[Math.floor(Math.random() * NEVER_FORGET.length)]
   );
@@ -69,7 +64,8 @@ export default function LandingScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const titleOpacity = useRef(new Animated.Value(1)).current;
+  const [isFading, setIsFading] = useState(false);
+  const fadeTimeoutRef = useRef(null);
   const longestNeverForgetItem = NEVER_FORGET.reduce(
     (longest, item) => (item.length > longest.length ? item : longest),
     ''
@@ -79,12 +75,11 @@ export default function LandingScreen() {
   const titleFontSize = Math.max(12, Math.min(34, Math.floor((width * 1.55) / maxTitleChars)));
 
   useEffect(() => {
+    const resizeHandler = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', resizeHandler);
     const interval = setInterval(() => {
-      Animated.timing(titleOpacity, {
-        toValue: 0,
-        duration: 240,
-        useNativeDriver: true,
-      }).start(() => {
+      setIsFading(true);
+      fadeTimeoutRef.current = setTimeout(() => {
         setCurrentItem((prevItem) => {
           if (NEVER_FORGET.length <= 1) return prevItem;
           let nextItem = prevItem;
@@ -93,17 +88,16 @@ export default function LandingScreen() {
           }
           return nextItem;
         });
-
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 240,
-          useNativeDriver: true,
-        }).start();
-      });
+        setIsFading(false);
+      }, 240);
     }, 2100);
 
-    return () => clearInterval(interval);
-  }, [titleOpacity]);
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+      window.removeEventListener('resize', resizeHandler);
+    };
+  }, []);
 
   async function submitSignup() {
     if (loading) return;
@@ -142,87 +136,83 @@ export default function LandingScreen() {
   }
 
   function goToLearnMore() {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       window.location.assign('/learn-more');
     }
   }
 
   function SecondBrainLogo() {
     return (
-      <Text style={styles.footerLogoText}>
-        second<Text style={styles.footerSecondBrainAccent}>brain</Text>
-      </Text>
+      <span className="ls-footer-logo">
+        second<span className="ls-footer-second">brain</span>
+      </span>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <div
+      className="ls-page"
+      style={{
+        '--ls-text-primary': theme.colors.textPrimary,
+        '--ls-accent': theme.colors.accent,
+        '--ls-brand': theme.colors.brand,
+      }}
+    >
       <BackgroundVideo />
-      <View style={styles.overlay} />
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text
-            style={[styles.title, { fontSize: titleFontSize }]}
-          >
+      <div className="ls-overlay" />
+      <div className="ls-content">
+        <div className="ls-card">
+          <h1 className="ls-title" style={{ fontSize: titleFontSize }}>
             never forget your next{' '}
-            <Animated.Text style={{ opacity: titleOpacity }}>
+            <span className={`ls-title-animated ${isFading ? 'fading' : ''}`}>
               {currentItem}
-            </Animated.Text>
-          </Text>
+            </span>
+          </h1>
 
-          <TextInput
+          <input
             value={name}
-            onChangeText={setName}
+            onChange={(event) => setName(event.target.value)}
             placeholder="name"
-            placeholderTextColor="rgba(255, 255, 255, 0.7)"
             autoCapitalize="words"
-            style={styles.input}
+            className="ls-input"
           />
-          <TextInput
+          <input
             value={email}
-            onChangeText={setEmail}
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="email"
-            placeholderTextColor="rgba(255, 255, 255, 0.7)"
             autoCapitalize="none"
-            keyboardType="email-address"
-            style={styles.input}
+            type="email"
+            className="ls-input"
           />
 
-          <Pressable
+          <button
+            type="button"
             onPress={submitSignup}
-            style={[
-              styles.button,
-              { backgroundColor: theme.colors.brand },
-              loading ? styles.buttonDisabled : null,
-            ]}
-            accessibilityRole="button"
+            className="ls-button"
+            style={{ backgroundColor: theme.colors.brand, color: theme.colors.textLight }}
             disabled={loading}
           >
-            <Text style={[styles.buttonText, { color: theme.colors.textLight }]}>
-              {loading ? 'submitting...' : 'notify me'}
-            </Text>
-          </Pressable>
-          <Pressable
+            {loading ? 'submitting...' : 'notify me'}
+          </button>
+          <button
+            type="button"
             onPress={goToLearnMore}
-            style={styles.learnMoreButton}
-            accessibilityRole="button"
+            className="ls-learn-more"
           >
-            <Text style={styles.learnMoreButtonText}>learn more</Text>
-          </Pressable>
+            learn more
+          </button>
 
           {success ? (
-            <Text style={[styles.helperText, { color: theme.colors.textLight, textAlign: 'center' }]}>
-              {success}
-            </Text>
+            <p className="ls-helper success" style={{ color: theme.colors.textLight }}>{success}</p>
           ) : null}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
-        <View style={styles.footer} accessibilityRole="text">
-          <OpenBrainLogo style={styles.footerLogoText} accentStyle={styles.footerOpenBrainAccent} />
-          <Text style={styles.footerSeparator}> + </Text>
+          {error ? <p className="ls-error">{error}</p> : null}
+        </div>
+        <div className="ls-footer">
+          <OpenBrainLogo style={{ color: theme.colors.textPrimary, fontSize: 21, lineHeight: '26px', letterSpacing: '-0.3px', fontFamily: "'DM Serif Display', serif" }} accentStyle={{ color: theme.colors.accent }} />
+          <span className="ls-footer-separator"> + </span>
           <SecondBrainLogo />
-        </View>
-      </View>
-    </View>
+        </div>
+      </div>
+    </div>
   );
 }

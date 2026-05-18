@@ -311,6 +311,67 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
   assert.equal(jsonBody(res)?.profile?.is_following, false);
 });
 
+test('open-brain profile handler treats username_changed_once as strict boolean', async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith('/rest/v1/profiles')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: '11111111-1111-4111-8111-111111111111',
+          username: 'alice',
+          avatar_url: null,
+          streak_count: 0,
+          last_posted_at: null,
+          timezone: 'UTC',
+          username_changed_once: 'false',
+        }]),
+      };
+    }
+    if (parsed.pathname.endsWith('/rest/v1/thoughts')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([]),
+      };
+    }
+    if (parsed.pathname.endsWith('/rest/v1/thought_second_brain_saves')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([]),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: profileHandler } = await importFresh('../../lib/open-brain/routes/profile.js', 'open-brain-profile-username-changed-strict');
+  const req = createReq({ method: 'GET', query: { username: 'alice' }, headers: {} });
+  const res = createRes();
+
+  try {
+    await profileHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(jsonBody(res)?.profile?.can_change_username, true);
+});
+
 test('open-brain public-thoughts handler allows anonymous lookup by user_id', async () => {
   const original = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,

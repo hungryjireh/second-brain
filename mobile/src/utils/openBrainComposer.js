@@ -45,7 +45,7 @@ export async function loadOpenBrainComposerState({
     if (!allowThoughtFetchFailure) throw err;
   }
 
-  const hasPostedToday = Boolean(thoughtData?.has_posted_today && thoughtData?.thought);
+  const hasPostedToday = thoughtData?.has_posted_today === true && Boolean(thoughtData?.thought);
   const postedText = hasPostedToday && typeof thoughtData?.thought?.content?.text === 'string'
     ? thoughtData.thought.content.text
     : '';

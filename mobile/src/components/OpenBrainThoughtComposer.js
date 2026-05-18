@@ -96,25 +96,30 @@ export default function OpenBrainThoughtComposer({
   const [contentHeight, setContentHeight] = useState(minInputHeight);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const remaining = typeof maxLength === 'number' ? maxLength - String(value || '').length : null;
-  const submitDisabled = disabled || isPosted;
+  const isDisabled = disabled === true;
+  const isMultiline = multiline === true;
+  const canRefresh = canRefreshPrompt === true;
+  const posted = isPosted === true;
+  const shouldShowRemaining = showRemaining !== false;
+  const submitDisabled = isDisabled || posted;
   const trackActive = visibility === 'public';
   const clampedInputHeight = Math.min(Math.max(contentHeight, minInputHeight), maxInputHeight);
   const shouldScrollInput = clampedInputHeight >= maxInputHeight;
   const postedThought = useMemo(() => parsePostedThought(value), [value]);
   const handleFormatPress = (marker, placeholder) => {
-    if (disabled || isPosted) return;
+    if (isDisabled || posted) return;
     const next = applyInlineMarkdown(value, selection, marker, placeholder);
     onChangeText(next.text);
     setSelection(next.selection);
   };
   const handleBulletListPress = () => {
-    if (disabled || isPosted) return;
+    if (isDisabled || posted) return;
     const next = applyLinePrefix(value, selection, () => '- ');
     onChangeText(next.text);
     setSelection(next.selection);
   };
   const handleNumberedListPress = () => {
-    if (disabled || isPosted) return;
+    if (isDisabled || posted) return;
     const next = applyLinePrefix(value, selection, index => `${index + 1}. `);
     onChangeText(next.text);
     setSelection(next.selection);
@@ -139,72 +144,72 @@ export default function OpenBrainThoughtComposer({
           </View>
         )}
         <Text style={styles.heading}>{heading}</Text>
-        {!isPosted && (
+        {!posted && (
           <View style={styles.promptRow}>
             <Text style={styles.prompt}>{prompt || placeholder}</Text>
             {!!onRefreshPrompt && (
-              <Pressable style={styles.refreshButton} onPress={onRefreshPrompt} disabled={!canRefreshPrompt}>
+              <Pressable style={styles.refreshButton} onPress={onRefreshPrompt} disabled={!canRefresh}>
                 <Feather name="rotate-cw" size={13} color={theme.colors.textSecondary} />
               </Pressable>
             )}
           </View>
         )}
         <View style={styles.divider}>
-          {!isPosted && (
+          {!posted && (
             <View style={styles.formatToolbar}>
               <Pressable
                 style={styles.formatButton}
                 onPress={() => handleFormatPress('**', 'bold')}
-                disabled={disabled}
+                disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Bold"
                 accessibilityHint="Formats selected text as bold"
               >
-                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>B</Text>
+                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>B</Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
                 onPress={() => handleFormatPress('*', 'italic')}
-                disabled={disabled}
+                disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Italic"
                 accessibilityHint="Formats selected text as italic"
               >
-                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>I</Text>
+                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>I</Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
                 onPress={() => handleFormatPress('__', 'underline')}
-                disabled={disabled}
+                disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Underline"
                 accessibilityHint="Formats selected text as underlined"
               >
-                <Text style={[styles.formatButtonText, styles.formatButtonTextUnderline, disabled && { color: theme.colors.textSecondary }]}>U</Text>
+                <Text style={[styles.formatButtonText, styles.formatButtonTextUnderline, isDisabled && { color: theme.colors.textSecondary }]}>U</Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
                 onPress={handleBulletListPress}
-                disabled={disabled}
+                disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Bulleted list"
                 accessibilityHint="Formats selected lines as a bulleted list"
               >
-                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>•</Text>
+                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>•</Text>
               </Pressable>
               <Pressable
                 style={[styles.formatButton, styles.formatButtonWide]}
                 onPress={handleNumberedListPress}
-                disabled={disabled}
+                disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Numbered list"
                 accessibilityHint="Formats selected lines as a numbered list"
               >
-                <Text style={[styles.formatButtonText, disabled && { color: theme.colors.textSecondary }]}>1.</Text>
+                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>1.</Text>
               </Pressable>
             </View>
           )}
-          {isPosted ? (
+          {posted ? (
             <ScrollView style={styles.postedScroll} contentContainerStyle={styles.postedScrollContent} showsVerticalScrollIndicator={false}>
               <View style={styles.postedBlocks}>
                 {postedThought.hasTitle ? <Text style={styles.postedTitle}>{postedThought.title}</Text> : null}
@@ -223,25 +228,25 @@ export default function OpenBrainThoughtComposer({
               onSelectionChange={event => setSelection(event.nativeEvent.selection)}
               placeholder={placeholder}
               placeholderTextColor={theme.colors.textSecondary}
-              style={[styles.input, multiline && styles.inputMultiline, multiline && { height: clampedInputHeight }]}
-              multiline={multiline}
+              style={[styles.input, isMultiline && styles.inputMultiline, isMultiline && { height: clampedInputHeight }]}
+              multiline={isMultiline}
               maxLength={maxLength}
-              onContentSizeChange={multiline ? event => setContentHeight(event.nativeEvent.contentSize.height) : undefined}
-              scrollEnabled={multiline ? shouldScrollInput : undefined}
+              onContentSizeChange={isMultiline ? event => setContentHeight(event.nativeEvent.contentSize.height) : undefined}
+              scrollEnabled={isMultiline ? shouldScrollInput : undefined}
               autoCapitalize="none"
             />
           )}
-          {isPosted && <Text style={styles.helperText}>you can't edit or delete this. it's yours now.</Text>}
+          {posted && <Text style={styles.helperText}>you can't edit or delete this. it's yours now.</Text>}
         </View>
       </View>
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
-          {showRemaining && remaining !== null && <Text style={styles.remaining}>{remaining} left</Text>}
+          {shouldShowRemaining && remaining !== null && <Text style={styles.remaining}>{remaining} left</Text>}
           <Pressable
-            style={[styles.visibilityButton, isPosted && { opacity: 0.55 }]}
+            style={[styles.visibilityButton, posted && { opacity: 0.55 }]}
             onPress={onToggleVisibility}
-            disabled={isPosted || !onToggleVisibility}
+            disabled={posted || !onToggleVisibility}
           >
             <View style={[styles.toggleTrack, { backgroundColor: trackActive ? theme.colors.accentSoft : 'rgba(255,255,255,0.12)', alignItems: trackActive ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }]}>
               <View style={[styles.toggleThumb, { backgroundColor: trackActive ? theme.colors.accentStrong : theme.colors.textSecondary }]} />

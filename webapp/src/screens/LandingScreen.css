@@ -1,0 +1,21 @@
+.ls-page{position:relative;min-height:100vh;background:#000;overflow:hidden}
+.ls-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.ls-overlay{position:absolute;inset:0;background:transparent;z-index:1}
+.ls-content{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:24px 20px;gap:8px}
+.ls-card{width:100%;max-width:560px;align-self:center;background:transparent;border-radius:16px;padding:20px;margin-bottom:4%}
+.ls-title{margin:0 0 10px;color:#fff;font-size:34px;font-weight:800;line-height:38px}
+.ls-title-animated{opacity:1;transition:opacity 240ms linear}
+.ls-title-animated.fading{opacity:0}
+.ls-input{display:block;width:100%;box-sizing:border-box;border:0;outline:none;border-radius:10px;padding:12px 14px;color:#fff;background:rgba(255,255,255,.08);margin-bottom:12px;font-size:15px}
+.ls-input::placeholder{color:rgba(255,255,255,.7)}
+.ls-button{width:100%;border:0;border-radius:10px;padding:12px 14px;display:flex;justify-content:center;align-items:center;margin-top:4px;cursor:pointer;font-weight:700;font-size:15px}
+.ls-button:disabled{opacity:.6;cursor:default}
+.ls-learn-more{width:100%;border:0;background:transparent;border-radius:10px;padding:10px 14px;display:flex;justify-content:center;align-items:center;margin-top:8px;cursor:pointer;color:rgba(255,255,255,.9);font-weight:600;font-size:14px;text-decoration:underline}
+.ls-helper{margin-top:12px;color:#d9e9ff;font-size:13px;line-height:18px}
+.ls-helper.success{text-align:center}
+.ls-error{margin-top:12px;color:#ffb3b3;font-size:13px;line-height:18px}
+.ls-footer{align-self:center;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;padding-bottom:8px}
+.ls-footer-separator{color:rgba(255,255,255,.84);font-size:15px;font-weight:600}
+.ls-footer-logo{color:var(--ls-text-primary);font-size:21px;line-height:26px;letter-spacing:-.3px;font-family:'DM Serif Display',serif}
+.ls-footer-open{color:var(--ls-accent)}
+.ls-footer-second{color:var(--ls-brand)}

@@ -56,6 +56,7 @@ function SecondBrainEntryCard({
     : (entry.is_archived ? 'Unarchive' : 'Archive');
   const isWeb = Platform.OS === 'web';
   const isSmallScreen = width < 720;
+  const isDrawerOpen = isActionDrawerOpen === true;
 
   function closeActionDrawer() {
     onActionDrawerChange?.(entry.id, false);
@@ -112,7 +113,7 @@ function SecondBrainEntryCard({
                     style={styles.mobileActionTrigger}
                     onPress={event => {
                       event?.stopPropagation?.();
-                      if (isActionDrawerOpen) {
+                      if (isDrawerOpen) {
                         closeActionDrawer();
                         return;
                       }
@@ -224,7 +225,7 @@ function SecondBrainEntryCard({
       ) : null}
 
       {isSmallScreen ? (
-        <Modal transparent visible={isActionDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
+        <Modal transparent visible={isDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
           <Pressable style={styles.mobileActionDrawerBackdrop} onPress={closeActionDrawer}>
             <View style={[styles.mobileActionDrawer, styles.mobileActionDrawerPortal, { top: drawerTop, left: drawerLeft }]}>
               <Pressable

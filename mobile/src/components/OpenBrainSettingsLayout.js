@@ -18,6 +18,7 @@ export default function OpenBrainSettingsLayout({
   onBackPress,
   children,
 }) {
+  const isScroll = scroll === true;
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu navigation={navigation} token={token} />
@@ -37,7 +38,7 @@ export default function OpenBrainSettingsLayout({
             </View>
           </View>
         )}
-        {scroll ? (
+        {isScroll ? (
           <ScrollView style={scrollStyle} contentContainerStyle={scrollContentContainerStyle} keyboardShouldPersistTaps="handled">
             {children}
           </ScrollView>

@@ -11,8 +11,6 @@ import { useFonts } from 'expo-font';
 import { Feather } from '@expo/vector-icons';
 import LoginScreen from './src/screens/LoginScreen';
 import AppPickerScreen from './src/screens/AppPickerScreen';
-import LandingScreen from './src/screens/LandingScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import SecondBrainScreen from './src/screens/SecondBrainScreen';
 import OpenBrainScreen from './src/screens/OpenBrainScreen';
 import OpenBrainFeedScreen from './src/screens/OpenBrainFeedScreen';
@@ -80,8 +78,6 @@ const navTheme = {
 const linking = {
   config: {
     screens: {
-      ...(Platform.OS === 'web' ? { Landing: '' } : {}),
-      Home: 'learn-more',
       Login: 'login',
       Apps: 'apps',
       OpenBrainFeed: 'open-brain',
@@ -100,7 +96,10 @@ const linking = {
     },
   },
   getStateFromPath(path, options) {
-    const normalizedPath = String(path || '').replace(/^\/?open-brain\/u\//, '/open-brain/profile/');
+    const rawPath = String(path || '');
+    const normalizedPath = (
+      rawPath === '' || rawPath === '/' ? '/apps' : rawPath
+    ).replace(/^\/?open-brain\/u\//, '/open-brain/profile/');
     return getStateFromPathDefault(normalizedPath, options);
   },
 };
@@ -162,7 +161,7 @@ export default function App() {
   if (loading || !fontsLoaded) return <ActivityIndicator style={styles.loadingIndicator} color={theme.colors.brand} />;
 
   const initialRouteName = Platform.OS === 'web'
-    ? 'Landing'
+    ? 'Login'
     : (token ? 'Apps' : 'Login');
 
   return (
@@ -173,14 +172,6 @@ export default function App() {
             initialRouteName={initialRouteName}
             screenOptions={{ contentStyle: { backgroundColor: theme.colors.bgBase } }}
           >
-          {Platform.OS === 'web' ? (
-            <Stack.Screen name="Landing" options={{ headerShown: false }}>
-              {() => <LandingScreen />}
-            </Stack.Screen>
-          ) : null}
-          <Stack.Screen name="Home" options={{ headerShown: false }}>
-            {props => <HomeScreen {...props} token={token} />}
-          </Stack.Screen>
           <Stack.Screen name="Login" options={{ headerShown: false }}>
             {() => <LoginScreen onLoggedIn={setToken} />}
           </Stack.Screen>

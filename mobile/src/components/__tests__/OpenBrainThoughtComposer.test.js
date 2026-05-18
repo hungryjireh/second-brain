@@ -152,4 +152,27 @@ describe('OpenBrainThoughtComposer', () => {
 
     expect(onChangeText).toHaveBeenCalledWith('1. first line\n2. second line');
   });
+
+  it('requires boolean props for native boolean behavior', () => {
+    const onSubmit = jest.fn();
+    const { getByText, queryByText } = render(
+      <OpenBrainThoughtComposer
+        value="hello"
+        onChangeText={() => {}}
+        placeholder="Type here"
+        buttonLabel="Send"
+        onSubmit={onSubmit}
+        disabled={false}
+        multiline={false}
+        isPosted
+        showRemaining={false}
+      />
+    );
+
+    expect(queryByText('4995 left')).toBeNull();
+    expect(getByText("you can't edit or delete this. it's yours now.")).toBeTruthy();
+
+    fireEvent.press(getByText('Send'));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
