@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import styles from './OpenBrainTopMenu.styles';
 import { apiRequest, sendFollowNotification } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
@@ -83,10 +84,14 @@ export const __testables = {
 
 export default function OpenBrainTopMenu({ navigation, token }) {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isSmallScreen = width <= 420;
   const dropdownMaxHeight = Math.max(220, Math.floor(height * 0.5));
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationsOpenedAtRef = useRef(0);
+  const searchOpenedAtRef = useRef(0);
+  const notificationsLoadingRef = useRef(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState('');
@@ -110,7 +115,8 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   });
 
   const fetchNotifications = useCallback(async () => {
-    if (!token || notificationsLoading) return;
+    if (!token || notificationsLoadingRef.current) return;
+    notificationsLoadingRef.current = true;
     setNotificationsLoading(true);
     setNotificationsError('');
     try {
@@ -119,9 +125,10 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     } catch (err) {
       setNotificationsError(err.message || 'Failed to load notifications.');
     } finally {
+      notificationsLoadingRef.current = false;
       setNotificationsLoading(false);
     }
-  }, [notificationsLoading, token]);
+  }, [token]);
 
   async function handleSearch() {
     await runSearch();
@@ -171,8 +178,25 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   }
 
   async function openNotifications() {
+    notificationsOpenedAtRef.current = Date.now();
     setIsNotificationsOpen(true);
     await fetchNotifications();
+  }
+
+  function openSearch() {
+    searchOpenedAtRef.current = Date.now();
+    setIsSearchOpen(true);
+    resetSearch();
+  }
+
+  function handleNotificationsBackdropPress() {
+    if (Date.now() - notificationsOpenedAtRef.current < 180) return;
+    closeNotifications();
+  }
+
+  function handleSearchBackdropPress() {
+    if (Date.now() - searchOpenedAtRef.current < 180) return;
+    closeSearch();
   }
 
   useEffect(() => {
@@ -278,7 +302,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   }, [followBusyUserId, openProfile, token]);
 
   return (
-    <View style={styles.outer}>
+    <View style={[styles.outer, { paddingTop: insets.top }]}>
       <View style={styles.wrap}>
         <Pressable
           style={styles.backButton}
@@ -302,6 +326,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
           <Pressable
             style={styles.notificationButton}
             onPress={openNotifications}
+            hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Notifications"
           >
@@ -316,10 +341,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
           </Pressable>
           <Pressable
             style={styles.searchButton}
-            onPress={() => {
-              setIsSearchOpen(true);
-              setError('');
-            }}
+            onPress={openSearch}
             accessibilityRole="button"
             accessibilityLabel="Search users"
           >
@@ -333,8 +355,11 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         animationType="fade"
         onRequestClose={closeNotifications}
       >
-        <Pressable style={styles.modalBackdrop} onPress={closeNotifications}>
-          <Pressable style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]} onPress={() => {}}>
+        <Pressable style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]} onPress={handleNotificationsBackdropPress}>
+          <Pressable
+            style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]}
+            onPress={event => event.stopPropagation()}
+          >
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Notifications</Text>
               {notificationsLoading ? <Text style={styles.emptyText}>Loading...</Text> : null}
@@ -406,8 +431,11 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         animationType="fade"
         onRequestClose={closeSearch}
       >
-        <Pressable style={styles.modalBackdrop} onPress={closeSearch}>
-          <Pressable style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]} onPress={() => {}}>
+        <Pressable style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]} onPress={handleSearchBackdropPress}>
+          <Pressable
+            style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]}
+            onPress={event => event.stopPropagation()}
+          >
             <TextInput
               value={query}
               onChangeText={setQuery}

@@ -266,6 +266,7 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
           streak_count: 0,
           last_posted_at: null,
           timezone: 'UTC',
+          username_changed_once: false,
         }]),
       };
     }
@@ -311,7 +312,7 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
   assert.equal(jsonBody(res)?.profile?.is_following, false);
 });
 
-test('open-brain profile handler treats username_changed_once as strict boolean', async () => {
+test('open-brain profile handler rejects non-boolean username_changed_once from upstream', async () => {
   const original = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
@@ -368,8 +369,8 @@ test('open-brain profile handler treats username_changed_once as strict boolean'
     global.fetch = original.fetch;
   }
 
-  assert.equal(res.statusCode, 200);
-  assert.equal(jsonBody(res)?.profile?.can_change_username, true);
+  assert.equal(res.statusCode, 500);
+  assert.equal(jsonBody(res)?.error, 'profiles.username_changed_once must be a boolean');
 });
 
 test('open-brain public-thoughts handler allows anonymous lookup by user_id', async () => {

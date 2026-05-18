@@ -71,4 +71,24 @@ describe('LoginScreen', () => {
       expect(login).toHaveBeenCalledWith('jireh@example.com', 'password123');
     });
   });
+
+  it('submits when enter is pressed on the password input', async () => {
+    login.mockResolvedValueOnce({ token: 'token-enter' });
+    const onLoggedIn = jest.fn();
+
+    const { getByPlaceholderText } = render(<LoginScreen onLoggedIn={onLoggedIn} />);
+    const emailInput = getByPlaceholderText('Email');
+    const passwordInput = getByPlaceholderText('Password');
+
+    fireEvent.changeText(emailInput, 'jireh@example.com');
+    fireEvent.changeText(passwordInput, 'password123');
+    fireEvent(passwordInput, 'submitEditing');
+
+    await waitFor(() => {
+      expect(login).toHaveBeenCalledWith('jireh@example.com', 'password123');
+      expect(setToken).toHaveBeenCalledWith('token-enter');
+      expect(onLoggedIn).toHaveBeenCalledWith('token-enter');
+      expect(mockReplace).toHaveBeenCalledWith('Apps');
+    });
+  });
 });

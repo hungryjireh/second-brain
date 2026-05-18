@@ -18,9 +18,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgBase,
   },
   backButton: {
-    minWidth: 72,
-    paddingVertical: 6,
+    width: 64,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
     justifyContent: 'center',
+    paddingLeft: 16,
   },
   logoText: {
     color: theme.colors.textPrimary,
@@ -49,8 +54,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   notificationButton: {
+    minWidth: 36,
+    minHeight: 36,
     paddingVertical: 6,
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',

@@ -39,13 +39,23 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
     setError('');
     try {
       const query = username ? `?username=${encodeURIComponent(username)}` : '';
-      const profileRes = await apiRequest(`/open-brain/profile${query}`, { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
+      const profileCacheScope = String(username || 'self').trim().toLowerCase();
+      const profileRes = await apiRequest(`/open-brain/profile${query}`, {
+        token,
+        cache: {
+          ttlMs: CACHE_TTL_MS.PROFILE_PAGE,
+          key: `open-brain-profile-page:${profileCacheScope}:profile`,
+        },
+      });
       const loadedProfile = profileRes.profile;
       setProfile(loadedProfile);
 
       const thoughtRes = await apiRequest(`/open-brain/public-thoughts?user_id=${encodeURIComponent(loadedProfile.id)}`, {
         token,
-        cache: { ttlMs: CACHE_TTL_MS.FEED },
+        cache: {
+          ttlMs: CACHE_TTL_MS.PROFILE_PAGE,
+          key: `open-brain-profile-page:${profileCacheScope}:thoughts`,
+        },
       });
       setThoughts(Array.isArray(thoughtRes.thoughts) ? thoughtRes.thoughts : []);
     } catch (err) {

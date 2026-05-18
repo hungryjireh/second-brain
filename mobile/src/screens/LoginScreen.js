@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, Text, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { login, setToken } from '../api';
 import { theme } from '../theme';
@@ -36,7 +36,11 @@ export default function LoginScreen({ onLoggedIn }) {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+    >
       <View style={styles.card}>
         <Text style={styles.eyebrow}>Welcome back</Text>
         <Text style={styles.title}>
@@ -68,6 +72,8 @@ export default function LoginScreen({ onLoggedIn }) {
               passwordRef.current = value;
               setPassword(value);
             }}
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
             style={styles.input}
           />
           <Pressable style={[styles.button, (loading || !canSubmit) && styles.buttonDisabled]} onPress={handleLogin} disabled={loading || !canSubmit}>
@@ -81,6 +87,6 @@ export default function LoginScreen({ onLoggedIn }) {
           </View>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

@@ -57,7 +57,7 @@ function HeaderBackToApps({ navigation }) {
       onPress={() => navigation.replace('Apps')}
       accessibilityRole="button"
       accessibilityLabel="Back to Apps"
-      style={{ minWidth: 72, paddingVertical: 6, paddingLeft: 12, justifyContent: 'center' }}
+      style={{ minWidth: 72, paddingVertical: 6, justifyContent: 'center' }}
     >
       <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
     </Pressable>
@@ -189,6 +189,7 @@ export default function App() {
                 name="OpenBrainFeed"
                 options={{
                   headerShown: false,
+                  animation: 'none',
                 }}
               >
                 {props => <OpenBrainFeedScreen {...props} token={token} />}
@@ -212,13 +213,13 @@ export default function App() {
               <Stack.Screen name="CreateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <CreateProfileScreen {...props} token={token} />}
               </Stack.Screen>
-              <Stack.Screen name="OpenBrainProfile" options={{ headerShown: false }}>
+              <Stack.Screen name="OpenBrainProfile" options={{ headerShown: false, animation: 'none' }}>
                 {props => <OpenBrainProfileScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="UpdateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <UpdateProfileScreen {...props} token={token} />}
               </Stack.Screen>
-              <Stack.Screen name="OpenBrainSettings" options={{ headerShown: false }}>
+              <Stack.Screen name="OpenBrainSettings" options={{ headerShown: false, animation: 'none' }}>
                 {props => <OpenBrainSettingsScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="OpenBrainResetPassword" options={{ headerShown: false }}>

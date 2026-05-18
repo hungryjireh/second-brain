@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Asset } from 'expo-asset';
 import { apiRequest } from '../api';
 import OpenBrainLogo from '../components/OpenBrainLogo';
 import { theme } from '../theme';
 import './LandingScreen.css';
+import landingPageVideo from '../../assets/landing-page.mp4';
 
 function BackgroundVideo() {
   const videoRef = useRef(null);
-
-  const videoSource = require('../../assets/landing-page.mp4');
-  const videoWebUri = Asset.fromModule(videoSource).uri;
 
   useEffect(() => {
     const element = videoRef.current;
@@ -39,7 +36,7 @@ function BackgroundVideo() {
       muted
       playsInline
       preload="auto"
-      src={videoWebUri}
+      src={landingPageVideo}
       aria-hidden
     />
   );
@@ -187,7 +184,7 @@ export default function LandingScreen() {
 
           <button
             type="button"
-            onPress={submitSignup}
+            onClick={submitSignup}
             className="ls-button"
             style={{ backgroundColor: theme.colors.brand, color: theme.colors.textLight }}
             disabled={loading}
@@ -196,7 +193,7 @@ export default function LandingScreen() {
           </button>
           <button
             type="button"
-            onPress={goToLearnMore}
+            onClick={goToLearnMore}
             className="ls-learn-more"
           >
             learn more
