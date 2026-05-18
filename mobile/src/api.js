@@ -105,6 +105,14 @@ export function createAuthHeaders(token) {
   return { Authorization: `Bearer ${normalizedToken}` };
 }
 
+export function isLikelyOfflineError(err) {
+  const message = String(err?.message || '').toLowerCase();
+  return message.includes('failed to fetch api')
+    || message.includes('network request failed')
+    || message.includes('network error')
+    || message.includes('offline');
+}
+
 async function readCache(cacheKey) {
   try {
     const raw = await AsyncStorage.getItem(cacheKey);

@@ -218,8 +218,10 @@ test('bot handler: method guard and no-message noop', async () => {
 
 test('bot handler enforces and communicates 30-second voice note limit', () => {
   const botSource = fs.readFileSync(new URL('../../api/bot.js', import.meta.url), 'utf8');
+  const voiceConstantsSource = fs.readFileSync(new URL('../../lib/constants/voice.js', import.meta.url), 'utf8');
 
-  assert.match(botSource, /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*30/);
+  assert.match(botSource, /MAX_VOICE_NOTE_DURATION_SECONDS[^;]*from '\.\.\/lib\/constants\/voice\.js'/);
+  assert.match(voiceConstantsSource, /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*30/);
   assert.match(botSource, /msg\.voice\.duration[\s\S]*>\s*MAX_VOICE_NOTE_DURATION_SECONDS/);
   assert.match(botSource, /Voice notes must be[\s\S]*seconds or less/);
   assert.match(botSource, /voice note \(max \$\{MAX_VOICE_NOTE_DURATION_SECONDS\} seconds\) or text/);

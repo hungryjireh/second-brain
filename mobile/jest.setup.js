@@ -54,6 +54,26 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map();
+  return {
+    getItem: jest.fn(async (key) => (store.has(key) ? store.get(key) : null)),
+    setItem: jest.fn(async (key, value) => {
+      store.set(key, value);
+    }),
+    removeItem: jest.fn(async (key) => {
+      store.delete(key);
+    }),
+    getAllKeys: jest.fn(async () => Array.from(store.keys())),
+    multiRemove: jest.fn(async (keys) => {
+      keys.forEach(key => store.delete(key));
+    }),
+    clear: jest.fn(async () => {
+      store.clear();
+    }),
+  };
+});
+
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: {

@@ -20,7 +20,7 @@ loadEnvFile(path.join(mobileDir, '.env.local'), true);
 
 module.exports = ({ config }) => ({
   ...config,
-  plugins: [...(config.plugins || [])],
+  plugins: [...(config.plugins || []), 'expo-audio'],
   extra: {
     ...(config.extra || {}),
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || '',

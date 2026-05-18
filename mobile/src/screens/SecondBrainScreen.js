@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { File, Paths } from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
-import { apiRequest, buildApiUrl, createAuthHeaders } from '../api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiRequest, buildApiUrl, createAuthHeaders, isLikelyOfflineError } from '../api';
 import { CACHE_TTL_MS } from '../constants/cache';
 import { theme } from '../theme';
 import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
@@ -35,6 +36,9 @@ const STATS = [
 
 const TYPEBAR_MIN_HEIGHT = 38;
 const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
+const OFFLINE_STORAGE_PREFIX = 'secondBrainOffline:';
+const OFFLINE_QUEUE_VERSION = 1;
+const VOICE_RECORDING_PRESET = RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
 
 function formatElapsedTime(elapsedMs) {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
@@ -227,14 +231,18 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [actionTooltip, setActionTooltip] = useState('');
   const [typebarFocused, setTypebarFocused] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceStarting, setVoiceStarting] = useState(false);
   const [voiceCaptureStartedAtMs, setVoiceCaptureStartedAtMs] = useState(null);
   const [voiceElapsedMs, setVoiceElapsedMs] = useState(0);
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const audioRecorder = useAudioRecorder(VOICE_RECORDING_PRESET);
   const recorderState = useAudioRecorderState(audioRecorder);
   const recording = recorderState?.isRecording;
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [offlineMode, setOfflineMode] = useState(false);
   const confirmDeleteTimeoutRef = useRef(null);
   const openActionDrawerIdRef = useRef(null);
+  const hasMicrophonePermissionRef = useRef(false);
+  const audioRecordingModeEnabledRef = useRef(false);
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
   const isWeb = Platform.OS === 'web';
@@ -242,9 +250,105 @@ export default function SecondBrainScreen({ token, navigation }) {
   const voiceElapsedLabel = useMemo(() => formatElapsedTime(voiceElapsedMs), [voiceElapsedMs]);
   const hideTypebarSideActions = typebarFocused && !recording;
 
+  function buildOfflineStorageKey() {
+    return `${OFFLINE_STORAGE_PREFIX}${String(token || '').trim()}`;
+  }
+
+  async function readOfflineState() {
+    try {
+      const raw = await AsyncStorage.getItem(buildOfflineStorageKey());
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  async function writeOfflineState(nextState) {
+    try {
+      await AsyncStorage.setItem(buildOfflineStorageKey(), JSON.stringify({
+        version: OFFLINE_QUEUE_VERSION,
+        entries: Array.isArray(nextState.entries) ? nextState.entries : [],
+        userTags: Array.isArray(nextState.userTags) ? nextState.userTags : [],
+        queue: Array.isArray(nextState.queue) ? nextState.queue : [],
+      }));
+    } catch {
+      // Offline persistence is best-effort.
+    }
+  }
+
+  async function persistCurrentOfflineState(nextEntries, nextUserTags) {
+    const snapshot = await readOfflineState();
+    await writeOfflineState({
+      entries: nextEntries,
+      userTags: nextUserTags,
+      queue: snapshot?.queue || [],
+    });
+  }
+
+  async function enqueueOfflineAction(action) {
+    const snapshot = await readOfflineState();
+    const existingQueue = Array.isArray(snapshot?.queue) ? snapshot.queue : [];
+    await writeOfflineState({
+      entries,
+      userTags,
+      queue: [...existingQueue, action],
+    });
+  }
+
+  async function flushOfflineQueue() {
+    const snapshot = await readOfflineState();
+    const queue = Array.isArray(snapshot?.queue) ? snapshot.queue : [];
+    if (!queue.length) return;
+
+    const pending = [];
+    for (const action of queue) {
+      try {
+        if (action?.type === 'create') {
+          await apiRequest('/entries', {
+            method: 'POST',
+            token,
+            body: { description: action.description },
+          });
+          continue;
+        }
+        if (action?.type === 'archive') {
+          await apiRequest(`/entries?id=${action.id}`, {
+            method: 'PATCH',
+            token,
+            body: { is_archived: action.is_archived },
+          });
+          continue;
+        }
+        if (action?.type === 'delete') {
+          await apiRequest(`/entries?id=${action.id}`, {
+            method: 'DELETE',
+            token,
+          });
+          continue;
+        }
+      } catch (err) {
+        if (isLikelyOfflineError(err)) {
+          pending.push(action);
+          continue;
+        }
+      }
+    }
+
+    await writeOfflineState({
+      entries,
+      userTags,
+      queue: pending,
+    });
+  }
+
   const loadEntries = useCallback(async () => {
     try {
       setError('');
+      setOfflineMode(false);
+      await flushOfflineQueue();
       const [data, tagsData] = await Promise.all([
         apiRequest('/entries?limit=60', { token, cache: { ttlMs: CACHE_TTL_MS.FEED } }),
         apiRequest('/tags', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } }),
@@ -255,12 +359,25 @@ export default function SecondBrainScreen({ token, navigation }) {
       const normalizedUserTags = (Array.isArray(tagsData?.tags) ? tagsData.tags : [])
         .map(tag => normalizeTagValue(tag))
         .filter(Boolean);
-      setUserTags(Array.from(new Set(normalizedUserTags)).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })));
+      const nextUserTags = Array.from(new Set(normalizedUserTags)).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+      setUserTags(nextUserTags);
       setUserTagsLoaded(true);
+      await persistCurrentOfflineState(list, nextUserTags);
     } catch (err) {
+      if (isLikelyOfflineError(err)) {
+        const snapshot = await readOfflineState();
+        if (Array.isArray(snapshot?.entries) && snapshot.entries.length > 0) {
+          setEntries(snapshot.entries);
+          setUserTags(Array.isArray(snapshot.userTags) ? snapshot.userTags : []);
+          setUserTagsLoaded(true);
+          setOfflineMode(true);
+          setError('Offline mode: showing saved entries.');
+          return;
+        }
+      }
       setError(err.message);
     }
-  }, [token]);
+  }, [entries, token, userTags]);
 
   useEffect(() => {
     loadEntries();
@@ -299,6 +416,12 @@ export default function SecondBrainScreen({ token, navigation }) {
     }
     setIsFilterDropdownOpen(true);
   }, [isSmallScreen]);
+
+  useEffect(() => {
+    if (recording && voiceStarting) {
+      setVoiceStarting(false);
+    }
+  }, [recording, voiceStarting]);
 
   useEffect(() => {
     if (!recording) {
@@ -350,36 +473,66 @@ export default function SecondBrainScreen({ token, navigation }) {
   async function createEntry() {
     if (!draft.trim()) return;
     try {
+      setOfflineMode(false);
       await apiRequest('/entries', { method: 'POST', token, body: { description: draft.trim() } });
       setDraft('');
       setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
       await loadEntries();
     } catch (err) {
+      if (isLikelyOfflineError(err)) {
+        const localId = `offline-${Date.now()}`;
+        const optimisticEntry = {
+          id: localId,
+          description: draft.trim(),
+          category: 'note',
+          is_archived: false,
+          created_at: Math.floor(Date.now() / 1000),
+        };
+        const nextEntries = [optimisticEntry, ...entries];
+        setEntries(nextEntries);
+        setDraft('');
+        setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
+        setOfflineMode(true);
+        setError('Offline mode: changes will sync automatically.');
+        await enqueueOfflineAction({ type: 'create', description: optimisticEntry.description });
+        await persistCurrentOfflineState(nextEntries, userTags);
+        return;
+      }
       setError(err.message);
     }
   }
 
   async function startVoiceCapture() {
-    if (voiceBusy || recording) return;
+    if (voiceBusy || voiceStarting || recording) return;
     if (Platform.OS === 'web') {
       setError('Voice capture is available on native app only.');
+      setVoiceStarting(false);
       return;
     }
+    setVoiceStarting(true);
     try {
       setError('');
-      const permission = await requestRecordingPermissionsAsync();
-      if (!permission.granted) {
-        setError('Microphone permission is required.');
-        return;
+      if (!hasMicrophonePermissionRef.current) {
+        const permission = await requestRecordingPermissionsAsync();
+        if (!permission.granted) {
+          setError('Microphone permission is required.');
+          setVoiceStarting(false);
+          return;
+        }
+        hasMicrophonePermissionRef.current = true;
       }
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-      await audioRecorder.prepareToRecordAsync(RecordingPresets.HIGH_QUALITY);
-      audioRecorder.record();
+      if (!audioRecordingModeEnabledRef.current) {
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+        });
+        audioRecordingModeEnabledRef.current = true;
+      }
+      await audioRecorder.prepareToRecordAsync(VOICE_RECORDING_PRESET);
+      await audioRecorder.record();
     } catch (err) {
       setError(err.message);
+      setVoiceStarting(false);
     }
   }
 
@@ -416,6 +569,7 @@ export default function SecondBrainScreen({ token, navigation }) {
       setVoiceBusy(false);
       try {
         await setAudioModeAsync({ allowsRecording: false });
+        audioRecordingModeEnabledRef.current = false;
       } catch {
         // Ignore audio mode reset failures.
       }
@@ -433,6 +587,7 @@ export default function SecondBrainScreen({ token, navigation }) {
       setVoiceBusy(false);
       try {
         await setAudioModeAsync({ allowsRecording: false });
+        audioRecordingModeEnabledRef.current = false;
       } catch {
         // Ignore audio mode reset failures.
       }
@@ -494,30 +649,56 @@ export default function SecondBrainScreen({ token, navigation }) {
   const toggleArchive = useCallback(async entry => {
     setBusyId(entry.id);
     try {
+      setOfflineMode(false);
       const updated = await apiRequest(`/entries?id=${entry.id}`, {
         method: 'PATCH',
         token,
         body: { is_archived: !entry.is_archived },
       });
-      setEntries(prev => prev.map(item => (item.id === entry.id ? updated : item)));
+      const nextEntries = entries.map(item => (item.id === entry.id ? updated : item));
+      setEntries(nextEntries);
+      await persistCurrentOfflineState(nextEntries, userTags);
     } catch (err) {
+      if (isLikelyOfflineError(err)) {
+        const nextEntries = entries.map(item => (item.id === entry.id ? { ...item, is_archived: !item.is_archived } : item));
+        setEntries(nextEntries);
+        setOfflineMode(true);
+        setError('Offline mode: changes will sync automatically.');
+        await enqueueOfflineAction({ type: 'archive', id: entry.id, is_archived: !entry.is_archived });
+        await persistCurrentOfflineState(nextEntries, userTags);
+        setBusyId(null);
+        return;
+      }
       setError(err.message);
     } finally {
       setBusyId(null);
     }
-  }, [token]);
+  }, [entries, token, userTags]);
 
   const deleteEntry = useCallback(async entryId => {
     setBusyId(entryId);
     try {
+      setOfflineMode(false);
       await apiRequest(`/entries?id=${entryId}`, { method: 'DELETE', token });
-      setEntries(prev => prev.filter(item => item.id !== entryId));
+      const nextEntries = entries.filter(item => item.id !== entryId);
+      setEntries(nextEntries);
+      await persistCurrentOfflineState(nextEntries, userTags);
     } catch (err) {
+      if (isLikelyOfflineError(err)) {
+        const nextEntries = entries.filter(item => item.id !== entryId);
+        setEntries(nextEntries);
+        setOfflineMode(true);
+        setError('Offline mode: changes will sync automatically.');
+        await enqueueOfflineAction({ type: 'delete', id: entryId });
+        await persistCurrentOfflineState(nextEntries, userTags);
+        setBusyId(null);
+        return;
+      }
       setError(err.message);
     } finally {
       setBusyId(null);
     }
-  }, [token]);
+  }, [entries, token, userTags]);
 
   const requestDelete = useCallback(entryId => {
     setOpenSwipeId(entryId);
@@ -1227,11 +1408,11 @@ export default function SecondBrainScreen({ token, navigation }) {
               </View>
             ) : null}
             <Pressable
-              style={[styles.typebarButton, (voiceBusy || loadingTelegramLinkKey) && styles.typebarButtonDisabled]}
+              style={[styles.typebarButton, (voiceBusy || voiceStarting || loadingTelegramLinkKey) && styles.typebarButtonDisabled]}
               onPress={recording ? stopVoiceCaptureAndSubmit : startVoiceCapture}
-              disabled={voiceBusy}
+              disabled={voiceBusy || voiceStarting}
               accessibilityRole="button"
-              accessibilityLabel={recording ? 'Stop and submit voice note' : 'Record voice note'}
+              accessibilityLabel={recording ? 'Stop and submit voice note' : voiceStarting ? 'Preparing voice recorder' : 'Record voice note'}
               onHoverIn={() => setActionTooltip('mic')}
               onHoverOut={() => setActionTooltip('')}
               onLongPress={() => setActionTooltip('mic')}
@@ -1240,9 +1421,9 @@ export default function SecondBrainScreen({ token, navigation }) {
               }}
             >
               <Feather
-                name={recording ? 'square' : 'mic'}
+                name={voiceStarting ? 'loader' : recording ? 'square' : 'mic'}
                 size={15}
-                style={[styles.typebarButtonIcon, voiceBusy && styles.typebarButtonIconDisabled]}
+                style={[styles.typebarButtonIcon, (voiceBusy || voiceStarting) && styles.typebarButtonIconDisabled]}
               />
             </Pressable>
           </View>

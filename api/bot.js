@@ -1,79 +1,29 @@
 import {
-  insertEntry,
-  getUserTags,
   getTelegramLinkByChatId,
   setTelegramChatIdForUser,
-  getUserTimezone,
 } from '../lib/db.js';
 import { TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
-import { classify } from '../lib/classify.js';
-import { extractCategoryOverride } from '../lib/category-override.js';
 import { transcribeFromUrl } from '../lib/whisper.js';
 import { sendMessage } from '../lib/notify.js';
+import { classifyAndInsertEntry } from '../lib/entry-processing.js';
+import { MAX_VOICE_NOTE_DURATION_SECONDS } from '../lib/constants/voice.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const DEFAULT_TIMEZONE = 'Asia/Singapore';
-const MAX_VOICE_NOTE_DURATION_SECONDS = 30;
 
 const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
 
-function compactWhitespace(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim();
-}
-
-function parseTags(input) {
-  if (!Array.isArray(input)) return [];
-
-  const deduped = new Map();
-  for (const raw of input) {
-    if (typeof raw !== 'string') continue;
-    const label = compactWhitespace(raw.replace(/^#+/, ''));
-    if (!label) continue;
-    const normalized = label
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 32);
-    if (!normalized) continue;
-    if (!deduped.has(normalized)) {
-      deduped.set(normalized, {
-        name: label.slice(0, 32),
-        normalized_name: normalized,
-      });
-    }
-  }
-  return [...deduped.values()].slice(0, 12);
-}
-
 async function processText(rawText, chatId, userId, authToken) {
-  const { category: forcedCategory, text: cleanedText } = extractCategoryOverride(rawText);
-  const textToClassify = cleanedText || String(rawText ?? '').trim();
-  const timezone = await getUserTimezone(userId, authToken);
-  const existingTags = await getUserTags(userId, authToken);
-  const { category, title, summary, content, remind_at, tags } = await classify(textToClassify, {
-    timezone,
-    existingTags,
-  });
-  const finalCategory = forcedCategory ?? category;
-  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
-  const normalizedSummary = typeof summary === 'string' ? summary.trim() : '';
-  const normalizedContent = typeof content === 'string' ? content.trim() : '';
-
-  await insertEntry({
+  const { textToClassify, finalCategory, normalizedContent, remindAt } = await classifyAndInsertEntry({
+    rawText,
     userId,
-    raw_text: textToClassify,
-    category: finalCategory,
-    title: normalizedTitle || normalizedContent || textToClassify,
-    summary: normalizedSummary || normalizedContent || textToClassify,
-    remind_at,
-    tags: parseTags(tags),
     authToken,
   });
 
   let reply = `✅ Got it — saved as *${finalCategory}*.\n\n_${normalizedContent || textToClassify}_`;
 
-  if (finalCategory === 'reminder' && remind_at) {
-    const when = new Date(remind_at * 1000).toLocaleString('en-SG', {
+  if (finalCategory === 'reminder' && remindAt) {
+    const when = new Date(remindAt * 1000).toLocaleString('en-SG', {
       timeZone: DEFAULT_TIMEZONE,
       weekday: 'short',
       month: 'short',
