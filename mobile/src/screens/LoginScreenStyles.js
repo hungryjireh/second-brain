@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonFormPrimitives } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   container: {
@@ -55,15 +56,10 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    ...commonFormPrimitives.inputBase,
     backgroundColor: theme.colors.bgRaised,
-    color: theme.colors.textPrimary,
     borderWidth: 0.5,
     borderColor: theme.colors.border,
-    borderRadius: 10,
-    fontSize: 14,
-    fontFamily: theme.fonts.regular,
   },
   button: {
     marginTop: 2,

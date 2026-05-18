@@ -54,7 +54,6 @@ const styles = StyleSheet.create({
   buttonText: {
     ...commonSearchStyles.submitLabel,
     color: theme.colors.accentOnSolid,
-    fontSize: 15,
   },
   error: {
     color: theme.colors.dangerSoft,

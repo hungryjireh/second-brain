@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonFormCompositions, commonFormPrimitives, commonStatusStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   header: {
@@ -24,28 +25,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   input: {
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    ...commonFormCompositions.raisedInput,
   },
   primaryButton: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.accentStrong,
-    borderRadius: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    width: '100%',
+    ...commonFormCompositions.primaryAccentButton,
   },
   primaryButtonText: {
-    color: theme.colors.textLight,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 14,
+    ...commonFormCompositions.primaryAccentButtonText,
   },
   buttonDisabled: {
     backgroundColor: theme.colors.accentStrong,
@@ -55,36 +41,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textLight,
   },
   secondaryButton: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    width: '100%',
+    ...commonFormCompositions.secondaryRaisedButton,
   },
   secondaryButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 14,
+    ...commonFormCompositions.secondaryRaisedButtonText,
   },
   actionsRow: {
-    flexDirection: 'column',
-    gap: 10,
-    marginTop: 4,
-    zIndex: 1,
+    ...commonFormPrimitives.actionsColumn,
   },
   error: {
-    color: theme.colors.dangerStrong,
-    backgroundColor: theme.colors.dangerBg,
-    borderColor: theme.colors.dangerBorder,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...commonStatusStyles.errorBanner,
   },
   success: {
     color: theme.colors.accentText,

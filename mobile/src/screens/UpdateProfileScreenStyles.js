@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonDropdownStyles, commonFormCompositions, commonFormPrimitives, commonStatusStyles } from '../styles/commonStyles';
 
 const styles = StyleSheet.create({
   headerSection: {
@@ -49,15 +50,7 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
   input: {
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    ...commonFormCompositions.raisedInput,
   },
   textArea: {
     minHeight: 96,
@@ -67,96 +60,49 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   timezoneDropdown: {
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexDirection: 'row',
+    ...commonDropdownStyles.trigger,
   },
   timezoneDropdownWrapper: {
-    position: 'relative',
-    zIndex: 40,
+    ...commonDropdownStyles.wrapper,
   },
   timezoneDropdownText: {
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...commonDropdownStyles.text,
   },
   timezoneDropdownChevron: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 12,
+    ...commonDropdownStyles.chevronText,
   },
   timezoneDropdownChevronIcon: {
-    color: theme.colors.textSecondary,
+    ...commonDropdownStyles.chevronIcon,
   },
   timezoneDropdownList: {
-    position: 'absolute',
-    top: 48,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    maxHeight: 220,
-    zIndex: 30,
-    elevation: 8,
+    ...commonDropdownStyles.list,
   },
   timezoneDropdownListContent: {
-    paddingVertical: 4,
+    ...commonDropdownStyles.listContent,
   },
   timezoneSearchInput: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
-    marginHorizontal: 8,
-    marginBottom: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    ...commonDropdownStyles.searchInput,
   },
   timezoneDropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    ...commonDropdownStyles.option,
   },
   timezoneDropdownOptionSelected: {
-    backgroundColor: theme.colors.accentDim,
+    ...commonDropdownStyles.optionSelected,
   },
   timezoneDropdownOptionText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
+    ...commonDropdownStyles.optionText,
   },
   timezoneDropdownOptionTextSelected: {
-    color: theme.colors.accentText,
+    ...commonDropdownStyles.optionTextSelected,
   },
   timezoneNoResults: {
-    color: theme.colors.textMuted,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    ...commonDropdownStyles.noResults,
   },
   primaryButton: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.accentStrong,
-    borderRadius: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    width: '100%',
+    ...commonFormCompositions.primaryAccentButton,
   },
   primaryButtonText: {
-    color: theme.colors.textLight,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 14,
+    ...commonFormCompositions.primaryAccentButtonText,
   },
   buttonDisabled: {
     backgroundColor: theme.colors.bgHover,
@@ -165,19 +111,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   secondaryButton: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    width: '100%',
+    ...commonFormCompositions.secondaryRaisedButton,
   },
   secondaryButtonText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 14,
+    ...commonFormCompositions.secondaryRaisedButtonText,
   },
   uploadButton: {
     alignItems: 'center',
@@ -200,10 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   actionsRow: {
-    flexDirection: 'column',
-    gap: 10,
-    marginTop: 4,
-    zIndex: 1,
+    ...commonFormPrimitives.actionsColumn,
   },
   confirmModalOverlay: {
     flex: 1,
@@ -272,15 +206,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   error: {
-    color: theme.colors.dangerStrong,
-    backgroundColor: theme.colors.dangerBg,
-    borderColor: theme.colors.dangerBorder,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
+    ...commonStatusStyles.errorBanner,
   },
   success: {
     color: theme.colors.accent,

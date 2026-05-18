@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { theme } from '../theme';
+import { commonDropdownStyles, commonStatusStyles } from '../styles/commonStyles';
 
 export const SWIPE_ACTION_WIDTH = 88;
 
@@ -233,79 +234,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   settingsDropdown: {
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexDirection: 'row',
+    ...commonDropdownStyles.trigger,
   },
   settingsDropdownWrapper: {
-    position: 'relative',
-    zIndex: 40,
+    ...commonDropdownStyles.wrapper,
   },
   settingsDropdownText: {
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 14,
+    ...commonDropdownStyles.text,
   },
   settingsDropdownChevron: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 12,
+    ...commonDropdownStyles.chevronText,
   },
-  settingsDropdownChevronIcon: { color: theme.colors.textSecondary },
+  settingsDropdownChevronIcon: { ...commonDropdownStyles.chevronIcon },
   settingsDropdownList: {
-    position: 'absolute',
-    top: 48,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.bgRaised,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    maxHeight: 220,
-    zIndex: 30,
-    elevation: 8,
+    ...commonDropdownStyles.list,
   },
-  settingsDropdownListContent: { paddingVertical: 4 },
+  settingsDropdownListContent: { ...commonDropdownStyles.listContent },
   settingsDropdownSearchInput: {
-    backgroundColor: theme.colors.bgSurface,
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    borderRadius: 8,
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
-    marginHorizontal: 8,
-    marginBottom: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    ...commonDropdownStyles.searchInput,
   },
   settingsDropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    ...commonDropdownStyles.option,
   },
   settingsDropdownOptionSelected: {
-    backgroundColor: theme.colors.accentDim,
+    ...commonDropdownStyles.optionSelected,
   },
   settingsDropdownOptionText: {
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.regular,
-    fontSize: 13,
+    ...commonDropdownStyles.optionText,
   },
   settingsDropdownOptionTextSelected: {
-    color: theme.colors.accentText,
+    ...commonDropdownStyles.optionTextSelected,
   },
   settingsNoResults: {
-    color: theme.colors.textMuted,
-    fontFamily: theme.fonts.regular,
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    ...commonDropdownStyles.noResults,
   },
   settingsCard: {
     borderWidth: 1,
@@ -604,15 +565,8 @@ const styles = StyleSheet.create({
   },
   itemTagText: { color: theme.colors.brandText, fontSize: 11, lineHeight: 14 },
   error: {
-    color: '#f87171',
+    ...commonStatusStyles.errorBanner,
     marginVertical: 6,
-    backgroundColor: 'rgba(220,60,60,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(220,60,60,0.25)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
   },
   editPanel: {
     width: '100%',
