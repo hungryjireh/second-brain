@@ -20,6 +20,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 0,
   },
+  contentArea: {
+    flex: 1,
+  },
+  contentAreaBlurred: {
+    opacity: 0.4,
+  },
   row: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   statsGridSmall: { flexWrap: 'nowrap', gap: 4 },
@@ -164,6 +170,16 @@ const styles = StyleSheet.create({
   statLabelActive: { color: theme.colors.brandText },
   list: { flex: 1 },
   listContent: { paddingBottom: 84 },
+  voiceCaptureOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 9,
+    backgroundColor: 'rgba(7, 11, 16, 0.18)',
+    backdropFilter: 'blur(4px)',
+  },
   listEmptyText: {
     color: theme.colors.textMuted,
     fontSize: 13,

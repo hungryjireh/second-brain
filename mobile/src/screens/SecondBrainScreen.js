@@ -216,6 +216,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   const typebarPlaceholder = isSmallScreen ? 'Type here' : 'Type a note, reminder or thought...';
   const voiceElapsedLabel = useMemo(() => formatElapsedTime(voiceElapsedMs), [voiceElapsedMs]);
   const hideTypebarSideActions = typebarFocused && !recording;
+  const isVoiceCaptureActive = recording || voiceStarting || voiceBusy;
 
   function buildOfflineStorageKey() {
     return `${OFFLINE_STORAGE_PREFIX}${String(token || '').trim()}`;
@@ -1096,32 +1097,36 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View testID="stats-grid" style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
-        {STATS.map(stat => {
-          const isActive = activeCategory === stat.key;
-          return (
-            <Pressable
-              key={stat.key}
-              testID={`stat-card-${stat.key}`}
-              style={[styles.statCard, isSmallScreen && styles.statCardSmall, isActive && styles.statCardActive]}
-              onPress={() => setActiveCategory(prev => (prev === stat.key ? '' : stat.key))}
-            >
-              <View style={[styles.statGlow, { backgroundColor: theme.colors.bgBase }]} />
-              <Text style={[styles.statCount, { color: isActive ? theme.colors.brandText : stat.color }]}>
-                {counts[stat.key] ?? 0}
-              </Text>
-              <Text
-                style={[styles.statLabel, isSmallScreen && styles.statLabelSmall, isActive && styles.statLabelActive]}
-                numberOfLines={1}
+      <View
+        style={[styles.contentArea, isVoiceCaptureActive && styles.contentAreaBlurred]}
+        pointerEvents={isVoiceCaptureActive ? 'none' : 'auto'}
+      >
+        <View testID="stats-grid" style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
+          {STATS.map(stat => {
+            const isActive = activeCategory === stat.key;
+            return (
+              <Pressable
+                key={stat.key}
+                testID={`stat-card-${stat.key}`}
+                style={[styles.statCard, isSmallScreen && styles.statCardSmall, isActive && styles.statCardActive]}
+                onPress={() => setActiveCategory(prev => (prev === stat.key ? '' : stat.key))}
               >
-                {stat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <View style={[styles.statGlow, { backgroundColor: theme.colors.bgBase }]} />
+                <Text style={[styles.statCount, { color: isActive ? theme.colors.brandText : stat.color }]}>
+                  {counts[stat.key] ?? 0}
+                </Text>
+                <Text
+                  style={[styles.statLabel, isSmallScreen && styles.statLabelSmall, isActive && styles.statLabelActive]}
+                  numberOfLines={1}
+                >
+                  {stat.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <View style={styles.filterSection}>
+        <View style={styles.filterSection}>
         <View style={[styles.filterHeaderRow, !isSmallScreen && styles.filterHeaderRowWithSpacing]}>
           {isSmallScreen ? (
             <Pressable
@@ -1230,9 +1235,25 @@ export default function SecondBrainScreen({ token, navigation }) {
             ))}
           </View>
         ) : null}
-      </View>
+        </View>
 
-      {!!error && <Text style={styles.error}>{error}</Text>}
+        {!!error && <Text style={styles.error}>{error}</Text>}
+
+        <FlatList
+          data={groupedRows}
+          style={styles.list}
+          contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
+          keyExtractor={keyExtractor}
+          CellRendererComponent={renderCell}
+          renderItem={renderListItem}
+          ListEmptyComponent={hasActiveFilters ? <Text style={styles.listEmptyText}>No matching entries</Text> : null}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={50}
+          windowSize={9}
+          removeClippedSubviews={false}
+        />
+      </View>
 
       <Modal
         visible={settingsOpen}
@@ -1327,20 +1348,7 @@ export default function SecondBrainScreen({ token, navigation }) {
         </Pressable>
       </Modal>
 
-      <FlatList
-        data={groupedRows}
-        style={styles.list}
-        contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
-        keyExtractor={keyExtractor}
-        CellRendererComponent={renderCell}
-        renderItem={renderListItem}
-        ListEmptyComponent={hasActiveFilters ? <Text style={styles.listEmptyText}>No matching entries</Text> : null}
-        initialNumToRender={10}
-        maxToRenderPerBatch={8}
-        updateCellsBatchingPeriod={50}
-        windowSize={9}
-        removeClippedSubviews={false}
-      />
+      {isVoiceCaptureActive ? <View style={styles.voiceCaptureOverlay} pointerEvents="auto" /> : null}
 
       <View style={[styles.typebarRow, { bottom: typebarBottom }]}>
         <TextInput
