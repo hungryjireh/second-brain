@@ -13,19 +13,6 @@ export const THANK_YOU_PROMPTS = [
   'that belongs to today now',
 ];
 
-export function formatTodayLabel(date) {
-  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-  const day = date.getDate();
-  const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-  return `${dayName} ${day} ${month}`;
-}
-
-export function formatTimeLabel(value) {
-  const date = value ? new Date(value) : new Date();
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-}
-
 export function randomFrom(list, current = '') {
   if (!Array.isArray(list) || list.length === 0) return '';
   if (list.length === 1) return list[0];

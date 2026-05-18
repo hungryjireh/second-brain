@@ -12,6 +12,19 @@ export function formatShortDateTime(value) {
   return `${dateLabel} ${timeLabel}`;
 }
 
+export function formatTodayLabel(date) {
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  const day = date.getDate();
+  const month = date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  return `${dayName} ${day} ${month}`;
+}
+
+export function formatTimeLabel(value) {
+  const date = toValidDate(value, true);
+  if (!date) return '';
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
 export function formatPublishedDateTime(value) {
   const date = toValidDate(value, false);
   if (!date) return '';

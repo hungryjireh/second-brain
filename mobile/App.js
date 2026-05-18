@@ -26,8 +26,7 @@ import OpenBrainSearchScreen from './src/screens/OpenBrainSearchScreen';
 import SharedThoughtScreen from './src/screens/SharedThoughtScreen';
 import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
 import { theme } from './src/theme';
-import { shouldApplyIOSInputZoomFix } from './src/utils/iosZoomFix';
-import { shouldShowSecondBrainHeaderDate } from './src/utils/responsive';
+import { shouldApplyIOSInputZoomFix, shouldShowSecondBrainHeaderDate } from './src/utils/responsive';
 import styles from './App.styles';
 
 const Stack = createNativeStackNavigator();

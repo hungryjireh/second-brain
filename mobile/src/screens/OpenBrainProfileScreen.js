@@ -15,7 +15,6 @@ import {
   shareThought,
 } from '../utils/secondBrainHelper';
 import { formatPublishedDateTime } from '../utils/openBrainDates';
-import { toBooleanLike } from '../utils/typeCoercion';
 import { executeOpenBrainFollowToggle } from '../utils/openBrainFollow';
 
 export default function OpenBrainProfileScreen({ token, route, navigation }) {
@@ -63,8 +62,8 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [load]);
 
   async function toggleFollow() {
-    if (!profile || toBooleanLike(profile.is_self) || followBusy) return;
-    const currentlyFollowing = toBooleanLike(profile.is_following);
+    if (!profile || profile.is_self === true || followBusy) return;
+    const currentlyFollowing = profile.is_following === true;
     setFollowBusy(true);
     setProfile(prev => (prev ? { ...prev, is_following: !currentlyFollowing } : prev));
     try {
@@ -99,8 +98,8 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [token]);
 
   const keyExtractor = useCallback(item => (item.type === 'section' ? item.id : String(item.thought.id)), []);
-  const isSelf = toBooleanLike(profile?.is_self);
-  const isFollowing = toBooleanLike(profile?.is_following);
+  const isSelf = profile?.is_self === true;
+  const isFollowing = profile?.is_following === true;
 
   const renderThoughtItem = useCallback(({ item }) => {
     return (

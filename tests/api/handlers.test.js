@@ -305,6 +305,8 @@ test('open-brain profile handler allows anonymous username lookup', async () => 
   assert.equal(res.statusCode, 200);
   assert.equal(jsonBody(res)?.profile?.username, 'alice');
   assert.equal(jsonBody(res)?.profile?.save_count, 2);
+  assert.equal(typeof jsonBody(res)?.profile?.is_self, 'boolean');
+  assert.equal(typeof jsonBody(res)?.profile?.is_following, 'boolean');
   assert.equal(jsonBody(res)?.profile?.is_self, false);
   assert.equal(jsonBody(res)?.profile?.is_following, false);
 });
@@ -479,6 +481,8 @@ test('open-brain feed handler returns per-thought save_count from thought_second
 
   assert.equal(res.statusCode, 200);
   assert.equal(jsonBody(res)?.everyone?.[0]?.id, thoughtId);
+  assert.equal(typeof jsonBody(res)?.everyone?.[0]?.profile?.is_self, 'boolean');
+  assert.equal(typeof jsonBody(res)?.everyone?.[0]?.profile?.is_following, 'boolean');
   assert.equal(jsonBody(res)?.everyone?.[0]?.save_count, 3);
   assert.equal(jsonBody(res)?.everyone?.[0]?.viewer_has_added_to_second_brain, true);
 });
@@ -633,6 +637,103 @@ test('open-brain feed handler excludes self-authored thoughts from following fee
   assert.equal(jsonBody(res)?.following?.[0]?.user_id, otherAuthorId);
 });
 
+test('open-brain search handler returns boolean is_self and is_following flags', async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = 'anon-key';
+
+  const viewerId = '11111111-1111-4111-8111-111111111111';
+  const followedId = '22222222-2222-4222-8222-222222222222';
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith('/auth/v1/user')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/follows')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ following_id: followedId }]),
+      };
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/profiles')) {
+      const usernameFilter = parsed.searchParams.get('username');
+      const idIn = parsed.searchParams.get('id');
+      if (usernameFilter) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            { id: viewerId, username: 'viewer', avatar_url: null, streak_count: 4 },
+            { id: followedId, username: 'followed', avatar_url: null, streak_count: 9 },
+          ]),
+        };
+      }
+      if (idIn && idIn.includes(followedId)) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            { id: followedId, username: 'followed', avatar_url: null, streak_count: 9 },
+          ]),
+        };
+      }
+    }
+
+    if (parsed.pathname.endsWith('/rest/v1/thoughts')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{
+          id: '33333333-3333-4333-8333-333333333333',
+          user_id: followedId,
+          content: { text: 'search hit' },
+          created_at: '2026-01-01T00:00:00.000Z',
+        }]),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: searchHandler } = await importFresh('../../lib/open-brain/routes/search.js', 'open-brain-search-bools');
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: 'GET',
+    headers: { authorization: `Bearer ${authToken}` },
+    query: { q: 'fo' },
+  });
+  const res = createRes();
+
+  try {
+    await searchHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  const payload = jsonBody(res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(typeof payload?.users?.[0]?.is_self, 'boolean');
+  assert.equal(typeof payload?.users?.[0]?.is_following, 'boolean');
+  assert.equal(payload?.users?.find(user => user.id === viewerId)?.is_self, true);
+  assert.equal(payload?.users?.find(user => user.id === followedId)?.is_following, true);
+});
+
 test('open-brain thoughts handler returns created thought with profile metadata', async () => {
   const original = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -720,6 +821,8 @@ test('open-brain thoughts handler returns created thought with profile metadata'
   assert.equal(payload?.thought?.id, thoughtId);
   assert.equal(payload?.thought?.text, 'Today felt quiet.');
   assert.equal(payload?.thought?.profile?.username, 'alice');
+  assert.equal(typeof payload?.thought?.profile?.is_self, 'boolean');
+  assert.equal(typeof payload?.thought?.profile?.is_following, 'boolean');
   assert.equal(payload?.thought?.profile?.is_self, true);
   assert.equal(payload?.thought?.save_count, 0);
   assert.equal(payload?.thought?.viewer_has_added_to_second_brain, false);

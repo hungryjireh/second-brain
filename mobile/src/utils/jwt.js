@@ -22,3 +22,10 @@ export function hasExpiredToken(token) {
   if (!payload || !Number.isFinite(payload.exp)) return false;
   return payload.exp <= Math.floor(Date.now() / 1000);
 }
+
+export function resolveStorageOwnerSegmentFromToken(token) {
+  const payload = decodeJwtPayload(token);
+  const rawUserId = String(payload?.sub || payload?.user_id || payload?.id || '').trim();
+  const safeUserId = rawUserId.replace(/[^a-zA-Z0-9_-]/g, '');
+  return safeUserId || '';
+}

@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import resolveSupabaseConfig from './resolveSupabaseConfig';
-import { resolveStorageOwnerSegmentFromToken } from './profileStorageOwner';
+import { resolveStorageOwnerSegmentFromToken } from './jwt';
 
 export const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif']);

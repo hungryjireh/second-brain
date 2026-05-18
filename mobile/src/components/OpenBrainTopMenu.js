@@ -7,7 +7,6 @@ import { CACHE_TTL_MS } from '../constants/cache';
 import { useOpenBrainSearch } from '../hooks/useOpenBrainSearch';
 import { theme } from '../theme';
 import { sortUsersByQuery } from '../utils/searchRanking';
-import { toBooleanLike } from '../utils/typeCoercion';
 import {
   buildOpenBrainSearchRows,
   normalizeOpenBrainSearchInput,
@@ -131,9 +130,9 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   async function toggleFollowFromSearch(user) {
     const targetUserId = user?.id;
     if (!token || !targetUserId || followBusyUserId) return;
-    const isSelf = toBooleanLike(user?.is_self);
+    const isSelf = user?.is_self === true;
     if (isSelf) return;
-    const currentlyFollowing = toBooleanLike(user?.is_following);
+    const currentlyFollowing = user?.is_following === true;
     setFollowBusyUserId(targetUserId);
     setResults(current => ({
       ...current,
@@ -238,8 +237,8 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     }
     if (item.type === 'user') {
       const user = item.user;
-      const isSelf = toBooleanLike(user?.is_self);
-      const isFollowing = toBooleanLike(user?.is_following);
+      const isSelf = user?.is_self === true;
+      const isFollowing = user?.is_following === true;
       const followBusy = followBusyUserId === user?.id;
       return (
         <View style={styles.resultRow}>

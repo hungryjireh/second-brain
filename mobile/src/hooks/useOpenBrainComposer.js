@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  formatTimeLabel,
-  formatTodayLabel,
   loadOpenBrainComposerState,
   randomFrom,
   THANK_YOU_PROMPTS,
   THOUGHT_FALLBACK_PROMPTS,
 } from '../utils/openBrainComposer';
+import { formatTimeLabel, formatTodayLabel } from '../utils/openBrainDates';
 
 export function useOpenBrainComposer({
   token,

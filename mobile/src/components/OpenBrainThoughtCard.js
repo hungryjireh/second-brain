@@ -5,7 +5,6 @@ import styles from './OpenBrainThoughtCard.styles';
 import { theme } from '../theme';
 import ProfileAvatar from './ProfileAvatar';
 import SecondBrainMarkdownBody from './SecondBrainMarkdownBody';
-import { toBooleanLike } from '../utils/typeCoercion';
 import { normalizeThoughtText, parseThoughtBlocks } from '../utils/openBrainThoughtText';
 
 const REACTIONS = [
@@ -234,8 +233,8 @@ function OpenBrainThoughtCard({
     const avatarUrl = item.profile?.avatar_url || '';
     const streak = coerceCount(item.profile?.streak_count);
     const saveCount = getThoughtSaveCount(item);
-    const isSelf = toBooleanLike(item.profile?.is_self);
-    const isFollowing = toBooleanLike(item.profile?.is_following);
+    const isSelf = item.profile?.is_self === true;
+    const isFollowing = item.profile?.is_following === true;
     const followBusy = followBusyUserId === item.user_id;
     const formattedTime = date || topMeta || '';
 

@@ -1,5 +1,4 @@
-import { shouldApplyIOSInputZoomFix } from '../src/utils/iosZoomFix';
-import { shouldShowSecondBrainHeaderDate } from '../src/utils/responsive';
+import { shouldApplyIOSInputZoomFix, shouldShowSecondBrainHeaderDate } from '../src/utils/responsive';
 
 describe('shouldApplyIOSInputZoomFix', () => {
   test('returns true for iOS user agent on web', () => {
