@@ -104,6 +104,6 @@ describe('SecondBrainEntryDetailsScreen', () => {
     fireEvent.press(getByLabelText('Open entry actions'));
     fireEvent.press(getByText('Edit'));
 
-    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', { entry });
+    expect(navigate).toHaveBeenCalledWith('SecondBrainEditEntry', { entry, token: null });
   });
 });

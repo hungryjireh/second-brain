@@ -63,9 +63,9 @@ function countBillableGlobalTags(tags) {
   ).size;
 }
 
-export default function SecondBrainEditEntryScreen({ route, navigation }) {
+export default function SecondBrainEditEntryScreen({ route, navigation, token: tokenFromProps }) {
   const entry = route?.params?.entry;
-  const token = route?.params?.token;
+  const token = route?.params?.token ?? tokenFromProps ?? null;
 
   const [editCategory, setEditCategory] = useState(entry?.category || 'note');
   const [editTitle, setEditTitle] = useState(entry?.title || '');

@@ -43,6 +43,9 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = 'authToken';
+const TOKEN_STORAGE_OPTIONS = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+};
 const CACHE_PREFIX = 'apiCache:';
 let authExpiredHandler = null;
 
@@ -164,7 +167,7 @@ export async function setToken(token) {
   }
 
   try {
-    await SecureStore.setItemAsync(TOKEN_KEY, normalizedToken);
+    await SecureStore.setItemAsync(TOKEN_KEY, normalizedToken, TOKEN_STORAGE_OPTIONS);
     await AsyncStorage.removeItem(TOKEN_KEY);
     return;
   } catch {

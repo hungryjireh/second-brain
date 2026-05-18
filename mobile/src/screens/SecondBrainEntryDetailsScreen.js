@@ -26,9 +26,9 @@ function parseImportedConversationFromEntry(entry) {
   }
 }
 
-export default function SecondBrainEntryDetailsScreen({ route, navigation }) {
+export default function SecondBrainEntryDetailsScreen({ route, navigation, token: tokenFromProps }) {
   const entryFromRoute = route?.params?.entry ?? null;
-  const token = route?.params?.token ?? null;
+  const token = route?.params?.token ?? tokenFromProps ?? null;
   const [entry, setEntry] = useState(entryFromRoute);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   const [drawerAnchor, setDrawerAnchor] = useState(null);
@@ -73,7 +73,7 @@ export default function SecondBrainEntryDetailsScreen({ route, navigation }) {
 
   function handleEditEntry() {
     closeActionDrawer();
-    navigation?.navigate?.('SecondBrainEditEntry', { entry });
+    navigation?.navigate?.('SecondBrainEditEntry', { entry, token });
   }
 
   async function handleToggleArchive() {

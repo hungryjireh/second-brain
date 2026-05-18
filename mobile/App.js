@@ -230,7 +230,7 @@ export default function App() {
                   headerShadowVisible: false,
                 }}
               >
-                {props => <SecondBrainEntryDetailsScreen {...props} />}
+                {props => <SecondBrainEntryDetailsScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen
                 name="SecondBrainEditEntry"
@@ -242,7 +242,7 @@ export default function App() {
                   headerShadowVisible: false,
                 }}
               >
-                {props => <SecondBrainEditEntryScreen {...props} />}
+                {props => <SecondBrainEditEntryScreen {...props} token={token} />}
               </Stack.Screen>
               <Stack.Screen name="CreateOpenBrainProfile" options={{ headerShown: false }}>
                 {props => <CreateProfileScreen {...props} token={token} />}
