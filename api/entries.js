@@ -333,9 +333,12 @@ function normalizeEntry(entry) {
     raw_text: rawText,
     title: entry.title ?? fallback.title,
     summary: entry.summary ?? entry.content ?? fallback.summary,
+    updated_at: entry.updated_at ?? entry.created_at ?? null,
     tags: Array.isArray(entry.tags) ? entry.tags : [],
   };
 }
+
+export { normalizeEntry };
 
 function parseEntriesLimit(value) {
   if (value === undefined) return undefined;

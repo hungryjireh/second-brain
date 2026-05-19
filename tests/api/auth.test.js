@@ -26,3 +26,47 @@ test("telegram link key embeds provided auth token", async () => {
     process.env.JWT_SECRET = originalJwtSecret;
   }
 });
+
+test("refreshSupabaseSession exchanges refresh token for new session", async () => {
+  const originalUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const originalKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const originalFetch = global.fetch;
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  try {
+    global.fetch = async (url, options) => {
+      assert.equal(
+        String(url),
+        "https://example.supabase.co/auth/v1/token?grant_type=refresh_token",
+      );
+      assert.equal(options.method, "POST");
+      assert.equal(options.headers["Content-Type"], "application/json");
+      assert.deepEqual(JSON.parse(options.body), {
+        refresh_token: "refresh-token-123",
+      });
+      return {
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            access_token: "new-access-token",
+            refresh_token: "next-refresh-token",
+          }),
+      };
+    };
+
+    const { refreshSupabaseSession } = await importFresh(
+      "../../lib/auth.js",
+      "refresh-supabase-session",
+    );
+    const session = await refreshSupabaseSession({
+      refreshToken: "refresh-token-123",
+    });
+    assert.equal(session.access_token, "new-access-token");
+    assert.equal(session.refresh_token, "next-refresh-token");
+  } finally {
+    global.fetch = originalFetch;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalUrl;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalKey;
+  }
+});

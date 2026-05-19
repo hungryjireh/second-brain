@@ -141,6 +141,36 @@ test("auth handlers: OPTIONS returns 204 and unsupported methods return 405", as
   assert.equal(loginOptionsRes.statusCode, 204);
 });
 
+test("POST /api/auth/refresh returns 400 when refreshToken is missing", async () => {
+  const { default: refreshHandler } = await importFresh(
+    "../../api/auth/refresh.js",
+    "refresh-missing-token",
+  );
+  const req = createReq({ method: "POST", body: {} });
+  const res = createRes();
+
+  await refreshHandler(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(jsonBody(res), { error: "refreshToken is required" });
+});
+
+test("auth refresh handler: OPTIONS returns 204 and unsupported methods return 405", async () => {
+  const { default: refreshHandler } = await importFresh(
+    "../../api/auth/refresh.js",
+    "refresh-methods",
+  );
+
+  const optionsRes = createRes();
+  await refreshHandler(createReq({ method: "OPTIONS" }), optionsRes);
+  assert.equal(optionsRes.statusCode, 204);
+
+  const wrongMethodRes = createRes();
+  await refreshHandler(createReq({ method: "GET" }), wrongMethodRes);
+  assert.equal(wrongMethodRes.statusCode, 405);
+  assert.deepEqual(jsonBody(wrongMethodRes), { error: "Method not allowed" });
+});
+
 test("settings handler: OPTIONS preflight and bearer token guard", async () => {
   const { default: settingsHandler } = await importFresh(
     "../../api/settings.js",

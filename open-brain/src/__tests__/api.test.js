@@ -26,6 +26,9 @@ function loadApiWith({ apiUrl, hostUri }) {
     createAsyncStorageMock(),
   );
   jest.doMock("expo-secure-store", () => createSecureStoreMock());
+  jest.doMock("react-native", () => ({
+    Platform: { OS: "ios" },
+  }));
   jest.doMock("expo-constants", () => ({
     expoConfig: hostUri ? { hostUri } : undefined,
     manifest2: undefined,
@@ -33,12 +36,13 @@ function loadApiWith({ apiUrl, hostUri }) {
 
   const api = require("../api");
   const asyncStorage = require("@react-native-async-storage/async-storage");
+  const secureStore = require("expo-secure-store");
 
   if (typeof previousApiUrl === "string")
     process.env.EXPO_PUBLIC_API_URL = previousApiUrl;
   else delete process.env.EXPO_PUBLIC_API_URL;
 
-  return { ...api, asyncStorage };
+  return { ...api, asyncStorage, secureStore };
 }
 
 describe("getApiBase transport security", () => {
@@ -106,5 +110,61 @@ describe("cache key token handling", () => {
 
     expect(asyncStorage.multiRemove).toHaveBeenCalledWith([tokenAKey]);
     expect(asyncStorage.multiRemove).not.toHaveBeenCalledWith([tokenBKey]);
+  });
+});
+
+describe("native auth refresh", () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  it("refreshes token and retries once on 401", async () => {
+    const { apiRequest, secureStore } = loadApiWith({});
+    secureStore.getItemAsync.mockImplementation(async (key) => {
+      if (key === "authRefreshToken") return "refresh-token-1";
+      return null;
+    });
+
+    const fetchMock = jest.fn();
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ error: "Token expired" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            token: "new-access-token",
+            refreshToken: "refresh-token-2",
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true }),
+      });
+    global.fetch = fetchMock;
+
+    const data = await apiRequest("/entries", { token: "expired-token" });
+    expect(data).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[1][0]).toContain("/auth/refresh");
+    expect(secureStore.setItemAsync).toHaveBeenCalledWith(
+      "authToken",
+      "new-access-token",
+      expect.any(Object),
+    );
+    expect(secureStore.setItemAsync).toHaveBeenCalledWith(
+      "authRefreshToken",
+      "refresh-token-2",
+      expect.any(Object),
+    );
   });
 });

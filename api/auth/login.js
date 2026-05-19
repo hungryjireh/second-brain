@@ -56,7 +56,10 @@ export default async function handler(req, res) {
         error: "Supabase session did not return an access token",
       });
     }
-    return json(res, 200, { token });
+    return json(res, 200, {
+      token,
+      refreshToken: String(session?.refresh_token || ""),
+    });
   } catch (err) {
     const status = err.status === 400 || err.status === 401 ? 401 : 500;
     return json(res, status, { error: err.message || "login failed" });

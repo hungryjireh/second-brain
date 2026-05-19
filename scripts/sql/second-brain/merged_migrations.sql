@@ -19,7 +19,8 @@ create table if not exists public.entries (
   reminded boolean not null default false,
   is_archived boolean not null default false,
   is_deleted boolean not null default false,
-  created_at bigint not null default extract(epoch from now())::bigint
+  created_at bigint not null default extract(epoch from now())::bigint,
+  updated_at bigint not null default extract(epoch from now())::bigint
 );
 create index if not exists entries_user_id_created_at_idx on public.entries (user_id, created_at desc);
 
@@ -75,6 +76,39 @@ end $$;
 
 alter table public.settings
   add constraint settings_pkey primary key (user_id, key);
+
+commit;
+
+-- ===== add_entries_updated_at.sql =====
+begin;
+
+alter table public.entries
+  add column if not exists updated_at bigint;
+
+update public.entries
+set updated_at = coalesce(updated_at, created_at, extract(epoch from now())::bigint)
+where updated_at is null;
+
+alter table public.entries
+  alter column updated_at set default extract(epoch from now())::bigint;
+
+alter table public.entries
+  alter column updated_at set not null;
+
+create or replace function public.set_entries_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = extract(epoch from now())::bigint;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_entries_updated_at on public.entries;
+create trigger trg_entries_updated_at
+before update on public.entries
+for each row execute function public.set_entries_updated_at();
 
 commit;
 

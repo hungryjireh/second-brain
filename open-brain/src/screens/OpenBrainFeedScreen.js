@@ -270,18 +270,21 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     ],
   );
 
-  const handleDraftPostSuccess = useCallback(async (data) => {
-    const createdThought = data?.thought;
-    if (createdThought && typeof createdThought === "object") {
-      setFeed((current) => ({
-        ...current,
-        following: [createdThought, ...(current.following || [])],
-        everyone: [createdThought, ...(current.everyone || [])],
-      }));
-      return;
-    }
-    await loadFeed();
-  }, [loadFeed]);
+  const handleDraftPostSuccess = useCallback(
+    async (data) => {
+      const createdThought = data?.thought;
+      if (createdThought && typeof createdThought === "object") {
+        setFeed((current) => ({
+          ...current,
+          following: [createdThought, ...(current.following || [])],
+          everyone: [createdThought, ...(current.everyone || [])],
+        }));
+        return;
+      }
+      await loadFeed();
+    },
+    [loadFeed],
+  );
 
   return (
     <View style={styles.container}>
