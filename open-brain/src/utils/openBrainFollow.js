@@ -8,15 +8,18 @@ export async function executeOpenBrainFollowToggle({
   if (!targetUserId) return false;
 
   if (isFollowing) {
-    await apiRequest(`/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`, {
-      method: 'DELETE',
-      token,
-    });
+    await apiRequest(
+      `/open-brain/follows?following_id=${encodeURIComponent(targetUserId)}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    );
     return true;
   }
 
-  await apiRequest('/open-brain/follows', {
-    method: 'POST',
+  await apiRequest("/open-brain/follows", {
+    method: "POST",
     token,
     body: { following_id: targetUserId },
   });

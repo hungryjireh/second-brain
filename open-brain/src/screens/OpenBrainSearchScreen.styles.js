@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonLayoutStyles, commonSearchStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonLayoutStyles, commonSearchStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   screen: {
@@ -21,8 +21,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 8,
   },
@@ -43,8 +43,8 @@ const styles = StyleSheet.create({
     height: 42,
     paddingHorizontal: 14,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: theme.colors.accent,
   },
   submitButtonDisabled: {
@@ -91,12 +91,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: theme.fonts.regular,
     marginBottom: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   loading: {
     marginTop: 8,

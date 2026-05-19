@@ -1,34 +1,47 @@
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, View, Text, TextInput, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { login, setToken } from '../api';
-import { theme } from '../theme';
-import { areRequiredFieldsPresent, normalizeRequiredField } from '../utils/formFields';
-import styles from './LoginScreenStyles';
+import { useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { login, setToken } from "../api";
+import { theme } from "../theme";
+import {
+  areRequiredFieldsPresent,
+  normalizeRequiredField,
+} from "../utils/formFields";
+import styles from "./LoginScreenStyles";
 
 export default function LoginScreen({ onLoggedIn }) {
   const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const passwordInputRef = useRef(null);
-  const emailRef = useRef('');
-  const passwordRef = useRef('');
-  const [error, setError] = useState('');
+  const emailRef = useRef("");
+  const passwordRef = useRef("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const normalizedEmail = normalizeRequiredField(emailRef.current);
   const normalizedPassword = passwordRef.current;
-  const canSubmit = areRequiredFieldsPresent([normalizedEmail, normalizedPassword]);
+  const canSubmit = areRequiredFieldsPresent([
+    normalizedEmail,
+    normalizedPassword,
+  ]);
 
   async function handleLogin() {
     if (!canSubmit || loading) return;
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const data = await login(normalizedEmail, normalizedPassword);
       await setToken(data.token);
       onLoggedIn(data.token);
-      navigation.replace('OpenBrainFeed');
+      navigation.replace("OpenBrainFeed");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -39,15 +52,17 @@ export default function LoginScreen({ onLoggedIn }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0}
     >
       <View style={styles.card}>
         <Text style={styles.eyebrow}>Welcome back</Text>
         <Text style={styles.title}>
           Sign in to second<Text style={styles.titleAccent}>brain</Text>
         </Text>
-        <Text style={styles.subtitle}>Use your account credentials to continue.</Text>
+        <Text style={styles.subtitle}>
+          Use your account credentials to continue.
+        </Text>
 
         <View style={styles.form}>
           <TextInput
@@ -60,7 +75,7 @@ export default function LoginScreen({ onLoggedIn }) {
             blurOnSubmit={false}
             onSubmitEditing={() => passwordInputRef.current?.focus()}
             value={email}
-            onChangeText={value => {
+            onChangeText={(value) => {
               emailRef.current = value;
               setEmail(value);
             }}
@@ -73,7 +88,7 @@ export default function LoginScreen({ onLoggedIn }) {
             secureTextEntry
             autoCapitalize="none"
             value={password}
-            onChangeText={value => {
+            onChangeText={(value) => {
               passwordRef.current = value;
               setPassword(value);
             }}
@@ -81,8 +96,19 @@ export default function LoginScreen({ onLoggedIn }) {
             onSubmitEditing={handleLogin}
             style={styles.input}
           />
-          <Pressable style={[styles.button, (loading || !canSubmit) && styles.buttonDisabled]} onPress={handleLogin} disabled={loading || !canSubmit}>
-            <Text style={[styles.buttonText, loading && styles.buttonTextDisabled]}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+          <Pressable
+            style={[
+              styles.button,
+              (loading || !canSubmit) && styles.buttonDisabled,
+            ]}
+            onPress={handleLogin}
+            disabled={loading || !canSubmit}
+          >
+            <Text
+              style={[styles.buttonText, loading && styles.buttonTextDisabled]}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </Text>
           </Pressable>
         </View>
 

@@ -1,5 +1,7 @@
 export function normalizeOpenBrainSearchInput(value) {
-  return String(value || '').trim().replace(/^@+/, '');
+  return String(value || "")
+    .trim()
+    .replace(/^@+/, "");
 }
 
 export function buildOpenBrainSearchRows(results) {
@@ -8,13 +10,17 @@ export function buildOpenBrainSearchRows(results) {
   const rows = [];
 
   if (users.length > 0) {
-    rows.push({ type: 'section', key: 'section-users', label: 'Users' });
-    users.forEach(user => rows.push({ type: 'user', key: `user-${user.id}`, user }));
+    rows.push({ type: "section", key: "section-users", label: "Users" });
+    users.forEach((user) =>
+      rows.push({ type: "user", key: `user-${user.id}`, user }),
+    );
   }
 
   if (thoughts.length > 0) {
-    rows.push({ type: 'section', key: 'section-thoughts', label: 'Thoughts' });
-    thoughts.forEach(thought => rows.push({ type: 'thought', key: `thought-${thought.id}`, thought }));
+    rows.push({ type: "section", key: "section-thoughts", label: "Thoughts" });
+    thoughts.forEach((thought) =>
+      rows.push({ type: "thought", key: `thought-${thought.id}`, thought }),
+    );
   }
 
   return rows;
@@ -30,10 +36,13 @@ export async function executeOpenBrainSearch({
   const normalizedValue = normalizeOpenBrainSearchInput(query);
   if (!normalizedValue) return null;
 
-  const data = await apiRequest(`/open-brain/search?q=${encodeURIComponent(normalizedValue)}`, {
-    token,
-    cache: { ttlMs: cacheTtlMs },
-  });
+  const data = await apiRequest(
+    `/open-brain/search?q=${encodeURIComponent(normalizedValue)}`,
+    {
+      token,
+      cache: { ttlMs: cacheTtlMs },
+    },
+  );
   const rawUsers = Array.isArray(data?.users) ? data.users : [];
 
   return {
@@ -55,7 +64,7 @@ export async function runGuardedOpenBrainSearch({
   if (!normalizedValue || loading) return null;
 
   setLoading(true);
-  setError('');
+  setError("");
   try {
     return await onSearch(normalizedValue);
   } catch (err) {

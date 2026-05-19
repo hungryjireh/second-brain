@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonLayoutStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonLayoutStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   container: {
@@ -16,8 +16,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerMainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backButton: {
-    alignSelf: 'center',
+    alignSelf: "center",
     paddingVertical: 0,
     paddingRight: 10,
   },

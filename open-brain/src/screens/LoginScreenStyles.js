@@ -1,18 +1,18 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonFormPrimitives } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonFormPrimitives } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
+    justifyContent: "center",
     backgroundColor: theme.colors.bgBase,
   },
   card: {
-    width: '100%',
+    width: "100%",
     maxWidth: 460,
-    alignSelf: 'center',
+    alignSelf: "center",
     backgroundColor: theme.colors.bgRaised,
     borderWidth: 0.5,
     borderColor: theme.colors.border,
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     color: theme.colors.brandText,
     fontSize: 11,
     letterSpacing: 0.9,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     fontFamily: theme.fonts.semibold,
   },
   title: {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   input: {
-    width: '100%',
+    width: "100%",
     ...commonFormPrimitives.inputBase,
     backgroundColor: theme.colors.bgRaised,
     borderWidth: 0.5,
@@ -60,14 +60,14 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 2,
-    width: '100%',
+    width: "100%",
     paddingVertical: 11,
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 0.5,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     backgroundColor: theme.colors.brand,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonDisabled: {
     backgroundColor: theme.colors.brand,

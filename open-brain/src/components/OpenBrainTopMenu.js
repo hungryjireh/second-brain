@@ -1,25 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import styles from './OpenBrainTopMenu.styles';
-import { apiRequest, sendFollowNotification } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import { useOpenBrainSearch } from '../hooks/useOpenBrainSearch';
-import { theme } from '../theme';
-import { sortUsersByQuery } from '../utils/searchRanking';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import styles from "./OpenBrainTopMenu.styles";
+import { apiRequest, sendFollowNotification } from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import { useOpenBrainSearch } from "../hooks/useOpenBrainSearch";
+import { theme } from "../theme";
+import { sortUsersByQuery } from "../utils/searchRanking";
 import {
   buildOpenBrainSearchRows,
   normalizeOpenBrainSearchInput,
-} from '../utils/openBrainSearch';
-import { executeOpenBrainFollowToggle } from '../utils/openBrainFollow';
+} from "../utils/openBrainSearch";
+import { executeOpenBrainFollowToggle } from "../utils/openBrainFollow";
 
 function formatRelativeTime(value) {
-  if (!value) return '';
+  if (!value) return "";
   const timestamp = new Date(value);
-  if (Number.isNaN(timestamp.getTime())) return '';
-  const deltaSeconds = Math.max(0, Math.floor((Date.now() - timestamp.getTime()) / 1000));
-  if (deltaSeconds < 60) return 'just now';
+  if (Number.isNaN(timestamp.getTime())) return "";
+  const deltaSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp.getTime()) / 1000),
+  );
+  if (deltaSeconds < 60) return "just now";
   if (deltaSeconds < 3600) return `${Math.floor(deltaSeconds / 60)}m ago`;
   if (deltaSeconds < 86400) return `${Math.floor(deltaSeconds / 3600)}h ago`;
   if (deltaSeconds < 604800) return `${Math.floor(deltaSeconds / 86400)}d ago`;
@@ -27,57 +39,60 @@ function formatRelativeTime(value) {
 }
 
 function blurFocusedElementOnWeb() {
-  if (typeof document === 'undefined') return;
+  if (typeof document === "undefined") return;
   const activeElement = document.activeElement;
-  if (!activeElement || typeof activeElement.blur !== 'function') return;
+  if (!activeElement || typeof activeElement.blur !== "function") return;
   activeElement.blur();
 }
 
 function formatReactionLabel(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return 'reaction';
-  return raw.replace(/_/g, ' ');
+  const raw = String(value || "").trim();
+  if (!raw) return "reaction";
+  return raw.replace(/_/g, " ");
 }
 
 function notificationPayload(item) {
   const payload = item?.payload;
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return {};
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    return {};
   return payload;
 }
 
 function buildNotificationViewModel(item) {
   const payload = notificationPayload(item);
-  const username = item?.profiles?.username || item?.actor_id || '';
+  const username = item?.profiles?.username || item?.actor_id || "";
 
-  if (item?.type === 'follow') {
+  if (item?.type === "follow") {
     return {
       username,
       segments: [
-        { type: 'actor', text: username ? `@${username}` : 'Someone' },
-        { type: 'text', text: ' is now following your thoughts' },
+        { type: "actor", text: username ? `@${username}` : "Someone" },
+        { type: "text", text: " is now following your thoughts" },
       ],
       action: null,
     };
   }
 
-  if (item?.type === 'reaction') {
-    const reactionLabel = formatReactionLabel(payload?.reaction_type || item?.reaction_type);
+  if (item?.type === "reaction") {
+    const reactionLabel = formatReactionLabel(
+      payload?.reaction_type || item?.reaction_type,
+    );
     return {
       username,
       segments: [
-        { type: 'actor', text: username ? `@${username}` : 'Someone' },
-        { type: 'text', text: ` has reacted "${reactionLabel}" to your ` },
-        { type: 'thought', text: 'thought' },
+        { type: "actor", text: username ? `@${username}` : "Someone" },
+        { type: "text", text: ` has reacted "${reactionLabel}" to your ` },
+        { type: "thought", text: "thought" },
       ],
-      action: { type: 'open_thought', thought: item },
+      action: { type: "open_thought", thought: item },
     };
   }
 
   return {
     username,
     segments: [
-      { type: 'actor', text: username ? `@${username}` : 'Someone' },
-      { type: 'text', text: ` sent a ${item?.type || 'notification'}` },
+      { type: "actor", text: username ? `@${username}` : "Someone" },
+      { type: "text", text: ` sent a ${item?.type || "notification"}` },
     ],
     action: null,
   };
@@ -101,8 +116,8 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   const notificationsLoadingRef = useRef(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationsError, setNotificationsError] = useState('');
-  const [followBusyUserId, setFollowBusyUserId] = useState('');
+  const [notificationsError, setNotificationsError] = useState("");
+  const [followBusyUserId, setFollowBusyUserId] = useState("");
   const {
     query,
     setQuery,
@@ -118,19 +133,24 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     apiRequest,
     cacheTtlMs: CACHE_TTL_MS.SEARCH,
     sortUsersByQuery,
-    fallbackErrorMessage: 'Search failed.',
+    fallbackErrorMessage: "Search failed.",
   });
 
   const fetchNotifications = useCallback(async () => {
     if (!token || notificationsLoadingRef.current) return;
     notificationsLoadingRef.current = true;
     setNotificationsLoading(true);
-    setNotificationsError('');
+    setNotificationsError("");
     try {
-      const data = await apiRequest('/open-brain/notifications', { token, cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS } });
-      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+      const data = await apiRequest("/open-brain/notifications", {
+        token,
+        cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS },
+      });
+      setNotifications(
+        Array.isArray(data?.notifications) ? data.notifications : [],
+      );
     } catch (err) {
-      setNotificationsError(err.message || 'Failed to load notifications.');
+      setNotificationsError(err.message || "Failed to load notifications.");
     } finally {
       notificationsLoadingRef.current = false;
       setNotificationsLoading(false);
@@ -148,11 +168,13 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     if (isSelf) return;
     const currentlyFollowing = user?.is_following === true;
     setFollowBusyUserId(targetUserId);
-    setResults(current => ({
+    setResults((current) => ({
       ...current,
-      users: (current.users || []).map(item => (
-        item?.id === targetUserId ? { ...item, is_following: !currentlyFollowing } : item
-      )),
+      users: (current.users || []).map((item) =>
+        item?.id === targetUserId
+          ? { ...item, is_following: !currentlyFollowing }
+          : item,
+      ),
     }));
     try {
       await executeOpenBrainFollowToggle({
@@ -163,14 +185,16 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         sendFollowNotification,
       });
     } catch {
-      setResults(current => ({
+      setResults((current) => ({
         ...current,
-        users: (current.users || []).map(item => (
-          item?.id === targetUserId ? { ...item, is_following: currentlyFollowing } : item
-        )),
+        users: (current.users || []).map((item) =>
+          item?.id === targetUserId
+            ? { ...item, is_following: currentlyFollowing }
+            : item,
+        ),
       }));
     } finally {
-      setFollowBusyUserId('');
+      setFollowBusyUserId("");
     }
   }
 
@@ -178,7 +202,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
     blurFocusedElementOnWeb();
     setIsSearchOpen(false);
     resetSearch();
-    setFollowBusyUserId('');
+    setFollowBusyUserId("");
   }
 
   function closeNotifications() {
@@ -211,7 +235,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   useEffect(() => {
     if (!token) {
       setNotifications([]);
-      setNotificationsError('');
+      setNotificationsError("");
       setNotificationsLoading(false);
       return;
     }
@@ -221,14 +245,17 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   async function markNotificationAsRead(id) {
     if (!token || !id) return;
     try {
-      const data = await apiRequest('/open-brain/notifications', {
-        method: 'PATCH',
+      const data = await apiRequest("/open-brain/notifications", {
+        method: "PATCH",
         token,
         body: { id },
       });
-      const nextReadAt = data?.notification?.read_at || new Date().toISOString();
-      setNotifications(current =>
-        current.map(item => (item.id === id ? { ...item, read_at: nextReadAt } : item))
+      const nextReadAt =
+        data?.notification?.read_at || new Date().toISOString();
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, read_at: nextReadAt } : item,
+        ),
       );
     } catch {
       // Notifications remain visible even if mark-as-read fails.
@@ -238,92 +265,117 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   function openProfile(username) {
     if (!username) return;
     closeSearch();
-    navigation.navigate('OpenBrainProfile', { username });
+    navigation.navigate("OpenBrainProfile", { username });
   }
 
   function openSeeMore() {
     const value = normalizeOpenBrainSearchInput(query);
     if (!value) return;
     closeSearch();
-    navigation.navigate('OpenBrainSearch', { query: value });
+    navigation.navigate("OpenBrainSearch", { query: value });
   }
 
   function openThoughtFromNotification(item) {
-    const slug = String(item?.thought?.share_slug || '').trim();
+    const slug = String(item?.thought?.share_slug || "").trim();
     if (!slug) return;
     closeNotifications();
-    navigation.navigate('SharedThought', { slug });
+    navigation.navigate("SharedThought", { slug });
   }
 
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
-  const unreadCount = notifications.filter(item => !item?.read_at).length;
-  const searchRows = useMemo(() => buildOpenBrainSearchRows(results), [results]);
-  const keyExtractor = useCallback(item => item.key, []);
-  const renderSearchResultItem = useCallback(({ item }) => {
-    if (item.type === 'section') {
-      return (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{item.label}</Text>
-        </View>
-      );
-    }
-    if (item.type === 'user') {
-      const user = item.user;
-      const isSelf = user?.is_self === true;
-      const isFollowing = user?.is_following === true;
-      const followBusy = followBusyUserId === user?.id;
-      return (
-        <View style={styles.resultRow}>
-          <Pressable style={styles.userInfoPressable} onPress={() => openProfile(user.username)}>
-            <Text style={styles.resultPrimary}>@{user.username}</Text>
-            <Text style={styles.resultSecondary}>
-              {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
-            </Text>
-          </Pressable>
-          {!isSelf ? (
+  const unreadCount = notifications.filter((item) => !item?.read_at).length;
+  const searchRows = useMemo(
+    () => buildOpenBrainSearchRows(results),
+    [results],
+  );
+  const keyExtractor = useCallback((item) => item.key, []);
+  const renderSearchResultItem = useCallback(
+    ({ item }) => {
+      if (item.type === "section") {
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{item.label}</Text>
+          </View>
+        );
+      }
+      if (item.type === "user") {
+        const user = item.user;
+        const isSelf = user?.is_self === true;
+        const isFollowing = user?.is_following === true;
+        const followBusy = followBusyUserId === user?.id;
+        return (
+          <View style={styles.resultRow}>
             <Pressable
-              style={[
-                styles.followButton,
-                isFollowing ? styles.followButtonFollowing : styles.followButtonActive,
-                followBusy && { opacity: 0.55 },
-              ]}
-              onPress={() => toggleFollowFromSearch(user)}
-              disabled={followBusy || !token}
+              style={styles.userInfoPressable}
+              onPress={() => openProfile(user.username)}
             >
-              <Text style={styles.followButtonText}>{isFollowing ? 'Unfollow' : 'Follow'}</Text>
+              <Text style={styles.resultPrimary}>@{user.username}</Text>
+              <Text style={styles.resultSecondary}>
+                {Number.isInteger(user.streak_count)
+                  ? `${user.streak_count} day streak`
+                  : "open profile"}
+              </Text>
             </Pressable>
-          ) : null}
-        </View>
+            {!isSelf ? (
+              <Pressable
+                style={[
+                  styles.followButton,
+                  isFollowing
+                    ? styles.followButtonFollowing
+                    : styles.followButtonActive,
+                  followBusy && { opacity: 0.55 },
+                ]}
+                onPress={() => toggleFollowFromSearch(user)}
+                disabled={followBusy || !token}
+              >
+                <Text style={styles.followButtonText}>
+                  {isFollowing ? "Unfollow" : "Follow"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        );
+      }
+      const thought = item.thought;
+      return (
+        <Pressable
+          style={styles.resultRow}
+          onPress={() => openProfile(thought?.profile?.username)}
+        >
+          <Text style={styles.resultPrimary}>
+            {(thought?.text || "").replace(/\s+/g, " ").slice(0, 100) ||
+              "View thought"}
+          </Text>
+          <Text style={styles.resultSecondary}>
+            {thought?.profile?.username
+              ? `by @${thought.profile.username}`
+              : "open profile"}
+          </Text>
+        </Pressable>
       );
-    }
-    const thought = item.thought;
-    return (
-      <Pressable style={styles.resultRow} onPress={() => openProfile(thought?.profile?.username)}>
-        <Text style={styles.resultPrimary}>
-          {(thought?.text || '').replace(/\s+/g, ' ').slice(0, 100) || 'View thought'}
-        </Text>
-        <Text style={styles.resultSecondary}>
-          {thought?.profile?.username ? `by @${thought.profile.username}` : 'open profile'}
-        </Text>
-      </Pressable>
-    );
-  }, [followBusyUserId, openProfile, token]);
+    },
+    [followBusyUserId, openProfile, token],
+  );
 
   return (
     <View style={[styles.outer, { paddingTop: insets.top }]}>
       <View style={styles.wrap}>
         <Pressable
           style={styles.backButton}
-          onPress={() => navigation.replace('OpenBrainFeed')}
+          onPress={() => navigation.replace("OpenBrainFeed")}
           accessibilityRole="button"
           accessibilityLabel="Back to Feed"
         >
-          <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
+          <Feather
+            name="arrow-left"
+            size={20}
+            color={theme.colors.textSecondary}
+          />
         </Pressable>
         <Pressable
           style={styles.logoButton}
-          onPress={() => navigation.navigate('OpenBrainFeed')}
+          onPress={() => navigation.navigate("OpenBrainFeed")}
           accessibilityRole="button"
           accessibilityLabel="Go to feed"
         >
@@ -343,7 +395,7 @@ export default function OpenBrainTopMenu({ navigation, token }) {
             {unreadCount > 0 ? (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>
-                  {unreadCount > 99 ? '99+' : String(unreadCount)}
+                  {unreadCount > 99 ? "99+" : String(unreadCount)}
                 </Text>
               </View>
             ) : null}
@@ -364,27 +416,40 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         animationType="fade"
         onRequestClose={closeNotifications}
       >
-        <Pressable style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]} onPress={handleNotificationsBackdropPress}>
+        <Pressable
+          style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]}
+          onPress={handleNotificationsBackdropPress}
+        >
           <Pressable
             style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]}
-            onPress={event => event.stopPropagation()}
+            onPress={(event) => event.stopPropagation()}
           >
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Notifications</Text>
-              {notificationsLoading ? <Text style={styles.emptyText}>Loading...</Text> : null}
-              {!!notificationsError ? <Text style={styles.errorText}>{notificationsError}</Text> : null}
-              {!notificationsLoading && !notificationsError && notifications.length === 0 ? (
+              {notificationsLoading ? (
+                <Text style={styles.emptyText}>Loading...</Text>
+              ) : null}
+              {notificationsError ? (
+                <Text style={styles.errorText}>{notificationsError}</Text>
+              ) : null}
+              {!notificationsLoading &&
+              !notificationsError &&
+              notifications.length === 0 ? (
                 <Text style={styles.emptyText}>No notifications yet.</Text>
               ) : null}
-              {!notificationsLoading && !notificationsError && notifications.length > 0 ? (
+              {!notificationsLoading &&
+              !notificationsError &&
+              notifications.length > 0 ? (
                 <ScrollView
                   style={styles.notificationsScroll}
                   contentContainerStyle={styles.notificationsScrollContent}
                   showsVerticalScrollIndicator
                 >
-                  {notifications.map(item => {
+                  {notifications.map((item) => {
                     const unread = !item?.read_at;
-                    const timestamp = formatRelativeTime(item?.created_at || item?.inserted_at || item?.updated_at);
+                    const timestamp = formatRelativeTime(
+                      item?.created_at || item?.inserted_at || item?.updated_at,
+                    );
                     const model = buildNotificationViewModel(item);
                     return (
                       <Pressable
@@ -395,10 +460,15 @@ export default function OpenBrainTopMenu({ navigation, token }) {
                         }}
                       >
                         <View style={styles.notificationsMain}>
-                          {unread ? <View style={styles.notificationsUnreadDot} /> : null}
-                          <Text style={styles.notificationsMessage} numberOfLines={2}>
+                          {unread ? (
+                            <View style={styles.notificationsUnreadDot} />
+                          ) : null}
+                          <Text
+                            style={styles.notificationsMessage}
+                            numberOfLines={2}
+                          >
                             {model.segments.map((segment, index) => {
-                              if (segment.type === 'actor' && model.username) {
+                              if (segment.type === "actor" && model.username) {
                                 return (
                                   <Text
                                     key={`segment-${item.id}-${index}`}
@@ -409,22 +479,37 @@ export default function OpenBrainTopMenu({ navigation, token }) {
                                   </Text>
                                 );
                               }
-                              if (segment.type === 'thought' && model.action?.type === 'open_thought') {
+                              if (
+                                segment.type === "thought" &&
+                                model.action?.type === "open_thought"
+                              ) {
                                 return (
                                   <Text
                                     key={`segment-${item.id}-${index}`}
                                     style={styles.notificationsLink}
-                                    onPress={() => openThoughtFromNotification(model.action.thought)}
+                                    onPress={() =>
+                                      openThoughtFromNotification(
+                                        model.action.thought,
+                                      )
+                                    }
                                   >
                                     {segment.text}
                                   </Text>
                                 );
                               }
-                              return <Text key={`segment-${item.id}-${index}`}>{segment.text}</Text>;
+                              return (
+                                <Text key={`segment-${item.id}-${index}`}>
+                                  {segment.text}
+                                </Text>
+                              );
                             })}
                           </Text>
                         </View>
-                        {!!timestamp ? <Text style={styles.notificationsTime}>{timestamp}</Text> : null}
+                        {timestamp ? (
+                          <Text style={styles.notificationsTime}>
+                            {timestamp}
+                          </Text>
+                        ) : null}
                       </Pressable>
                     );
                   })}
@@ -440,10 +525,13 @@ export default function OpenBrainTopMenu({ navigation, token }) {
         animationType="fade"
         onRequestClose={closeSearch}
       >
-        <Pressable style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]} onPress={handleSearchBackdropPress}>
+        <Pressable
+          style={[styles.modalBackdrop, { paddingTop: insets.top + 70 }]}
+          onPress={handleSearchBackdropPress}
+        >
           <Pressable
             style={[styles.dropdownModal, { maxHeight: dropdownMaxHeight }]}
-            onPress={event => event.stopPropagation()}
+            onPress={(event) => event.stopPropagation()}
           >
             <TextInput
               value={query}
@@ -465,11 +553,15 @@ export default function OpenBrainTopMenu({ navigation, token }) {
               onPress={handleSearch}
               disabled={loading || !query.trim()}
             >
-              <Text style={styles.submitLabel}>{loading ? '...' : 'Search'}</Text>
+              <Text style={styles.submitLabel}>
+                {loading ? "..." : "Search"}
+              </Text>
             </Pressable>
-            {!!error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {!error && hasSearched && !hasResults ? (
-              <Text style={styles.emptyText}>No matching users or thoughts.</Text>
+              <Text style={styles.emptyText}>
+                No matching users or thoughts.
+              </Text>
             ) : null}
             <FlatList
               data={searchRows}
@@ -483,7 +575,11 @@ export default function OpenBrainTopMenu({ navigation, token }) {
               windowSize={7}
               removeClippedSubviews
             />
-            <Pressable style={styles.seeMorePressable} onPress={openSeeMore} disabled={!query.trim()}>
+            <Pressable
+              style={styles.seeMorePressable}
+              onPress={openSeeMore}
+              disabled={!query.trim()}
+            >
               <Text style={styles.seeMoreLabel}>See More</Text>
             </Pressable>
           </Pressable>

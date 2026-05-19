@@ -1,5 +1,5 @@
 export function normalizeRequiredField(value) {
-  return String(value ?? '').trim();
+  return String(value ?? "").trim();
 }
 
 export function isRequiredFieldPresent(value) {

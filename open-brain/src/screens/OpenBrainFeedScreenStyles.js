@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
 
 const styles = StyleSheet.create({
   container: {
@@ -12,14 +12,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   floatingDraftButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     bottom: 84,
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderColor: theme.colors.border,
     borderWidth: 1,
     backgroundColor: theme.colors.bgBase,
@@ -37,8 +37,8 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalBlur: {
     ...StyleSheet.absoluteFillObject,
@@ -47,15 +47,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalCardWrap: {
-    width: '100%',
+    width: "100%",
     maxWidth: 560,
-    height: '82%',
+    height: "82%",
     maxHeight: 760,
     paddingHorizontal: 12,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   tabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginBottom: 12,
   },
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 9,
     backgroundColor: theme.colors.bgBase,
   },
@@ -88,14 +88,14 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   meta: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   error: {
     color: theme.colors.danger,

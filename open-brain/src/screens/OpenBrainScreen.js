@@ -1,17 +1,17 @@
-import { useEffect } from 'react';
-import { Text, View } from 'react-native';
-import { apiRequest } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
-import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
-import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
-import { useOpenBrainComposer } from '../hooks/useOpenBrainComposer';
+import { useEffect } from "react";
+import { Text, View } from "react-native";
+import { apiRequest } from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import OpenBrainThoughtComposer from "../components/OpenBrainThoughtComposer";
+import OpenBrainBottomNav from "../components/OpenBrainBottomNav";
+import OpenBrainTopMenu from "../components/OpenBrainTopMenu";
+import { useOpenBrainComposer } from "../hooks/useOpenBrainComposer";
 import {
   OPEN_BRAIN_MAX_CHARS,
   randomFrom,
   THOUGHT_FALLBACK_PROMPTS,
-} from '../utils/openBrainComposer';
-import styles from './OpenBrainScreen.styles';
+} from "../utils/openBrainComposer";
+import styles from "./OpenBrainScreen.styles";
 
 export default function OpenBrainScreen({ token, navigation }) {
   const {
@@ -41,9 +41,12 @@ export default function OpenBrainScreen({ token, navigation }) {
   });
 
   useEffect(() => {
-    loadComposerState().catch(err => {
-      if (String(err.message).toLowerCase().includes('404') || String(err.message).toLowerCase().includes('not found')) {
-        navigation.replace('CreateOpenBrainProfile');
+    loadComposerState().catch((err) => {
+      if (
+        String(err.message).toLowerCase().includes("404") ||
+        String(err.message).toLowerCase().includes("not found")
+      ) {
+        navigation.replace("CreateOpenBrainProfile");
         return;
       }
       setError(err.message);
@@ -56,9 +59,9 @@ export default function OpenBrainScreen({ token, navigation }) {
       <View style={styles.composerWrap}>
         <OpenBrainThoughtComposer
           value={draft}
-          onChangeText={text => setDraft(text.slice(0, OPEN_BRAIN_MAX_CHARS))}
+          onChangeText={(text) => setDraft(text.slice(0, OPEN_BRAIN_MAX_CHARS))}
           placeholder="Write your thought for today..."
-          buttonLabel={saving ? 'Saving...' : hasPostedToday ? '✓' : 'Done'}
+          buttonLabel={saving ? "Saving..." : hasPostedToday ? "✓" : "Done"}
           onSubmit={postThought}
           disabled={saving || !draft.trim()}
           multiline
@@ -68,12 +71,24 @@ export default function OpenBrainScreen({ token, navigation }) {
           timeLabel={timeLabel}
           streakCount={streakCount}
           saveCount={saveCount}
-          heading={hasPostedToday ? (postedHeading || "What's on your mind?") : "What's on your mind?"}
+          heading={
+            hasPostedToday
+              ? postedHeading || "What's on your mind?"
+              : "What's on your mind?"
+          }
           prompt={prompt}
-          onRefreshPrompt={() => setPrompt(current => randomFrom(THOUGHT_FALLBACK_PROMPTS, current))}
+          onRefreshPrompt={() =>
+            setPrompt((current) =>
+              randomFrom(THOUGHT_FALLBACK_PROMPTS, current),
+            )
+          }
           canRefreshPrompt={THOUGHT_FALLBACK_PROMPTS.length > 1}
           visibility={visibility}
-          onToggleVisibility={() => setVisibility(current => (current === 'public' ? 'private' : 'public'))}
+          onToggleVisibility={() =>
+            setVisibility((current) =>
+              current === "public" ? "private" : "public",
+            )
+          }
           isPosted={hasPostedToday}
           error={error}
         />

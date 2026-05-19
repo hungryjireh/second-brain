@@ -1,11 +1,11 @@
-import { Pressable, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import styles from './OpenBrainBottomNav.styles';
+import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import styles from "./OpenBrainBottomNav.styles";
 
 const BUTTONS = [
-  { key: 'OpenBrainFeed', label: 'Home' },
-  { key: 'OpenBrainProfile', label: 'Profile' },
-  { key: 'OpenBrainSettings', label: 'Settings' },
+  { key: "OpenBrainFeed", label: "Home" },
+  { key: "OpenBrainProfile", label: "Profile" },
+  { key: "OpenBrainSettings", label: "Settings" },
 ];
 
 export default function OpenBrainBottomNav({ navigation, currentRoute }) {
@@ -14,7 +14,7 @@ export default function OpenBrainBottomNav({ navigation, currentRoute }) {
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       <View style={styles.row}>
-        {BUTTONS.map(button => {
+        {BUTTONS.map((button) => {
           const active = button.key === currentRoute;
           return (
             <Pressable
@@ -24,7 +24,9 @@ export default function OpenBrainBottomNav({ navigation, currentRoute }) {
               accessibilityRole="button"
             >
               {active ? <View style={styles.activeDot} /> : null}
-              <Text style={[styles.label, active && styles.labelActive]}>{button.label}</Text>
+              <Text style={[styles.label, active && styles.labelActive]}>
+                {button.label}
+              </Text>
             </Pressable>
           );
         })}

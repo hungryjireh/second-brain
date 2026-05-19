@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
 
 const styles = StyleSheet.create({
   card: {
@@ -7,7 +7,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 14,
     shadowColor: theme.colors.shadow,
     shadowOpacity: 0.28,
@@ -21,9 +21,9 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
     minWidth: 0,
   },
@@ -32,18 +32,18 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 1.1,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     flex: 1,
     flexShrink: 1,
   },
   metricsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   metricInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   metricCount: {
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   promptRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginTop: 10,
     minWidth: 0,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
     fontSize: 13,
-    fontStyle: 'italic',
+    fontStyle: "italic",
     flex: 1,
     flexShrink: 1,
   },
@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     backgroundColor: theme.colors.bgRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   refreshText: {
     color: theme.colors.textSecondary,
@@ -97,11 +97,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   formatToolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   postedScroll: {
     flex: 1,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   inputMultiline: {
     minHeight: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   postedText: {
     color: theme.colors.textPrimary,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   postedQuoteText: {
     color: theme.colors.textPrimary,
-    fontStyle: 'italic',
+    fontStyle: "italic",
     opacity: 0.82,
   },
   footer: {
@@ -162,19 +162,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   footerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     flex: 1,
     minWidth: 0,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   remaining: {
     color: theme.colors.textSecondary,
@@ -186,19 +186,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 999,
     backgroundColor: theme.colors.bgRaised,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingVertical: 5,
     paddingLeft: 6,
     paddingRight: 10,
-    maxWidth: '100%',
+    maxWidth: "100%",
   },
   toggleTrack: {
     width: 34,
     height: 18,
     borderRadius: 999,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   toggleThumb: {
     width: 14,
@@ -214,9 +214,9 @@ const styles = StyleSheet.create({
   button: {
     borderColor: theme.colors.border,
     borderWidth: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontFamily: theme.fonts.regular,
     fontSize: 12,
-    textAlign: 'right',
+    textAlign: "right",
     marginTop: 10,
   },
   error: {
@@ -250,8 +250,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgRaised,
     width: 28,
     height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   formatButtonWide: {
     width: 34,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   formatButtonTextUnderline: {
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
 });
 

@@ -1,8 +1,8 @@
 {
   "framework": null,
-  "installCommand": "cd mobile && npm install",
-  "buildCommand": "cd mobile && npx expo export --platform web",
-  "outputDirectory": "mobile/dist",
+  "installCommand": "cd second-brain && npm install",
+  "buildCommand": "cd second-brain && npx expo export --platform web",
+  "outputDirectory": "second-brain/dist",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],

@@ -1,6 +1,10 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonFormCompositions, commonFormPrimitives, commonStatusStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import {
+  commonFormCompositions,
+  commonFormPrimitives,
+  commonStatusStyles,
+} from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   header: {

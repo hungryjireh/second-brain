@@ -1,6 +1,6 @@
-import { Pressable, Text, View } from 'react-native';
-import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
-import styles from './OpenBrainSettingsScreen.styles';
+import { Pressable, Text, View } from "react-native";
+import OpenBrainSettingsLayout from "../components/OpenBrainSettingsLayout";
+import styles from "./OpenBrainSettingsScreen.styles";
 
 export default function OpenBrainSettingsScreen({ token, navigation }) {
   return (
@@ -12,14 +12,20 @@ export default function OpenBrainSettingsScreen({ token, navigation }) {
       headerStyle={styles.headerSection}
     >
       <View style={styles.card}>
-        <Pressable style={styles.navButton} onPress={() => navigation.navigate('UpdateOpenBrainProfile')}>
+        <Pressable
+          style={styles.navButton}
+          onPress={() => navigation.navigate("UpdateOpenBrainProfile")}
+        >
           <Text style={styles.navButtonText}>Update profile</Text>
-          <Text style={styles.navButtonArrow}>{'>'}</Text>
+          <Text style={styles.navButtonArrow}>{">"}</Text>
         </Pressable>
 
-        <Pressable style={styles.navButton} onPress={() => navigation.navigate('OpenBrainResetPassword')}>
+        <Pressable
+          style={styles.navButton}
+          onPress={() => navigation.navigate("OpenBrainResetPassword")}
+        >
           <Text style={styles.navButtonText}>Reset password</Text>
-          <Text style={styles.navButtonArrow}>{'>'}</Text>
+          <Text style={styles.navButtonArrow}>{">"}</Text>
         </Pressable>
       </View>
     </OpenBrainSettingsLayout>

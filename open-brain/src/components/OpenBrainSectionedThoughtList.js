@@ -1,5 +1,5 @@
-import { FlatList, Text, View } from 'react-native';
-import styles from './OpenBrainSectionedThoughtList.styles';
+import { FlatList, Text, View } from "react-native";
+import styles from "./OpenBrainSectionedThoughtList.styles";
 
 export default function OpenBrainSectionedThoughtList({
   data,
@@ -17,7 +17,7 @@ export default function OpenBrainSectionedThoughtList({
       contentContainerStyle={contentContainerStyle}
       ListEmptyComponent={listEmptyComponent}
       renderItem={({ item }) => {
-        if (item?.type === 'section') {
+        if (item?.type === "section") {
           return (
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionHeader}>{item.title}</Text>

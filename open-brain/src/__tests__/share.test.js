@@ -1,14 +1,14 @@
-describe('buildThoughtSharePayload', () => {
+describe("buildThoughtSharePayload", () => {
   function loadShareModule({
-    apiUrl = 'http://localhost:3000/api',
-    shareBaseUrl = '',
-    webUrl = '',
+    apiUrl = "http://localhost:3000/api",
+    shareBaseUrl = "",
+    webUrl = "",
   } = {}) {
     jest.resetModules();
     process.env.EXPO_PUBLIC_API_URL = apiUrl;
     process.env.EXPO_PUBLIC_SHARE_BASE_URL = shareBaseUrl;
     process.env.EXPO_PUBLIC_WEB_URL = webUrl;
-    return require('../share');
+    return require("../share");
   }
 
   afterEach(() => {
@@ -19,69 +19,69 @@ describe('buildThoughtSharePayload', () => {
     delete global.window;
   });
 
-  it('returns only url when share slug exists', () => {
+  it("returns only url when share slug exists", () => {
     const { buildThoughtSharePayload } = loadShareModule();
     const payload = buildThoughtSharePayload({
-      text: 'hello world',
-      share_slug: 'gD4GQswVXWo',
+      text: "hello world",
+      share_slug: "gD4GQswVXWo",
     });
 
     expect(payload).toEqual({
-      url: 'http://localhost:3000/shared-thought/gD4GQswVXWo',
+      url: "http://localhost:3000/shared-thought/gD4GQswVXWo",
     });
     expect(payload.message).toBeUndefined();
   });
 
-  it('falls back to message when share slug is missing', () => {
+  it("falls back to message when share slug is missing", () => {
     const { buildThoughtSharePayload } = loadShareModule();
     const payload = buildThoughtSharePayload({
-      text: 'hello world',
-      share_slug: '',
+      text: "hello world",
+      share_slug: "",
     });
 
     expect(payload).toEqual({
-      message: 'hello world',
+      message: "hello world",
     });
   });
 
-  it('returns null when text is empty', () => {
+  it("returns null when text is empty", () => {
     const { buildThoughtSharePayload } = loadShareModule();
     const payload = buildThoughtSharePayload({
-      text: '   ',
-      share_slug: 'gD4GQswVXWo',
+      text: "   ",
+      share_slug: "gD4GQswVXWo",
     });
 
     expect(payload).toBeNull();
   });
 
-  it('upgrades non-local explicit share base URL from http to https', () => {
+  it("upgrades non-local explicit share base URL from http to https", () => {
     const { buildSharedThoughtUrl } = loadShareModule({
-      shareBaseUrl: 'http://openbrain.example.com',
+      shareBaseUrl: "http://openbrain.example.com",
     });
 
-    expect(buildSharedThoughtUrl('gD4GQswVXWo')).toBe(
-      'https://openbrain.example.com/shared-thought/gD4GQswVXWo'
+    expect(buildSharedThoughtUrl("gD4GQswVXWo")).toBe(
+      "https://openbrain.example.com/shared-thought/gD4GQswVXWo",
     );
   });
 
-  it('preserves localhost explicit share base URL', () => {
+  it("preserves localhost explicit share base URL", () => {
     const { buildSharedThoughtUrl } = loadShareModule({
-      shareBaseUrl: 'http://localhost:8080',
+      shareBaseUrl: "http://localhost:8080",
     });
 
-    expect(buildSharedThoughtUrl('gD4GQswVXWo')).toBe(
-      'http://localhost:8080/shared-thought/gD4GQswVXWo'
+    expect(buildSharedThoughtUrl("gD4GQswVXWo")).toBe(
+      "http://localhost:8080/shared-thought/gD4GQswVXWo",
     );
   });
 
-  it('uses browser origin when explicit share base URL is not set', () => {
-    global.window = { location: { origin: 'http://localhost:8081' } };
+  it("uses browser origin when explicit share base URL is not set", () => {
+    global.window = { location: { origin: "http://localhost:8081" } };
     const { buildSharedThoughtUrl } = loadShareModule({
-      apiUrl: 'http://localhost:3000/api',
+      apiUrl: "http://localhost:3000/api",
     });
 
-    expect(buildSharedThoughtUrl('gD4GQswVXWo')).toBe(
-      'http://localhost:8081/shared-thought/gD4GQswVXWo'
+    expect(buildSharedThoughtUrl("gD4GQswVXWo")).toBe(
+      "http://localhost:8081/shared-thought/gD4GQswVXWo",
     );
   });
 });

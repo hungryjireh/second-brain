@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "second-brain",
+    "slug": "second-brain",
     "version": "1.0.0",
     "orientation": "portrait",
     "jsEngine": "hermes",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hungryjireh.mobile"
+      "bundleIdentifier": "com.hungryjireh.second_brain"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +34,7 @@
         {
           "frequentUpdates": true,
           "widgetsFolder": "widgets",
-          "groupIdentifier": "group.com.hungryjireh.mobile"
+          "groupIdentifier": "group.com.hungryjireh.second_brain"
         }
       ]
     ]

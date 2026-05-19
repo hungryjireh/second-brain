@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 import {
   loadOpenBrainComposerState,
   randomFrom,
   THANK_YOU_PROMPTS,
   THOUGHT_FALLBACK_PROMPTS,
-} from '../utils/openBrainComposer';
-import { formatTimeLabel, formatTodayLabel } from '../utils/dateUtils';
+} from "../utils/openBrainComposer";
+import { formatTimeLabel, formatTodayLabel } from "../utils/dateUtils";
 
 export function useOpenBrainComposer({
   token,
@@ -13,17 +13,19 @@ export function useOpenBrainComposer({
   cacheProfileTtlMs,
   cacheThoughtsTtlMs,
   allowThoughtFetchFailure = false,
-  initialError = '',
-  fallbackSaveErrorMessage = 'Unable to save thought.',
+  initialError = "",
+  fallbackSaveErrorMessage = "Unable to save thought.",
   onPostSuccess,
 }) {
-  const [draft, setDraft] = useState('');
-  const [visibility, setVisibility] = useState('public');
+  const [draft, setDraft] = useState("");
+  const [visibility, setVisibility] = useState("public");
   const [hasPostedToday, setHasPostedToday] = useState(false);
-  const [postedHeading, setPostedHeading] = useState('');
+  const [postedHeading, setPostedHeading] = useState("");
   const [streakCount, setStreakCount] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
-  const [prompt, setPrompt] = useState(() => randomFrom(THOUGHT_FALLBACK_PROMPTS));
+  const [prompt, setPrompt] = useState(() =>
+    randomFrom(THOUGHT_FALLBACK_PROMPTS),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(initialError);
   const todayLabel = useMemo(() => formatTodayLabel(new Date()), []);
@@ -44,21 +46,31 @@ export function useOpenBrainComposer({
     setHasPostedToday(state.hasPostedToday);
     if (state.hasPostedToday) setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
     return state;
-  }, [allowThoughtFetchFailure, apiRequest, cacheProfileTtlMs, cacheThoughtsTtlMs, token]);
+  }, [
+    allowThoughtFetchFailure,
+    apiRequest,
+    cacheProfileTtlMs,
+    cacheThoughtsTtlMs,
+    token,
+  ]);
 
   const postThought = useCallback(async () => {
     if (!draft.trim() || saving || hasPostedToday) return null;
     try {
       setSaving(true);
-      setError('');
-      const data = await apiRequest('/open-brain/thoughts', {
-        method: 'POST',
+      setError("");
+      const data = await apiRequest("/open-brain/thoughts", {
+        method: "POST",
         token,
         body: { thought: draft.trim(), visibility },
       });
       setHasPostedToday(true);
       setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
-      setStreakCount(Number.isInteger(data?.profile?.streak_count) ? data.profile.streak_count : streakCount);
+      setStreakCount(
+        Number.isInteger(data?.profile?.streak_count)
+          ? data.profile.streak_count
+          : streakCount,
+      );
       if (onPostSuccess) await onPostSuccess(data);
       return data;
     } catch (err) {
@@ -67,7 +79,17 @@ export function useOpenBrainComposer({
     } finally {
       setSaving(false);
     }
-  }, [apiRequest, draft, fallbackSaveErrorMessage, hasPostedToday, onPostSuccess, saving, streakCount, token, visibility]);
+  }, [
+    apiRequest,
+    draft,
+    fallbackSaveErrorMessage,
+    hasPostedToday,
+    onPostSuccess,
+    saving,
+    streakCount,
+    token,
+    visibility,
+  ]);
 
   return {
     draft,

@@ -1,14 +1,24 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import styles from './OpenBrainThoughtComposer.styles';
-import { theme } from '../theme';
-import { normalizeThoughtText, parseThoughtBlocks } from '../utils/openBrainThoughtText';
+import { useMemo, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import styles from "./OpenBrainThoughtComposer.styles";
+import { theme } from "../theme";
+import {
+  normalizeThoughtText,
+  parseThoughtBlocks,
+} from "../utils/openBrainThoughtText";
 
 function parsePostedThought(text) {
   const normalized = normalizeThoughtText(text);
-  if (!normalized) return { title: '', blocks: [], hasTitle: false };
-  const lines = normalized.split('\n');
+  if (!normalized) return { title: "", blocks: [], hasTitle: false };
+  const lines = normalized.split("\n");
   let firstLineIndex = -1;
   for (let i = 0; i < lines.length; i += 1) {
     if (lines[i].trim()) {
@@ -16,28 +26,39 @@ function parsePostedThought(text) {
       break;
     }
   }
-  if (firstLineIndex < 0) return { title: '', blocks: [], hasTitle: false };
+  if (firstLineIndex < 0) return { title: "", blocks: [], hasTitle: false };
   const title = lines[firstLineIndex].trim();
-  const body = lines.slice(firstLineIndex + 1).join('\n').trim();
-  if (!body) return { title: '', blocks: [{ text: title, isQuote: false }], hasTitle: false };
+  const body = lines
+    .slice(firstLineIndex + 1)
+    .join("\n")
+    .trim();
+  if (!body)
+    return {
+      title: "",
+      blocks: [{ text: title, isQuote: false }],
+      hasTitle: false,
+    };
   const blocks = parseThoughtBlocks(body);
   return { title, blocks, hasTitle: true };
 }
 
 function applyInlineMarkdown(text, selection, marker, placeholder) {
-  const current = String(text || '');
+  const current = String(text || "");
   const start = Math.max(0, selection?.start ?? current.length);
   const end = Math.max(start, selection?.end ?? start);
   const before = current.slice(0, start);
   const selected = current.slice(start, end);
   const after = current.slice(end);
-  const token = String(marker || '');
-  const seed = String(placeholder || 'text');
+  const token = String(marker || "");
+  const seed = String(placeholder || "text");
 
   if (start === end) {
     return {
       text: `${before}${token}${seed}${token}${after}`,
-      selection: { start: start + token.length, end: start + token.length + seed.length },
+      selection: {
+        start: start + token.length,
+        end: start + token.length + seed.length,
+      },
     };
   }
 
@@ -48,16 +69,16 @@ function applyInlineMarkdown(text, selection, marker, placeholder) {
 }
 
 function applyLinePrefix(text, selection, prefixBuilder) {
-  const current = String(text || '');
+  const current = String(text || "");
   const rawStart = Math.max(0, selection?.start ?? current.length);
   const rawEnd = Math.max(rawStart, selection?.end ?? rawStart);
-  const lineStart = current.lastIndexOf('\n', Math.max(0, rawStart - 1)) + 1;
-  const lineEndIndex = current.indexOf('\n', rawEnd);
+  const lineStart = current.lastIndexOf("\n", Math.max(0, rawStart - 1)) + 1;
+  const lineEndIndex = current.indexOf("\n", rawEnd);
   const lineEnd = lineEndIndex === -1 ? current.length : lineEndIndex;
   const block = current.slice(lineStart, lineEnd);
-  const lines = block.split('\n');
+  const lines = block.split("\n");
   const formatted = lines.map((line, idx) => `${prefixBuilder(idx)}${line}`);
-  const nextBlock = formatted.join('\n');
+  const nextBlock = formatted.join("\n");
   const before = current.slice(0, lineStart);
   const after = current.slice(lineEnd);
   return {
@@ -84,26 +105,35 @@ export default function OpenBrainThoughtComposer({
   prompt,
   onRefreshPrompt,
   canRefreshPrompt = false,
-  visibility = 'public',
+  visibility = "public",
   onToggleVisibility,
   isPosted = false,
-  error = '',
+  error = "",
   showRemaining = true,
 }) {
   const { height: viewportHeight } = useWindowDimensions();
   const minInputHeight = 120;
-  const maxInputHeight = useMemo(() => Math.max(minInputHeight, Math.floor(viewportHeight * 0.52)), [viewportHeight]);
+  const maxInputHeight = useMemo(
+    () => Math.max(minInputHeight, Math.floor(viewportHeight * 0.52)),
+    [viewportHeight],
+  );
   const [contentHeight, setContentHeight] = useState(minInputHeight);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
-  const remaining = typeof maxLength === 'number' ? maxLength - String(value || '').length : null;
+  const remaining =
+    typeof maxLength === "number"
+      ? maxLength - String(value || "").length
+      : null;
   const isDisabled = disabled === true;
   const isMultiline = multiline === true;
   const canRefresh = canRefreshPrompt === true;
   const posted = isPosted === true;
   const shouldShowRemaining = showRemaining !== false;
   const submitDisabled = isDisabled || posted;
-  const trackActive = visibility === 'public';
-  const clampedInputHeight = Math.min(Math.max(contentHeight, minInputHeight), maxInputHeight);
+  const trackActive = visibility === "public";
+  const clampedInputHeight = Math.min(
+    Math.max(contentHeight, minInputHeight),
+    maxInputHeight,
+  );
   const shouldScrollInput = clampedInputHeight >= maxInputHeight;
   const postedThought = useMemo(() => parsePostedThought(value), [value]);
   const handleFormatPress = (marker, placeholder) => {
@@ -114,13 +144,13 @@ export default function OpenBrainThoughtComposer({
   };
   const handleBulletListPress = () => {
     if (isDisabled || posted) return;
-    const next = applyLinePrefix(value, selection, () => '- ');
+    const next = applyLinePrefix(value, selection, () => "- ");
     onChangeText(next.text);
     setSelection(next.selection);
   };
   const handleNumberedListPress = () => {
     if (isDisabled || posted) return;
-    const next = applyLinePrefix(value, selection, index => `${index + 1}. `);
+    const next = applyLinePrefix(value, selection, (index) => `${index + 1}. `);
     onChangeText(next.text);
     setSelection(next.selection);
   };
@@ -130,14 +160,25 @@ export default function OpenBrainThoughtComposer({
       <View style={styles.content}>
         {!!dateLabel && (
           <View style={styles.eyebrowRow}>
-            <Text style={styles.eyebrow}>{dateLabel}{timeLabel ? ` • ${timeLabel}` : ''}</Text>
+            <Text style={styles.eyebrow}>
+              {dateLabel}
+              {timeLabel ? ` • ${timeLabel}` : ""}
+            </Text>
             <View style={styles.metricsRow}>
               <View style={styles.metricInline}>
-                <Feather name="zap" size={12} color={theme.colors.textSecondary} />
+                <Feather
+                  name="zap"
+                  size={12}
+                  color={theme.colors.textSecondary}
+                />
                 <Text style={styles.metricCount}>{streakCount}</Text>
               </View>
               <View style={styles.metricInline}>
-                <Feather name="bookmark" size={12} color={theme.colors.textSecondary} />
+                <Feather
+                  name="bookmark"
+                  size={12}
+                  color={theme.colors.textSecondary}
+                />
                 <Text style={styles.metricCount}>{saveCount}</Text>
               </View>
             </View>
@@ -148,8 +189,16 @@ export default function OpenBrainThoughtComposer({
           <View style={styles.promptRow}>
             <Text style={styles.prompt}>{prompt || placeholder}</Text>
             {!!onRefreshPrompt && (
-              <Pressable style={styles.refreshButton} onPress={onRefreshPrompt} disabled={!canRefresh}>
-                <Feather name="rotate-cw" size={13} color={theme.colors.textSecondary} />
+              <Pressable
+                style={styles.refreshButton}
+                onPress={onRefreshPrompt}
+                disabled={!canRefresh}
+              >
+                <Feather
+                  name="rotate-cw"
+                  size={13}
+                  color={theme.colors.textSecondary}
+                />
               </Pressable>
             )}
           </View>
@@ -159,33 +208,55 @@ export default function OpenBrainThoughtComposer({
             <View style={styles.formatToolbar}>
               <Pressable
                 style={styles.formatButton}
-                onPress={() => handleFormatPress('**', 'bold')}
+                onPress={() => handleFormatPress("**", "bold")}
                 disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Bold"
                 accessibilityHint="Formats selected text as bold"
               >
-                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>B</Text>
+                <Text
+                  style={[
+                    styles.formatButtonText,
+                    isDisabled && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  B
+                </Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
-                onPress={() => handleFormatPress('*', 'italic')}
+                onPress={() => handleFormatPress("*", "italic")}
                 disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Italic"
                 accessibilityHint="Formats selected text as italic"
               >
-                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>I</Text>
+                <Text
+                  style={[
+                    styles.formatButtonText,
+                    isDisabled && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  I
+                </Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
-                onPress={() => handleFormatPress('__', 'underline')}
+                onPress={() => handleFormatPress("__", "underline")}
                 disabled={isDisabled}
                 accessibilityRole="button"
                 accessibilityLabel="Underline"
                 accessibilityHint="Formats selected text as underlined"
               >
-                <Text style={[styles.formatButtonText, styles.formatButtonTextUnderline, isDisabled && { color: theme.colors.textSecondary }]}>U</Text>
+                <Text
+                  style={[
+                    styles.formatButtonText,
+                    styles.formatButtonTextUnderline,
+                    isDisabled && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  U
+                </Text>
               </Pressable>
               <Pressable
                 style={styles.formatButton}
@@ -195,7 +266,14 @@ export default function OpenBrainThoughtComposer({
                 accessibilityLabel="Bulleted list"
                 accessibilityHint="Formats selected lines as a bulleted list"
               >
-                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>•</Text>
+                <Text
+                  style={[
+                    styles.formatButtonText,
+                    isDisabled && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  •
+                </Text>
               </Pressable>
               <Pressable
                 style={[styles.formatButton, styles.formatButtonWide]}
@@ -205,17 +283,40 @@ export default function OpenBrainThoughtComposer({
                 accessibilityLabel="Numbered list"
                 accessibilityHint="Formats selected lines as a numbered list"
               >
-                <Text style={[styles.formatButtonText, isDisabled && { color: theme.colors.textSecondary }]}>1.</Text>
+                <Text
+                  style={[
+                    styles.formatButtonText,
+                    isDisabled && { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  1.
+                </Text>
               </Pressable>
             </View>
           )}
           {posted ? (
-            <ScrollView style={styles.postedScroll} contentContainerStyle={styles.postedScrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.postedScroll}
+              contentContainerStyle={styles.postedScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.postedBlocks}>
-                {postedThought.hasTitle ? <Text style={styles.postedTitle}>{postedThought.title}</Text> : null}
+                {postedThought.hasTitle ? (
+                  <Text style={styles.postedTitle}>{postedThought.title}</Text>
+                ) : null}
                 {postedThought.blocks.map((block, index) => (
-                  <View key={`posted-thought-block-${index}`} style={block.isQuote ? styles.postedQuoteBlock : null}>
-                    <Text style={[styles.postedText, block.isQuote ? styles.postedQuoteText : null]}>{block.text}</Text>
+                  <View
+                    key={`posted-thought-block-${index}`}
+                    style={block.isQuote ? styles.postedQuoteBlock : null}
+                  >
+                    <Text
+                      style={[
+                        styles.postedText,
+                        block.isQuote ? styles.postedQuoteText : null,
+                      ]}
+                    >
+                      {block.text}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -225,31 +326,68 @@ export default function OpenBrainThoughtComposer({
               value={value}
               onChangeText={onChangeText}
               selection={selection}
-              onSelectionChange={event => setSelection(event.nativeEvent.selection)}
+              onSelectionChange={(event) =>
+                setSelection(event.nativeEvent.selection)
+              }
               placeholder={placeholder}
               placeholderTextColor={theme.colors.textSecondary}
-              style={[styles.input, isMultiline && styles.inputMultiline, isMultiline && { height: clampedInputHeight }]}
+              style={[
+                styles.input,
+                isMultiline && styles.inputMultiline,
+                isMultiline && { height: clampedInputHeight },
+              ]}
               multiline={isMultiline}
               maxLength={maxLength}
-              onContentSizeChange={isMultiline ? event => setContentHeight(event.nativeEvent.contentSize.height) : undefined}
+              onContentSizeChange={
+                isMultiline
+                  ? (event) =>
+                      setContentHeight(event.nativeEvent.contentSize.height)
+                  : undefined
+              }
               scrollEnabled={isMultiline ? shouldScrollInput : undefined}
               autoCapitalize="none"
             />
           )}
-          {posted && <Text style={styles.helperText}>you can't edit or delete this. it's yours now.</Text>}
+          {posted && (
+            <Text style={styles.helperText}>
+              you can't edit or delete this. it's yours now.
+            </Text>
+          )}
         </View>
       </View>
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
-          {shouldShowRemaining && remaining !== null && <Text style={styles.remaining}>{remaining} left</Text>}
+          {shouldShowRemaining && remaining !== null && (
+            <Text style={styles.remaining}>{remaining} left</Text>
+          )}
           <Pressable
             style={[styles.visibilityButton, posted && { opacity: 0.55 }]}
             onPress={onToggleVisibility}
             disabled={posted || !onToggleVisibility}
           >
-            <View style={[styles.toggleTrack, { backgroundColor: trackActive ? theme.colors.accentSoft : 'rgba(255,255,255,0.12)', alignItems: trackActive ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }]}>
-              <View style={[styles.toggleThumb, { backgroundColor: trackActive ? theme.colors.accentStrong : theme.colors.textSecondary }]} />
+            <View
+              style={[
+                styles.toggleTrack,
+                {
+                  backgroundColor: trackActive
+                    ? theme.colors.accentSoft
+                    : "rgba(255,255,255,0.12)",
+                  alignItems: trackActive ? "flex-end" : "flex-start",
+                  paddingHorizontal: 2,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  {
+                    backgroundColor: trackActive
+                      ? theme.colors.accentStrong
+                      : theme.colors.textSecondary,
+                  },
+                ]}
+              />
             </View>
             <Text style={styles.visibilityText}>{visibility}</Text>
           </Pressable>
@@ -259,7 +397,14 @@ export default function OpenBrainThoughtComposer({
           onPress={onSubmit}
           disabled={submitDisabled}
         >
-          <Text style={[styles.buttonText, submitDisabled && { color: theme.colors.textSecondary }]}>{buttonLabel}</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              submitDisabled && { color: theme.colors.textSecondary },
+            ]}
+          >
+            {buttonLabel}
+          </Text>
         </Pressable>
       </View>
       {!!error && <Text style={styles.error}>{error}</Text>}

@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonLayoutStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonLayoutStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   container: { ...commonLayoutStyles.screenBase },
@@ -9,12 +9,12 @@ const styles = StyleSheet.create({
   thoughtScroll: { flex: 1 },
   thoughtScrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 8,
   },
   thoughtCardWrap: {
-    width: '100%',
+    width: "100%",
     maxWidth: 760,
   },
   error: { color: theme.colors.danger },

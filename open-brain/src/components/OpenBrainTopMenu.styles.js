@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonFollowStyles, commonSearchStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonFollowStyles, commonSearchStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   outer: {
@@ -10,9 +10,9 @@ const styles = StyleSheet.create({
   wrap: {
     height: 62,
     paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.bgBase,
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.bgSurface,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingLeft: 16,
   },
   logoText: {
@@ -44,13 +44,13 @@ const styles = StyleSheet.create({
   searchButton: {
     minWidth: 36,
     paddingVertical: 6,
-    alignItems: 'center',
+    alignItems: "center",
   },
   rightActions: {
     minWidth: 72,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
     gap: 12,
   },
   notificationButton: {
@@ -58,12 +58,12 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingVertical: 6,
     paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
   },
   notificationBadge: {
-    position: 'absolute',
+    position: "absolute",
     right: -7,
     top: -2,
     minWidth: 17,
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
     borderRadius: 8.5,
     paddingHorizontal: 4,
     backgroundColor: theme.colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   notificationBadgeText: {
     color: theme.colors.textLight,
@@ -87,9 +87,9 @@ const styles = StyleSheet.create({
     paddingTop: 70,
   },
   dropdownModal: {
-    width: '92%',
+    width: "92%",
     maxWidth: 520,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
     borderWidth: 1,
     borderColor: theme.colors.borderStrong,
     borderRadius: 14,
@@ -97,9 +97,9 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 10,
     backgroundColor: theme.colors.bgSurface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
   },
   searchInput: {
@@ -119,12 +119,12 @@ const styles = StyleSheet.create({
     height: 38,
     paddingHorizontal: 12,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: theme.colors.accent,
   },
   submitButtonFullWidth: {
-    width: '100%',
+    width: "100%",
   },
   submitButtonDisabled: {
     ...commonSearchStyles.submitButtonDisabled,
@@ -133,19 +133,19 @@ const styles = StyleSheet.create({
     ...commonSearchStyles.submitLabel,
   },
   resultsWrap: {
-    width: '100%',
+    width: "100%",
     flexGrow: 0,
   },
   section: {
-    width: '100%',
+    width: "100%",
     paddingTop: 4,
   },
   sectionLabel: {
     ...commonSearchStyles.sectionLabel,
   },
   resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -178,14 +178,14 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   errorText: {
-    width: '100%',
+    width: "100%",
     color: theme.colors.danger,
     fontSize: 12,
     lineHeight: 16,
     fontFamily: theme.fonts.regular,
   },
   emptyText: {
-    width: '100%',
+    width: "100%",
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
@@ -193,8 +193,8 @@ const styles = StyleSheet.create({
   },
   seeMorePressable: {
     margin: 4,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     paddingVertical: 6,
   },
   seeMoreLabel: {
@@ -202,11 +202,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontFamily: theme.fonts.semibold,
-    textAlign: 'center',
-    textDecorationLine: 'underline',
+    textAlign: "center",
+    textDecorationLine: "underline",
   },
   notificationsScroll: {
-    width: '100%',
+    width: "100%",
     marginTop: 2,
     flexGrow: 0,
   },
@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   notificationsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -226,8 +226,8 @@ const styles = StyleSheet.create({
   },
   notificationsMain: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingRight: 10,
   },
   notificationsUnreadDot: {
@@ -247,14 +247,14 @@ const styles = StyleSheet.create({
   notificationsLink: {
     color: theme.colors.accent,
     fontFamily: theme.fonts.semibold,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   notificationsTime: {
     color: theme.colors.textSecondary,
     fontSize: 11,
     lineHeight: 14,
     fontFamily: theme.fonts.regular,
-    textAlign: 'right',
+    textAlign: "right",
     minWidth: 48,
   },
 });

@@ -1,81 +1,103 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
-import { apiRequest } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import { useOpenBrainSearch } from '../hooks/useOpenBrainSearch';
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import OpenBrainTopMenu from "../components/OpenBrainTopMenu";
+import { apiRequest } from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import { useOpenBrainSearch } from "../hooks/useOpenBrainSearch";
 import {
   buildOpenBrainSearchRows,
   normalizeOpenBrainSearchInput,
-} from '../utils/openBrainSearch';
-import { isRequiredFieldPresent } from '../utils/formFields';
-import { sortUsersByQuery } from '../utils/searchRanking';
-import styles from './OpenBrainSearchScreen.styles';
+} from "../utils/openBrainSearch";
+import { isRequiredFieldPresent } from "../utils/formFields";
+import { sortUsersByQuery } from "../utils/searchRanking";
+import styles from "./OpenBrainSearchScreen.styles";
 
 export default function OpenBrainSearchScreen({ token, navigation, route }) {
-  const initialQuery = useMemo(() => String(route?.params?.query || ''), [route?.params?.query]);
-  const {
-    query,
-    setQuery,
-    loading,
-    error,
-    didSearch,
-    results,
-    runSearch,
-  } = useOpenBrainSearch({
-    token,
-    apiRequest,
-    cacheTtlMs: CACHE_TTL_MS.SEARCH,
-    sortUsersByQuery,
-    initialQuery,
-    fallbackErrorMessage: 'Search failed.',
-  });
+  const initialQuery = useMemo(
+    () => String(route?.params?.query || ""),
+    [route?.params?.query],
+  );
+  const { query, setQuery, loading, error, didSearch, results, runSearch } =
+    useOpenBrainSearch({
+      token,
+      apiRequest,
+      cacheTtlMs: CACHE_TTL_MS.SEARCH,
+      sortUsersByQuery,
+      initialQuery,
+      fallbackErrorMessage: "Search failed.",
+    });
   const canSearch = isRequiredFieldPresent(query);
 
   useEffect(() => {
     if (normalizeOpenBrainSearchInput(initialQuery)) runSearch(initialQuery);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery]);
 
-  const openProfile = useCallback(username => {
-    if (!username) return;
-    navigation.navigate('OpenBrainProfile', { username });
-  }, [navigation]);
+  const openProfile = useCallback(
+    (username) => {
+      if (!username) return;
+      navigation.navigate("OpenBrainProfile", { username });
+    },
+    [navigation],
+  );
 
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
-  const searchRows = useMemo(() => buildOpenBrainSearchRows(results), [results]);
-  const keyExtractor = useCallback(item => item.key, []);
-  const renderResultItem = useCallback(({ item }) => {
-    if (item.type === 'section') {
+  const searchRows = useMemo(
+    () => buildOpenBrainSearchRows(results),
+    [results],
+  );
+  const keyExtractor = useCallback((item) => item.key, []);
+  const renderResultItem = useCallback(
+    ({ item }) => {
+      if (item.type === "section") {
+        return (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{item.label}</Text>
+          </View>
+        );
+      }
+      if (item.type === "user") {
+        const user = item.user;
+        return (
+          <Pressable
+            style={styles.resultRow}
+            onPress={() => openProfile(user.username)}
+          >
+            <Text style={styles.resultPrimary}>@{user.username}</Text>
+            <Text style={styles.resultSecondary}>
+              {Number.isInteger(user.streak_count)
+                ? `${user.streak_count} day streak`
+                : "open profile"}
+            </Text>
+          </Pressable>
+        );
+      }
+      const thought = item.thought;
       return (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{item.label}</Text>
-        </View>
-      );
-    }
-    if (item.type === 'user') {
-      const user = item.user;
-      return (
-        <Pressable style={styles.resultRow} onPress={() => openProfile(user.username)}>
-          <Text style={styles.resultPrimary}>@{user.username}</Text>
+        <Pressable
+          style={styles.resultRow}
+          onPress={() => openProfile(thought?.profile?.username)}
+        >
+          <Text style={styles.resultPrimary}>
+            {(thought?.text || "").replace(/\s+/g, " ").slice(0, 160) ||
+              "View thought"}
+          </Text>
           <Text style={styles.resultSecondary}>
-            {Number.isInteger(user.streak_count) ? `${user.streak_count} day streak` : 'open profile'}
+            {thought?.profile?.username
+              ? `by @${thought.profile.username}`
+              : "open profile"}
           </Text>
         </Pressable>
       );
-    }
-    const thought = item.thought;
-    return (
-      <Pressable style={styles.resultRow} onPress={() => openProfile(thought?.profile?.username)}>
-        <Text style={styles.resultPrimary}>
-          {(thought?.text || '').replace(/\s+/g, ' ').slice(0, 160) || 'View thought'}
-        </Text>
-        <Text style={styles.resultSecondary}>
-          {thought?.profile?.username ? `by @${thought.profile.username}` : 'open profile'}
-        </Text>
-      </Pressable>
-    );
-  }, [openProfile]);
+    },
+    [openProfile],
+  );
 
   return (
     <View style={styles.screen}>
@@ -95,15 +117,18 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
             onSubmitEditing={() => runSearch(query)}
           />
           <Pressable
-            style={[styles.submitButton, (loading || !canSearch) && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton,
+              (loading || !canSearch) && styles.submitButtonDisabled,
+            ]}
             onPress={() => runSearch(query)}
             disabled={loading || !canSearch}
           >
-            <Text style={styles.submitLabel}>{loading ? '...' : 'Search'}</Text>
+            <Text style={styles.submitLabel}>{loading ? "..." : "Search"}</Text>
           </Pressable>
         </View>
 
-        {!!error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
         {!error && didSearch && !hasResults && !loading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No matching users or thoughts.</Text>

@@ -1,6 +1,6 @@
-import { Alert, Share } from 'react-native';
-import { apiRequest, invalidateApiCache } from '../api';
-import { buildThoughtSharePayload } from '../share';
+import { Alert, Share } from "react-native";
+import { apiRequest, invalidateApiCache } from "../api";
+import { buildThoughtSharePayload } from "../share";
 
 export async function addThoughtToSecondBrain({
   token,
@@ -9,22 +9,25 @@ export async function addThoughtToSecondBrain({
   exactPaths = [],
   pathPrefixes = [],
 }) {
-  const thoughtText = String(thought?.text || '').trim();
+  const thoughtText = String(thought?.text || "").trim();
   if (!thoughtText) return false;
 
   const thoughtId = thought?.id;
-  const username = String(thought?.profile?.username || thought?.username || 'unknown').trim() || 'unknown';
+  const username =
+    String(
+      thought?.profile?.username || thought?.username || "unknown",
+    ).trim() || "unknown";
   const description = `Thought taken from @${username}:\n\n${thoughtText}`;
 
-  await apiRequest('/entries', {
-    method: 'POST',
+  await apiRequest("/entries", {
+    method: "POST",
     token,
-    body: { description, category: 'thought', tags: ['openbrain'] },
+    body: { description, category: "thought", tags: ["openbrain"] },
   });
 
   if (thoughtId) {
-    await apiRequest('/open-brain/add-to-second-brain-click', {
-      method: 'POST',
+    await apiRequest("/open-brain/add-to-second-brain-click", {
+      method: "POST",
       token,
       body: { thought_id: thoughtId },
     });
@@ -62,9 +65,12 @@ export async function addThoughtToSecondBrainWithAlert({
       exactPaths,
       pathPrefixes,
     });
-    Alert.alert('Added to SecondBrain', 'Thought saved to your SecondBrain.');
+    Alert.alert("Added to SecondBrain", "Thought saved to your SecondBrain.");
   } catch (err) {
-    Alert.alert('Add to SecondBrain', err?.message || 'Unable to save thought.');
+    Alert.alert(
+      "Add to SecondBrain",
+      err?.message || "Unable to save thought.",
+    );
   }
 }
 
@@ -73,13 +79,14 @@ export function groupThoughtsByDay(thoughts, dateFormatter) {
   const todayThoughts = [];
   const pastThoughts = [];
 
-  (thoughts || []).forEach(thought => {
+  (thoughts || []).forEach((thought) => {
     const created = new Date(thought?.created_at);
     const isValidDate = !Number.isNaN(created.getTime());
-    const isToday = isValidDate
-      && created.getFullYear() === today.getFullYear()
-      && created.getMonth() === today.getMonth()
-      && created.getDate() === today.getDate();
+    const isToday =
+      isValidDate &&
+      created.getFullYear() === today.getFullYear() &&
+      created.getMonth() === today.getMonth() &&
+      created.getDate() === today.getDate();
 
     if (isToday) {
       todayThoughts.push(thought);
@@ -91,13 +98,13 @@ export function groupThoughtsByDay(thoughts, dateFormatter) {
   return {
     todayThoughts,
     pastThoughts,
-    todayItems: todayThoughts.map(thought => ({
+    todayItems: todayThoughts.map((thought) => ({
       thought,
-      dateLabel: dateFormatter?.(thought?.created_at) || '',
+      dateLabel: dateFormatter?.(thought?.created_at) || "",
     })),
-    pastItems: pastThoughts.map(thought => ({
+    pastItems: pastThoughts.map((thought) => ({
       thought,
-      dateLabel: dateFormatter?.(thought?.created_at) || '',
+      dateLabel: dateFormatter?.(thought?.created_at) || "",
     })),
   };
 }
@@ -105,31 +112,40 @@ export function groupThoughtsByDay(thoughts, dateFormatter) {
 export function buildThoughtSectionRows({
   todayItems = [],
   pastItems = [],
-  todaySectionId = 'section-today',
-  pastSectionId = 'section-past',
+  todaySectionId = "section-today",
+  pastSectionId = "section-past",
   todaySectionTitle = "Today's Thoughts",
-  pastSectionTitle = 'Past Thoughts',
+  pastSectionTitle = "Past Thoughts",
   mapThoughtItem,
 }) {
-  const normalizeThoughtItem = typeof mapThoughtItem === 'function'
-    ? mapThoughtItem
-    : ({ thought, dateLabel }) => ({ thought, dateLabel });
+  const normalizeThoughtItem =
+    typeof mapThoughtItem === "function"
+      ? mapThoughtItem
+      : ({ thought, dateLabel }) => ({ thought, dateLabel });
   const rows = [];
 
   if (todayItems.length > 0) {
-    rows.push({ type: 'section', id: todaySectionId, title: todaySectionTitle });
-    todayItems.forEach(item => rows.push({
-      type: 'thought',
-      ...normalizeThoughtItem(item),
-    }));
+    rows.push({
+      type: "section",
+      id: todaySectionId,
+      title: todaySectionTitle,
+    });
+    todayItems.forEach((item) =>
+      rows.push({
+        type: "thought",
+        ...normalizeThoughtItem(item),
+      }),
+    );
   }
 
   if (pastItems.length > 0) {
-    rows.push({ type: 'section', id: pastSectionId, title: pastSectionTitle });
-    pastItems.forEach(item => rows.push({
-      type: 'thought',
-      ...normalizeThoughtItem(item),
-    }));
+    rows.push({ type: "section", id: pastSectionId, title: pastSectionTitle });
+    pastItems.forEach((item) =>
+      rows.push({
+        type: "thought",
+        ...normalizeThoughtItem(item),
+      }),
+    );
   }
 
   return rows;

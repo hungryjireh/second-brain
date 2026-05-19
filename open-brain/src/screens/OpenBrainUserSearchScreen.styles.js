@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonLayoutStyles, commonSearchStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonLayoutStyles, commonSearchStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   screen: {
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingVertical: 12,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.colors.accent,
   },
   buttonDisabled: {

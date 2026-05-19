@@ -1,6 +1,11 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonDropdownStyles, commonFormCompositions, commonFormPrimitives, commonStatusStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import {
+  commonDropdownStyles,
+  commonFormCompositions,
+  commonFormPrimitives,
+  commonStatusStyles,
+} from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   headerSection: {
@@ -117,7 +122,7 @@ const styles = StyleSheet.create({
     ...commonFormCompositions.secondaryRaisedButtonText,
   },
   uploadButton: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: theme.colors.bgRaised,
     borderColor: theme.colors.border,
     borderWidth: 1,
@@ -141,8 +146,8 @@ const styles = StyleSheet.create({
   },
   confirmModalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   confirmModalBlur: {
@@ -152,7 +157,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   confirmModalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 360,
     borderRadius: 18,
     borderWidth: 1,
@@ -181,8 +186,8 @@ const styles = StyleSheet.create({
   },
   confirmModalActions: {
     marginTop: 6,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
   },
   confirmModalButton: {

@@ -1,6 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
-import { Text } from 'react-native';
-import SwipeToDeleteRow from '../SwipeToDeleteRow';
+import { fireEvent, render } from "@testing-library/react-native";
+import { Text } from "react-native";
+import SwipeToDeleteRow from "../SwipeToDeleteRow";
 
 const styles = {
   swipeRow: {},
@@ -10,8 +10,8 @@ const styles = {
   swipeCardWrap: {},
 };
 
-describe('SwipeToDeleteRow', () => {
-  it('renders child content and fires delete action', () => {
+describe("SwipeToDeleteRow", () => {
+  it("renders child content and fires delete action", () => {
     const onOpen = jest.fn();
     const onActionPress = jest.fn();
 
@@ -26,11 +26,11 @@ describe('SwipeToDeleteRow', () => {
         styles={styles}
       >
         <Text>Row content</Text>
-      </SwipeToDeleteRow>
+      </SwipeToDeleteRow>,
     );
 
-    expect(getByText('Row content')).toBeTruthy();
-    fireEvent.press(getByTestId('entry-swipe-delete-42'));
+    expect(getByText("Row content")).toBeTruthy();
+    fireEvent.press(getByTestId("entry-swipe-delete-42"));
     expect(onActionPress).toHaveBeenCalledTimes(1);
   });
 });

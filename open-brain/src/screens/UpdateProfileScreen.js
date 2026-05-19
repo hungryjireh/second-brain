@@ -1,54 +1,63 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { apiRequest, invalidateApiCache } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { BlurView } from "expo-blur";
+import { apiRequest, invalidateApiCache } from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import OpenBrainSettingsLayout from "../components/OpenBrainSettingsLayout";
 import {
   pickAndValidateProfileImage,
   uploadProfileImageAndGetPublicUrl,
-} from '../utils/profileImageUploadUtils';
-import TimezoneDropdown from '../components/TimezoneDropdown';
-import { theme } from '../theme';
-import styles from './UpdateProfileScreenStyles';
+} from "../utils/profileImageUploadUtils";
+import TimezoneDropdown from "../components/TimezoneDropdown";
+import { theme } from "../theme";
+import styles from "./UpdateProfileScreenStyles";
 
 export default function UpdateProfileScreen({ token, navigation }) {
-  const defaultTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore', []);
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const defaultTimezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Singapore",
+    [],
+  );
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [timezone, setTimezone] = useState(defaultTimezone);
   const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [canChangeUsername, setCanChangeUsername] = useState(false);
-  const [originalUsername, setOriginalUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState("");
   const [showUsernameConfirm, setShowUsernameConfirm] = useState(false);
-  const [profileId, setProfileId] = useState('');
+  const [profileId, setProfileId] = useState("");
   const [checkingUsername, setCheckingUsername] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
-    setError('');
+    setError("");
     try {
-      const data = await apiRequest('/open-brain/profile', { token, cache: { ttlMs: CACHE_TTL_MS.PROFILE } });
-      const nextUsername = String(data.profile?.username || '');
+      const data = await apiRequest("/open-brain/profile", {
+        token,
+        cache: { ttlMs: CACHE_TTL_MS.PROFILE },
+      });
+      const nextUsername = String(data.profile?.username || "");
       setUsername(nextUsername);
       setOriginalUsername(nextUsername);
-      setProfileId(String(data.profile?.id || ''));
-      setBio(String(data.profile?.bio || ''));
-      setAvatarUrl(String(data.profile?.avatar_url || ''));
+      setProfileId(String(data.profile?.id || ""));
+      setBio(String(data.profile?.bio || ""));
+      setAvatarUrl(String(data.profile?.avatar_url || ""));
       setTimezone(String(data.profile?.timezone || defaultTimezone));
       setCanChangeUsername(Boolean(data.profile?.can_change_username));
     } catch (err) {
-      if (String(err.message).toLowerCase().includes('404') || String(err.message).toLowerCase().includes('not found')) {
-        navigation.replace('CreateOpenBrainProfile');
+      if (
+        String(err.message).toLowerCase().includes("404") ||
+        String(err.message).toLowerCase().includes("not found")
+      ) {
+        navigation.replace("CreateOpenBrainProfile");
         return;
       }
-      setError(err.message || 'Failed to load your profile.');
+      setError(err.message || "Failed to load your profile.");
     } finally {
       setLoading(false);
     }
@@ -60,8 +69,8 @@ export default function UpdateProfileScreen({ token, navigation }) {
 
   async function handleUploadAvatar() {
     if (uploadingAvatar || saving) return;
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       const selectedImage = await pickAndValidateProfileImage();
@@ -77,9 +86,9 @@ export default function UpdateProfileScreen({ token, navigation }) {
         username,
       });
       setAvatarUrl(publicUrl);
-      setSuccess('Photo uploaded. Save changes to apply it to your profile.');
+      setSuccess("Photo uploaded. Save changes to apply it to your profile.");
     } catch (err) {
-      setError(err.message || 'Failed to upload profile photo.');
+      setError(err.message || "Failed to upload profile photo.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -89,28 +98,38 @@ export default function UpdateProfileScreen({ token, navigation }) {
 
   async function isUsernameAvailable(nextUsername) {
     try {
-      const response = await apiRequest(`/open-brain/profile?username=${encodeURIComponent(nextUsername)}`, {
-        token,
-        cache: { enabled: false },
-      });
-      const matchingProfileId = String(response?.profile?.id || '').trim();
+      const response = await apiRequest(
+        `/open-brain/profile?username=${encodeURIComponent(nextUsername)}`,
+        {
+          token,
+          cache: { enabled: false },
+        },
+      );
+      const matchingProfileId = String(response?.profile?.id || "").trim();
       if (!matchingProfileId) return true;
       return matchingProfileId === profileId;
     } catch (err) {
-      if (String(err?.message || '').includes('404')) return true;
+      if (String(err?.message || "").includes("404")) return true;
       throw err;
     }
   }
 
   async function submitProfileUpdate() {
-    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar || checkingUsername) return;
+    if (
+      !username.trim() ||
+      !timezone.trim() ||
+      saving ||
+      uploadingAvatar ||
+      checkingUsername
+    )
+      return;
     const nextUsername = username.trim();
     setSaving(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     try {
-      await apiRequest('/open-brain/profile', {
-        method: 'PATCH',
+      await apiRequest("/open-brain/profile", {
+        method: "PATCH",
         token,
         body: {
           username: nextUsername,
@@ -121,34 +140,43 @@ export default function UpdateProfileScreen({ token, navigation }) {
       });
       await invalidateApiCache({
         token,
-        exactPaths: ['/open-brain/profile'],
-        pathPrefixes: ['/open-brain/feed'],
+        exactPaths: ["/open-brain/profile"],
+        pathPrefixes: ["/open-brain/feed"],
       });
       setUsername(nextUsername);
       setOriginalUsername(nextUsername);
       if (usernameChanged) setCanChangeUsername(false);
-      setSuccess('Profile updated successfully.');
+      setSuccess("Profile updated successfully.");
     } catch (err) {
-      setError(err.message || 'Failed to update your profile.');
+      setError(err.message || "Failed to update your profile.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleUpdateProfile() {
-    if (!username.trim() || !timezone.trim() || saving || uploadingAvatar || checkingUsername) return;
+    if (
+      !username.trim() ||
+      !timezone.trim() ||
+      saving ||
+      uploadingAvatar ||
+      checkingUsername
+    )
+      return;
     if (canChangeUsername && usernameChanged) {
       setCheckingUsername(true);
-      setError('');
-      setSuccess('');
+      setError("");
+      setSuccess("");
       try {
         const available = await isUsernameAvailable(username.trim());
         if (!available) {
-          setError('That username is already taken. Please choose another one.');
+          setError(
+            "That username is already taken. Please choose another one.",
+          );
           return;
         }
       } catch (err) {
-        setError(err.message || 'Failed to verify username availability.');
+        setError(err.message || "Failed to verify username availability.");
         return;
       } finally {
         setCheckingUsername(false);
@@ -170,7 +198,7 @@ export default function UpdateProfileScreen({ token, navigation }) {
         token={token}
         navigation={navigation}
         backLabel="Back to settings"
-        onBackPress={() => navigation.navigate('OpenBrainSettings')}
+        onBackPress={() => navigation.navigate("OpenBrainSettings")}
         title="Profile settings"
         copy="Edit how people see you on OpenBrain."
         headerStyle={styles.headerSection}
@@ -193,12 +221,17 @@ export default function UpdateProfileScreen({ token, navigation }) {
                 onChangeText={setUsername}
                 placeholder="e.g. jireh"
                 placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, !canChangeUsername && styles.inputDisabled]}
+                style={[
+                  styles.input,
+                  !canChangeUsername && styles.inputDisabled,
+                ]}
                 maxLength={24}
                 autoCapitalize="none"
               />
               <Text style={styles.fieldHint}>
-                {canChangeUsername ? 'You can change your username once.' : 'You already used your one username change.'}
+                {canChangeUsername
+                  ? "You can change your username once."
+                  : "You already used your one username change."}
               </Text>
               <Text style={[styles.label, styles.bioLabel]}>Bio</Text>
               <TextInput
@@ -217,17 +250,32 @@ export default function UpdateProfileScreen({ token, navigation }) {
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Profile photo</Text>
               <Pressable
-                style={[styles.uploadButton, uploadingAvatar && styles.buttonDisabled]}
+                style={[
+                  styles.uploadButton,
+                  uploadingAvatar && styles.buttonDisabled,
+                ]}
                 onPress={handleUploadAvatar}
                 disabled={uploadingAvatar || saving}
               >
-                <Text style={[styles.uploadButtonText, uploadingAvatar && styles.buttonDisabledText]}>
-                  {uploadingAvatar ? 'Uploading photo...' : 'Upload from device'}
+                <Text
+                  style={[
+                    styles.uploadButtonText,
+                    uploadingAvatar && styles.buttonDisabledText,
+                  ]}
+                >
+                  {uploadingAvatar
+                    ? "Uploading photo..."
+                    : "Upload from device"}
                 </Text>
               </Pressable>
             </View>
 
-            <View style={[styles.sectionCard, timezoneMenuOpen && styles.sectionCardElevated]}>
+            <View
+              style={[
+                styles.sectionCard,
+                timezoneMenuOpen && styles.sectionCardElevated,
+              ]}
+            >
               <Text style={styles.sectionTitle}>Regional settings</Text>
               <Text style={styles.label}>Timezone</Text>
               <View style={styles.timezoneDropdownWrapper}>
@@ -244,9 +292,11 @@ export default function UpdateProfileScreen({ token, navigation }) {
                     dropdownListContent: styles.timezoneDropdownListContent,
                     searchInput: styles.timezoneSearchInput,
                     dropdownOption: styles.timezoneDropdownOption,
-                    dropdownOptionSelected: styles.timezoneDropdownOptionSelected,
+                    dropdownOptionSelected:
+                      styles.timezoneDropdownOptionSelected,
                     dropdownOptionText: styles.timezoneDropdownOptionText,
-                    dropdownOptionTextSelected: styles.timezoneDropdownOptionTextSelected,
+                    dropdownOptionTextSelected:
+                      styles.timezoneDropdownOptionTextSelected,
                     noResults: styles.timezoneNoResults,
                   }}
                 />
@@ -258,20 +308,46 @@ export default function UpdateProfileScreen({ token, navigation }) {
 
             <View style={styles.actionsRow}>
               <Pressable
-                style={[styles.primaryButton, (saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabled]}
+                style={[
+                  styles.primaryButton,
+                  (saving ||
+                    checkingUsername ||
+                    uploadingAvatar ||
+                    !username.trim() ||
+                    !timezone.trim()) &&
+                    styles.buttonDisabled,
+                ]}
                 onPress={handleUpdateProfile}
-                disabled={saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()}
+                disabled={
+                  saving ||
+                  checkingUsername ||
+                  uploadingAvatar ||
+                  !username.trim() ||
+                  !timezone.trim()
+                }
               >
                 <Text
                   style={[
                     styles.primaryButtonText,
-                    (saving || checkingUsername || uploadingAvatar || !username.trim() || !timezone.trim()) && styles.buttonDisabledText,
+                    (saving ||
+                      checkingUsername ||
+                      uploadingAvatar ||
+                      !username.trim() ||
+                      !timezone.trim()) &&
+                      styles.buttonDisabledText,
                   ]}
                 >
-                  {saving ? 'Saving profile...' : (checkingUsername ? 'Checking username...' : 'Save changes')}
+                  {saving
+                    ? "Saving profile..."
+                    : checkingUsername
+                      ? "Checking username..."
+                      : "Save changes"}
                 </Text>
               </Pressable>
-              <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainSettings')}>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate("OpenBrainSettings")}
+              >
                 <Text style={styles.secondaryButtonText}>Back to settings</Text>
               </Pressable>
             </View>
@@ -285,22 +361,45 @@ export default function UpdateProfileScreen({ token, navigation }) {
         onRequestClose={() => setShowUsernameConfirm(false)}
       >
         <View style={styles.confirmModalOverlay}>
-          <BlurView intensity={30} tint="dark" style={styles.confirmModalBlur} />
-          <Pressable style={styles.confirmModalBackdrop} onPress={() => setShowUsernameConfirm(false)} />
+          <BlurView
+            intensity={30}
+            tint="dark"
+            style={styles.confirmModalBlur}
+          />
+          <Pressable
+            style={styles.confirmModalBackdrop}
+            onPress={() => setShowUsernameConfirm(false)}
+          />
           <View style={styles.confirmModalCard}>
-            <Text style={styles.confirmModalTitle}>Confirm username change</Text>
+            <Text style={styles.confirmModalTitle}>
+              Confirm username change
+            </Text>
             <Text style={styles.confirmModalBody}>
-              Your username will change to @{username.trim()}. You can only change your username once.
+              Your username will change to @{username.trim()}. You can only
+              change your username once.
             </Text>
             <View style={styles.confirmModalActions}>
-              <Pressable style={styles.confirmModalButton} onPress={() => setShowUsernameConfirm(false)}>
+              <Pressable
+                style={styles.confirmModalButton}
+                onPress={() => setShowUsernameConfirm(false)}
+              >
                 <Text style={styles.confirmModalButtonText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.confirmModalButton, styles.confirmModalButtonPrimary]}
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonPrimary,
+                ]}
                 onPress={handleConfirmUsernameChange}
               >
-                <Text style={[styles.confirmModalButtonText, styles.confirmModalButtonTextPrimary]}>Confirm</Text>
+                <Text
+                  style={[
+                    styles.confirmModalButtonText,
+                    styles.confirmModalButtonTextPrimary,
+                  ]}
+                >
+                  Confirm
+                </Text>
               </Pressable>
             </View>
           </View>

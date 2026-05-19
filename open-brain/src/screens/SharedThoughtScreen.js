@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
-import { apiRequest } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import OpenBrainBottomNav from '../components/OpenBrainBottomNav';
-import OpenBrainTopMenu from '../components/OpenBrainTopMenu';
-import OpenBrainThoughtCard from '../components/OpenBrainThoughtCard';
-import OpenBrainThoughtComposer from '../components/OpenBrainThoughtComposer';
-import { formatPublishedDateTime } from '../utils/dateUtils';
-import { isRequiredFieldPresent, normalizeRequiredField } from '../utils/formFields';
-import styles from './SharedThoughtScreen.styles';
+import { useEffect, useState } from "react";
+import { View, Text, ScrollView } from "react-native";
+import { apiRequest } from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import OpenBrainBottomNav from "../components/OpenBrainBottomNav";
+import OpenBrainTopMenu from "../components/OpenBrainTopMenu";
+import OpenBrainThoughtCard from "../components/OpenBrainThoughtCard";
+import OpenBrainThoughtComposer from "../components/OpenBrainThoughtComposer";
+import { formatPublishedDateTime } from "../utils/dateUtils";
+import {
+  isRequiredFieldPresent,
+  normalizeRequiredField,
+} from "../utils/formFields";
+import styles from "./SharedThoughtScreen.styles";
 
 export default function SharedThoughtScreen({ navigation, route, token }) {
-  const [slug, setSlug] = useState('');
+  const [slug, setSlug] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
   const slugFromRoute = normalizeRequiredField(route?.params?.slug);
   const canLoadSlug = isRequiredFieldPresent(slug);
@@ -22,12 +25,15 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
     const normalizedSlug = normalizeRequiredField(nextSlug);
     if (!normalizedSlug) return;
     setLoading(true);
-    setError('');
+    setError("");
     setPayload(null);
     try {
-      const data = await apiRequest(`/open-brain/shared-thought?slug=${encodeURIComponent(normalizedSlug)}`, {
-        cache: { ttlMs: CACHE_TTL_MS.SHARED_THOUGHT },
-      });
+      const data = await apiRequest(
+        `/open-brain/shared-thought?slug=${encodeURIComponent(normalizedSlug)}`,
+        {
+          cache: { ttlMs: CACHE_TTL_MS.SHARED_THOUGHT },
+        },
+      );
       setPayload(data);
     } catch (err) {
       setError(err.message);
@@ -47,32 +53,40 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
     if (!username) return;
     if (navigation?.navigate) {
       if (!token) {
-        navigation.navigate('Login');
+        navigation.navigate("Login");
         return;
       }
-      navigation.navigate('OpenBrainProfile', { username });
+      navigation.navigate("OpenBrainProfile", { username });
       return;
     }
-    if (typeof window !== 'undefined' && window.location?.origin) {
+    if (typeof window !== "undefined" && window.location?.origin) {
       window.location.href = `${window.location.origin}/open-brain/u/${encodeURIComponent(username)}`;
     }
   }
 
   const sharedThoughtItem = payload?.thought
     ? {
-      id: payload.thought.id || payload.thought.slug || slugFromRoute || 'shared-thought',
-      text: payload.thought.text || '',
-      created_at: payload.thought.created_at,
-      user_id: payload.author?.id || payload.author?.user_id || payload.author?.username || 'shared-author',
-      profile: {
-        username: payload.author?.username || 'anonymous',
-        avatar_url: payload.author?.avatar_url || '',
-        streak_count: payload.author?.streak_count,
-        save_count: payload.author?.save_count,
-        is_self: false,
-        is_following: false,
-      },
-    }
+        id:
+          payload.thought.id ||
+          payload.thought.slug ||
+          slugFromRoute ||
+          "shared-thought",
+        text: payload.thought.text || "",
+        created_at: payload.thought.created_at,
+        user_id:
+          payload.author?.id ||
+          payload.author?.user_id ||
+          payload.author?.username ||
+          "shared-author",
+        profile: {
+          username: payload.author?.username || "anonymous",
+          avatar_url: payload.author?.avatar_url || "",
+          streak_count: payload.author?.streak_count,
+          save_count: payload.author?.save_count,
+          is_self: false,
+          is_following: false,
+        },
+      }
     : null;
 
   return (
@@ -84,7 +98,7 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
             value={slug}
             onChangeText={setSlug}
             placeholder="share slug"
-            buttonLabel={loading ? 'Loading...' : 'Load thought'}
+            buttonLabel={loading ? "Loading..." : "Load thought"}
             onSubmit={load}
             disabled={loading || !canLoadSlug}
           />
@@ -101,7 +115,9 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
                 <OpenBrainThoughtCard
                   item={sharedThoughtItem}
                   token={token}
-                  onOpenProfile={payload?.author?.username ? openAuthorProfile : undefined}
+                  onOpenProfile={
+                    payload?.author?.username ? openAuthorProfile : undefined
+                  }
                   date={formatPublishedDateTime(payload.thought.created_at)}
                 />
               </View>
@@ -109,7 +125,10 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
           </View>
         ) : null}
       </View>
-      <OpenBrainBottomNav navigation={navigation} currentRoute="SharedThought" />
+      <OpenBrainBottomNav
+        navigation={navigation}
+        currentRoute="SharedThought"
+      />
     </View>
   );
 }

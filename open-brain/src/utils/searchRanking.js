@@ -1,6 +1,6 @@
 export function rankUsernameMatch(username, query) {
-  const source = String(username || '').toLowerCase();
-  const needle = String(query || '').toLowerCase();
+  const source = String(username || "").toLowerCase();
+  const needle = String(query || "").toLowerCase();
   if (!source || !needle) return Number.NEGATIVE_INFINITY;
   if (source === needle) return 1000;
   if (source.startsWith(needle)) return 800 - (source.length - needle.length);
@@ -24,8 +24,8 @@ export function rankUsernameMatch(username, query) {
 
 export function sortUsersByQuery(users, query) {
   return [...users]
-    .map(user => ({ user, score: rankUsernameMatch(user?.username, query) }))
-    .filter(item => item.score > Number.NEGATIVE_INFINITY)
+    .map((user) => ({ user, score: rankUsernameMatch(user?.username, query) }))
+    .filter((item) => item.score > Number.NEGATIVE_INFINITY)
     .sort((a, b) => b.score - a.score)
-    .map(item => item.user);
+    .map((item) => item.user);
 }

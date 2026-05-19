@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonFollowStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonFollowStyles } from "../styles/commonStyles";
 
 const styles = StyleSheet.create({
   container: {
@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgBase,
   },
   headerCard: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 0,
     borderRadius: 0,
     paddingHorizontal: 0,
@@ -30,8 +30,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   profileRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
   },
   avatar: {
@@ -51,14 +51,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarFallbackText: {
     color: theme.colors.textLight,
     fontFamily: theme.fonts.bold,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   profileText: {
     flex: 1,
@@ -78,14 +78,14 @@ const styles = StyleSheet.create({
   },
   usernamePlaceholder: {
     width: 160,
-    maxWidth: '90%',
+    maxWidth: "90%",
     height: 24,
     borderRadius: 8,
     backgroundColor: theme.colors.bgHover,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   streakPill: {
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     ...commonFollowStyles.buttonBase,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   followActiveButton: {
     ...commonFollowStyles.buttonActive,
@@ -143,12 +143,12 @@ const styles = StyleSheet.create({
   empty: {
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.regular,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   error: {
     color: theme.colors.danger,

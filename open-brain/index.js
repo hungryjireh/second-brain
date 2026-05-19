@@ -1,8 +1,8 @@
-import { registerRootComponent } from 'expo';
+import { registerRootComponent } from "expo";
 
-import App from './App';
-if (typeof document !== 'undefined') {
-  require('./src/global.css');
+import App from "./App";
+if (typeof document !== "undefined") {
+  require("./src/global.css");
 }
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

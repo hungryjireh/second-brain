@@ -1,10 +1,10 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
 
 const styles = StyleSheet.create({
   sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginTop: 10,
     marginBottom: 8,
@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
     fontSize: 11,
     letterSpacing: 0.72,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   sectionHeaderLine: {
     flex: 1,

@@ -1,4 +1,4 @@
-import { theme } from '../theme';
+import { theme } from "../theme";
 
 export const commonFollowStyles = {
   buttonBase: {
@@ -43,30 +43,30 @@ export const commonFormPrimitives = {
     paddingVertical: 11,
   },
   primaryButtonBase: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     paddingVertical: 11,
     paddingHorizontal: 14,
-    width: '100%',
+    width: "100%",
   },
   primaryButtonTextBase: {
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   secondaryButtonBase: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 10,
     borderWidth: 1,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    width: '100%',
+    width: "100%",
   },
   secondaryButtonTextBase: {
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
   },
   actionsColumn: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 10,
     marginTop: 4,
     zIndex: 1,
@@ -106,12 +106,12 @@ export const commonDropdownStyles = {
     borderRadius: 10,
     minHeight: 44,
     paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexDirection: "row",
   },
   wrapper: {
-    position: 'relative',
+    position: "relative",
     zIndex: 40,
   },
   text: {
@@ -128,7 +128,7 @@ export const commonDropdownStyles = {
     color: theme.colors.textSecondary,
   },
   list: {
-    position: 'absolute',
+    position: "absolute",
     top: 48,
     left: 0,
     right: 0,
@@ -207,7 +207,7 @@ export const commonSearchStyles = {
     color: theme.colors.textSecondary,
     fontSize: 12,
     lineHeight: 14,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.4,
     fontFamily: theme.fonts.semibold,
     marginBottom: 6,

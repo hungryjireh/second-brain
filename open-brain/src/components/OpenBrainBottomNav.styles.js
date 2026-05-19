@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
 
 const styles = StyleSheet.create({
   wrap: {
@@ -9,7 +9,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     padding: 6,
     borderWidth: 1,
@@ -20,12 +20,12 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
+    borderColor: "transparent",
+    backgroundColor: "transparent",
     borderRadius: 14,
     paddingVertical: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 5,
   },
   buttonActive: {

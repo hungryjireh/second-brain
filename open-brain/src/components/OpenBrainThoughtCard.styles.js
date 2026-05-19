@@ -1,6 +1,6 @@
-import { StyleSheet } from 'react-native';
-import { theme } from '../theme';
-import { commonFollowStyles } from '../styles/commonStyles';
+import { StyleSheet } from "react-native";
+import { theme } from "../theme";
+import { commonFollowStyles } from "../styles/commonStyles";
 
 const absoluteFill = {
   ...StyleSheet.absoluteFillObject,
@@ -13,7 +13,7 @@ const pillActionButton = {
   borderColor: theme.colors.textSecondary,
   paddingHorizontal: 12,
   paddingVertical: 7,
-  position: 'relative',
+  position: "relative",
 };
 
 const secondaryMetaButtonText = {
@@ -23,8 +23,8 @@ const secondaryMetaButtonText = {
 };
 
 const hoverTooltip = {
-  position: 'absolute',
-  bottom: '100%',
+  position: "absolute",
+  bottom: "100%",
   left: 0,
   marginBottom: 8,
   backgroundColor: theme.colors.surfaceOverlay,
@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 20,
   },
@@ -65,8 +65,8 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarFallbackText: {
     color: theme.colors.textPrimary,
@@ -78,21 +78,21 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
   },
   metricGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   metricInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    position: 'relative',
+    position: "relative",
   },
   metricCount: {
     color: theme.colors.textSecondary,
@@ -182,11 +182,11 @@ const styles = StyleSheet.create({
   },
   markdownUnderline: {
     color: theme.colors.textWarm,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   markdownItalic: {
     color: theme.colors.textWarm,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   markdownCode: {
     color: theme.colors.textPrimary,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   markdownLink: {
     color: theme.colors.accent,
-    textDecorationLine: 'underline',
+    textDecorationLine: "underline",
   },
   markdownCodeBlock: {
     borderRadius: 8,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   markdownCodeScrollContent: {
-    minWidth: '100%',
+    minWidth: "100%",
   },
   markdownCodeBlockText: {
     color: theme.colors.textPrimary,
@@ -216,8 +216,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   markdownListItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 6,
   },
   markdownListBullet: {
@@ -241,10 +241,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.white15,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   markdownTableRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   markdownTableHeaderRow: {
     backgroundColor: theme.colors.white03,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
   },
   quoteText: {
-    fontStyle: 'italic',
+    fontStyle: "italic",
     color: theme.colors.textSecondary,
   },
   meta: {
@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   standaloneAuthorRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: 4,
     marginBottom: 4,
   },
@@ -322,15 +322,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dateActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
     marginBottom: 6,
   },
   followButton: {
     ...commonFollowStyles.buttonBase,
-    position: 'relative',
+    position: "relative",
   },
   followButtonActive: {
     ...commonFollowStyles.buttonActive,
@@ -345,31 +345,31 @@ const styles = StyleSheet.create({
     ...commonFollowStyles.textFollowing,
   },
   reactions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginTop: 20,
   },
   reactionsCompact: {
-    flexWrap: 'nowrap',
+    flexWrap: "nowrap",
     gap: 6,
-    alignItems: 'center',
-    width: '100%',
+    alignItems: "center",
+    width: "100%",
   },
   actionsGroup: {
-    marginLeft: 'auto',
-    flexDirection: 'row',
+    marginLeft: "auto",
+    flexDirection: "row",
     gap: 10,
   },
   actionsBlock: {
-    marginLeft: 'auto',
-    alignItems: 'flex-end',
+    marginLeft: "auto",
+    alignItems: "flex-end",
     gap: 8,
   },
   actionsBlockCompact: {
     gap: 0,
   },
-  mobileActionDrawerWrap: { position: 'relative', alignItems: 'flex-end' },
+  mobileActionDrawerWrap: { position: "relative", alignItems: "flex-end" },
   mobileActionTrigger: {
     borderWidth: 0,
     borderRadius: 8,
@@ -377,8 +377,8 @@ const styles = StyleSheet.create({
     minHeight: 26,
     paddingHorizontal: 6,
     paddingVertical: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: theme.colors.white09,
   },
   mobileActionTriggerText: {
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   mobileActionDrawer: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 3,
     minWidth: 170,
     borderRadius: 10,
@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
   },
   confirmModalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   confirmModalBlur: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     ...absoluteFill,
   },
   confirmModalCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 360,
     borderRadius: 18,
     borderWidth: 1,
@@ -449,8 +449,8 @@ const styles = StyleSheet.create({
   },
   confirmModalActions: {
     marginTop: 6,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
   },
   confirmModalButton: {
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   reactionTextCompact: {
     fontSize: 10,
     lineHeight: 13,
-    textAlign: 'center',
+    textAlign: "center",
   },
   reactionTextActive: {
     color: theme.colors.textPrimary,
@@ -537,8 +537,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   actionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   shareButtonText: {

@@ -1,33 +1,36 @@
-import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
-import { apiRequest } from '../api';
-import OpenBrainSettingsLayout from '../components/OpenBrainSettingsLayout';
-import { theme } from '../theme';
-import { isRequiredFieldPresent, normalizeRequiredField } from '../utils/formFields';
-import styles from './ResetPasswordScreen.styles';
+import { useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
+import { apiRequest } from "../api";
+import OpenBrainSettingsLayout from "../components/OpenBrainSettingsLayout";
+import { theme } from "../theme";
+import {
+  isRequiredFieldPresent,
+  normalizeRequiredField,
+} from "../utils/formFields";
+import styles from "./ResetPasswordScreen.styles";
 
 export default function ResetPasswordScreen({ token, navigation }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const normalizedEmail = normalizeRequiredField(email);
   const canSubmit = isRequiredFieldPresent(email);
 
   async function handleSendReset() {
     if (!canSubmit || sending) return;
     setSending(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     try {
-      await apiRequest('/auth/reset-password', {
-        method: 'POST',
+      await apiRequest("/auth/reset-password", {
+        method: "POST",
         token,
         body: { email: normalizedEmail },
       });
-      setSuccess('If that email exists, a password reset link has been sent.');
+      setSuccess("If that email exists, a password reset link has been sent.");
     } catch (err) {
-      setError(err.message || 'Unable to send password reset email.');
+      setError(err.message || "Unable to send password reset email.");
     } finally {
       setSending(false);
     }
@@ -38,7 +41,7 @@ export default function ResetPasswordScreen({ token, navigation }) {
       token={token}
       navigation={navigation}
       backLabel="Back to settings"
-      onBackPress={() => navigation.navigate('OpenBrainSettings')}
+      onBackPress={() => navigation.navigate("OpenBrainSettings")}
       title="Reset your password"
       copy="Enter your account email and we'll send a reset link."
       headerStyle={styles.header}
@@ -58,16 +61,27 @@ export default function ResetPasswordScreen({ token, navigation }) {
 
         <View style={styles.actionsRow}>
           <Pressable
-            style={[styles.primaryButton, (sending || !canSubmit) && styles.buttonDisabled]}
+            style={[
+              styles.primaryButton,
+              (sending || !canSubmit) && styles.buttonDisabled,
+            ]}
             onPress={handleSendReset}
             disabled={sending || !canSubmit}
           >
-            <Text style={[styles.primaryButtonText, (sending || !canSubmit) && styles.buttonDisabledText]}>
-              {sending ? 'Sending reset link...' : 'Send reset link'}
+            <Text
+              style={[
+                styles.primaryButtonText,
+                (sending || !canSubmit) && styles.buttonDisabledText,
+              ]}
+            >
+              {sending ? "Sending reset link..." : "Send reset link"}
             </Text>
           </Pressable>
 
-          <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('OpenBrainSettings')}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate("OpenBrainSettings")}
+          >
             <Text style={styles.secondaryButtonText}>Back to settings</Text>
           </Pressable>
         </View>
