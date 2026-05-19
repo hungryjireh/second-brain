@@ -1,8 +1,9 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import fs from "node:fs";
 import path from "node:path";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import SecondBrainScreen from "../SecondBrainScreen";
-import { apiRequest } from "../../api";
+import { apiRequest, isLikelyOfflineError } from "../../api";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
@@ -20,6 +21,10 @@ describe("SecondBrainScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     apiRequest.mockImplementation(async () => ({}));
+    isLikelyOfflineError.mockImplementation(() => false);
+    if (typeof AsyncStorage?.clear === "function") {
+      AsyncStorage.clear();
+    }
     global.fetch = jest.fn();
   });
 
@@ -381,9 +386,50 @@ describe("SecondBrainScreen", () => {
     const screenPath = path.resolve(__dirname, "../SecondBrainScreen.js");
     const source = fs.readFileSync(screenPath, "utf8");
 
-    expect(source).toContain("import { File, Paths } from 'expo-file-system';");
+    expect(source).toContain('import { File, Paths } from "expo-file-system";');
     expect(source).toContain("const file = new File(Paths.cache, fileName);");
     expect(source).toContain("file.write(icsContent);");
     expect(source).not.toContain("writeAsStringAsync");
+  });
+
+  it("shows native offline banner and queued sync count when loading saved entries offline", async () => {
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [
+        { type: "create", description: "queued create" },
+        { type: "delete", id: 99 },
+      ],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByText, getByTestId } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => expect(getByText("Offline note")).toBeTruthy());
+    expect(getByTestId("offline-banner")).toBeTruthy();
+    expect(getByText("Offline mode")).toBeTruthy();
+    expect(getByText("2 changes queued for sync.")).toBeTruthy();
   });
 });

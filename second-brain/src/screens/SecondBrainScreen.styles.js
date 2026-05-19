@@ -38,6 +38,28 @@ const styles = StyleSheet.create({
   },
   statsGridSmall: { flexWrap: "nowrap", gap: 4 },
   filterSection: { marginBottom: 10 },
+  offlineBanner: {
+    borderWidth: 1,
+    borderColor: theme.colors.brand,
+    backgroundColor: theme.colors.brandDim,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+    gap: 2,
+  },
+  offlineBannerTitle: {
+    color: theme.colors.brandText,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  offlineBannerText: {
+    color: theme.colors.brandText,
+    fontSize: 12,
+    lineHeight: 16,
+  },
   clearFiltersButton: {
     width: "100%",
     alignItems: "center",

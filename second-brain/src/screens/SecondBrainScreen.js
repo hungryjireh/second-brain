@@ -242,7 +242,8 @@ export default function SecondBrainScreen({ token, navigation }) {
   const recorderState = useAudioRecorderState(audioRecorder);
   const recording = recorderState?.isRecording;
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const [, setOfflineMode] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [offlineQueueSize, setOfflineQueueSize] = useState(0);
   const confirmDeleteTimeoutRef = useRef(null);
   const openActionDrawerIdRef = useRef(null);
   const hasMicrophonePermissionRef = useRef(false);
@@ -253,6 +254,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   const typebarPlaceholder = isSmallScreen
     ? "Type here"
     : "Type a note, reminder or thought...";
+  const isNativeOfflineMode = !isWeb && offlineMode;
   const voiceElapsedLabel = useMemo(
     () => formatElapsedTime(voiceElapsedMs),
     [voiceElapsedMs],
@@ -278,15 +280,17 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   async function writeOfflineState(nextState) {
     try {
+      const queue = Array.isArray(nextState.queue) ? nextState.queue : [];
       await AsyncStorage.setItem(
         buildOfflineStorageKey(),
         JSON.stringify({
           version: OFFLINE_QUEUE_VERSION,
           entries: Array.isArray(nextState.entries) ? nextState.entries : [],
           userTags: Array.isArray(nextState.userTags) ? nextState.userTags : [],
-          queue: Array.isArray(nextState.queue) ? nextState.queue : [],
+          queue,
         }),
       );
+      setOfflineQueueSize(queue.length);
     } catch {
       // Offline persistence is best-effort.
     }
@@ -314,6 +318,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   async function flushOfflineQueue() {
     const snapshot = await readOfflineState();
     const queue = Array.isArray(snapshot?.queue) ? snapshot.queue : [];
+    setOfflineQueueSize(queue.length);
     if (!queue.length) return;
 
     const pending = [];
@@ -343,10 +348,8 @@ export default function SecondBrainScreen({ token, navigation }) {
           continue;
         }
       } catch (err) {
-        if (isLikelyOfflineError(err)) {
-          pending.push(action);
-          continue;
-        }
+        pending.push(action);
+        if (isLikelyOfflineError(err)) setOfflineMode(true);
       }
     }
 
@@ -387,6 +390,7 @@ export default function SecondBrainScreen({ token, navigation }) {
       setUserTags(nextUserTags);
       setUserTagsLoaded(true);
       await persistCurrentOfflineState(list, nextUserTags);
+      setOfflineMode(false);
     } catch (err) {
       if (isLikelyOfflineError(err)) {
         const snapshot = await readOfflineState();
@@ -396,6 +400,9 @@ export default function SecondBrainScreen({ token, navigation }) {
             Array.isArray(snapshot.userTags) ? snapshot.userTags : [],
           );
           setUserTagsLoaded(true);
+          setOfflineQueueSize(
+            Array.isArray(snapshot.queue) ? snapshot.queue.length : 0,
+          );
           setOfflineMode(true);
           setError("Offline mode: showing saved entries.");
           return;
@@ -1274,6 +1281,16 @@ export default function SecondBrainScreen({ token, navigation }) {
         </View>
 
         <View style={styles.filterSection}>
+          {isNativeOfflineMode ? (
+            <View testID="offline-banner" style={styles.offlineBanner}>
+              <Text style={styles.offlineBannerTitle}>Offline mode</Text>
+              <Text style={styles.offlineBannerText}>
+                {offlineQueueSize > 0
+                  ? `${offlineQueueSize} change${offlineQueueSize === 1 ? "" : "s"} queued for sync.`
+                  : "Showing saved entries. Changes will sync automatically."}
+              </Text>
+            </View>
+          ) : null}
           <View
             style={[
               styles.filterHeaderRow,
