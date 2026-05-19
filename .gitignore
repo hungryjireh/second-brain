@@ -6,3 +6,7 @@ second_brain_webapp_mockup.html
 .env*.local
 webapp/dist
 .expo
+second-brain/dist
+second-brain/dist-test
+open-brain/dist
+open-brain/dist-test
