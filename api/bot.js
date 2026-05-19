@@ -1,35 +1,40 @@
 import {
   getTelegramLinkByChatId,
   setTelegramChatIdForUser,
-} from '../lib/db.js';
-import { TELEGRAM_SESSION_TOKEN_PURPOSE, verifyTelegramLinkKey } from '../lib/auth.js';
-import { transcribeFromUrl } from '../lib/whisper.js';
-import { sendMessage } from '../lib/notify.js';
-import { classifyAndInsertEntry } from '../lib/entry-processing.js';
-import { MAX_VOICE_NOTE_DURATION_SECONDS } from '../lib/constants/voice.js';
+} from "../lib/db.js";
+import {
+  TELEGRAM_SESSION_TOKEN_PURPOSE,
+  verifyTelegramLinkKey,
+} from "../lib/auth.js";
+import { transcribeFromUrl } from "../lib/whisper.js";
+import { sendMessage } from "../lib/notify.js";
+import { classifyAndInsertEntry } from "../lib/entry-processing.js";
+import { MAX_VOICE_NOTE_DURATION_SECONDS } from "../lib/constants/voice.js";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const DEFAULT_TIMEZONE = 'Asia/Singapore';
+const DEFAULT_TIMEZONE = "Asia/Singapore";
 
-const LINK_USAGE_MESSAGE = 'To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>';
+const LINK_USAGE_MESSAGE =
+  "To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>";
 
 async function processText(rawText, chatId, userId, authToken) {
-  const { textToClassify, finalCategory, normalizedContent, remindAt } = await classifyAndInsertEntry({
-    rawText,
-    userId,
-    authToken,
-  });
+  const { textToClassify, finalCategory, normalizedContent, remindAt } =
+    await classifyAndInsertEntry({
+      rawText,
+      userId,
+      authToken,
+    });
 
   let reply = `✅ Got it — saved as *${finalCategory}*.\n\n_${normalizedContent || textToClassify}_`;
 
-  if (finalCategory === 'reminder' && remindAt) {
-    const when = new Date(remindAt * 1000).toLocaleString('en-SG', {
+  if (finalCategory === "reminder" && remindAt) {
+    const when = new Date(remindAt * 1000).toLocaleString("en-SG", {
       timeZone: DEFAULT_TIMEZONE,
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
     reply += `\n\n⏰ Reminder time detected: *${when}*.\nDownload the .ics file from the web app to save this reminder to your device calendar.`;
   }
@@ -48,12 +53,14 @@ async function getLinkedUserId(chatId) {
 }
 
 function maybeReadJwtPayloadWithoutVerifying(token) {
-  const parts = String(token || '').split('.');
+  const parts = String(token || "").split(".");
   if (parts.length !== 3) return null;
   try {
-    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
-    return JSON.parse(Buffer.from(normalized + padding, 'base64').toString('utf8'));
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(
+      Buffer.from(normalized + padding, "base64").toString("utf8"),
+    );
   } catch {
     return null;
   }
@@ -65,7 +72,7 @@ function isLegacyLocalTelegramSessionToken(token) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== "POST") return res.status(405).end();
 
   const update = req.body;
   const msg = update?.message;
@@ -79,34 +86,43 @@ export default async function handler(req, res) {
   try {
     const text = msg.text?.trim();
 
-    if (text?.startsWith('/link')) {
-      const linkKey = text.replace('/link', '').trim();
+    if (text?.startsWith("/link")) {
+      const linkKey = text.replace("/link", "").trim();
       if (!linkKey) {
-        await sendMessage('Please provide your link key: /link <your-key>', chatId);
+        await sendMessage(
+          "Please provide your link key: /link <your-key>",
+          chatId,
+        );
         return res.status(200).end();
       }
       await linkTelegramChatToUser(chatId, linkKey);
       await sendMessage(
         `✅ Your Telegram is now linked to your secondbrain account. Send any text or voice note (max ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds) to continue.`,
-        chatId
+        chatId,
       );
       return res.status(200).end();
     }
 
     const linkedUser = await getLinkedUserId(chatId);
     if (!linkedUser?.userId || !linkedUser?.authToken) {
-      await sendMessage(`🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`, chatId);
+      await sendMessage(
+        `🔒 Account linking required.\n\n${LINK_USAGE_MESSAGE}`,
+        chatId,
+      );
       return res.status(200).end();
     }
     if (isLegacyLocalTelegramSessionToken(linkedUser.authToken)) {
-      await sendMessage(`🔒 Please relink your account to refresh your session:\n/link <your-key>`, chatId);
+      await sendMessage(
+        `🔒 Please relink your account to refresh your session:\n/link <your-key>`,
+        chatId,
+      );
       return res.status(200).end();
     }
 
-    if (text?.startsWith('/start')) {
+    if (text?.startsWith("/start")) {
       await sendMessage(
         `👋 *Second Brain* is ready.\n\nSend me a voice note (max ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds) or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes\n\nNeed to relink? Use /link <your-key>.`,
-        chatId
+        chatId,
       );
     } else if (text) {
       await notifyTyping(chatId);
@@ -115,7 +131,7 @@ export default async function handler(req, res) {
       if ((msg.voice.duration || 0) > MAX_VOICE_NOTE_DURATION_SECONDS) {
         await sendMessage(
           `⏱️ Voice notes must be ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds or less. Please send a shorter voice note.`,
-          chatId
+          chatId,
         );
         return res.status(200).end();
       }
@@ -125,17 +141,28 @@ export default async function handler(req, res) {
       const rawText = await transcribeFromUrl(audioUrl);
 
       if (!rawText) {
-        await sendMessage("🤔 Couldn't transcribe that — try speaking more clearly.", chatId);
+        await sendMessage(
+          "🤔 Couldn't transcribe that — try speaking more clearly.",
+          chatId,
+        );
       } else {
         await sendMessage(`🎙️ _Transcribed: "${rawText}"_`, chatId);
-        await processText(rawText, chatId, linkedUser.userId, linkedUser.authToken);
+        await processText(
+          rawText,
+          chatId,
+          linkedUser.userId,
+          linkedUser.authToken,
+        );
       }
     }
   } catch (err) {
-    console.error('[bot webhook]', err.message);
+    console.error("[bot webhook]", err.message);
     try {
-      if (/JWT|token|expired|unauthorized|401/i.test(err.message || '')) {
-        await sendMessage(`🔒 Your login session expired. Please relink your account:\n/link <your-key>`, chatId);
+      if (/JWT|token|expired|unauthorized|401/i.test(err.message || "")) {
+        await sendMessage(
+          `🔒 Your login session expired. Please relink your account:\n/link <your-key>`,
+          chatId,
+        );
       } else {
         await sendMessage(`❌ Something went wrong: ${err.message}`, chatId);
       }
@@ -150,7 +177,7 @@ export default async function handler(req, res) {
 
 async function telegramGetFile(fileId) {
   const res = await fetch(
-    `https://api.telegram.org/bot${TOKEN}/getFile?file_id=${fileId}`
+    `https://api.telegram.org/bot${TOKEN}/getFile?file_id=${fileId}`,
   );
   const data = await res.json();
   if (!data.ok) throw new Error(`getFile failed: ${data.description}`);
@@ -159,8 +186,8 @@ async function telegramGetFile(fileId) {
 
 async function notifyTyping(chatId) {
   await fetch(`https://api.telegram.org/bot${TOKEN}/sendChatAction`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, action: 'typing' }),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, action: "typing" }),
   }).catch(() => {}); // fire-and-forget, ignore errors
 }
