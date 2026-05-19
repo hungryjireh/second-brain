@@ -264,6 +264,14 @@ const styles = StyleSheet.create({
   statLabelActive: { color: theme.colors.brandText },
   list: { flex: 1 },
   listContent: { paddingBottom: 84 },
+  listContentEmpty: {
+    flexGrow: 1,
+  },
+  listEmptyCentered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   voiceCaptureOverlay: {
     position: "absolute",
     top: 0,
@@ -640,7 +648,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   listCell: { position: "relative", zIndex: 1, overflow: "visible" },
   listCellRaised: {
@@ -707,6 +716,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  entryPanelTitleRowLarge: {
+    minHeight: 32,
+  },
+  entryPanelInlineActionsLarge: {
+    width: "auto",
+    marginBottom: 0,
+    minHeight: 0,
+    flexWrap: "nowrap",
+    flexShrink: 0,
   },
   entryActionDismissOverlay: {
     position: "absolute",
@@ -967,6 +986,7 @@ const styles = StyleSheet.create({
     gap: 6,
     flexWrap: "wrap",
     marginTop: 10,
+    marginBottom: 4,
   },
   itemTagPill: {
     backgroundColor: theme.colors.brandDim,

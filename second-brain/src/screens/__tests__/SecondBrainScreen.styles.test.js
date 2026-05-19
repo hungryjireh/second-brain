@@ -22,4 +22,9 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(swipeActionWrap.backgroundColor).toBe("rgba(220,60,60,0.16)");
     expect(swipeDeleteAction.backgroundColor).toBe("transparent");
   });
+
+  it("centers title-row children vertically for title and menu alignment", () => {
+    const titleRow = StyleSheet.flatten(styles.entryPanelTitleRow);
+    expect(titleRow.alignItems).toBe("center");
+  });
 });

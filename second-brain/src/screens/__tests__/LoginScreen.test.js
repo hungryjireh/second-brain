@@ -1,12 +1,12 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import LoginScreen from "../LoginScreen";
-import { login, setToken } from "../../api";
+import { login, setSessionTokens } from "../../api";
 
 const mockReplace = jest.fn();
 
 jest.mock("../../api", () => ({
   login: jest.fn(),
-  setToken: jest.fn(),
+  setSessionTokens: jest.fn(),
 }));
 
 jest.mock("@react-navigation/native", () => ({
@@ -18,7 +18,7 @@ jest.mock("@react-navigation/native", () => ({
 describe("LoginScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    setToken.mockResolvedValue(undefined);
+    setSessionTokens.mockResolvedValue(undefined);
   });
 
   it("submits credentials and calls onLoggedIn on success", async () => {
@@ -35,7 +35,10 @@ describe("LoginScreen", () => {
 
     await waitFor(() => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
-      expect(setToken).toHaveBeenCalledWith("token-123");
+      expect(setSessionTokens).toHaveBeenCalledWith({
+        token: "token-123",
+        refreshToken: undefined,
+      });
       expect(onLoggedIn).toHaveBeenCalledWith("token-123");
       expect(mockReplace).not.toHaveBeenCalled();
     });
@@ -94,7 +97,10 @@ describe("LoginScreen", () => {
 
     await waitFor(() => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
-      expect(setToken).toHaveBeenCalledWith("token-enter");
+      expect(setSessionTokens).toHaveBeenCalledWith({
+        token: "token-enter",
+        refreshToken: undefined,
+      });
       expect(onLoggedIn).toHaveBeenCalledWith("token-enter");
       expect(mockReplace).not.toHaveBeenCalled();
     });

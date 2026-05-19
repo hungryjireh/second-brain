@@ -7,7 +7,7 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { login, setToken } from "../api";
+import { login, setSessionTokens } from "../api";
 import { theme } from "../theme";
 import {
   areRequiredFieldsPresent,
@@ -37,7 +37,10 @@ export default function LoginScreen({ onLoggedIn }) {
     setError("");
     try {
       const data = await login(normalizedEmail, normalizedPassword);
-      await setToken(data.token);
+      await setSessionTokens({
+        token: data.token,
+        refreshToken: data.refreshToken,
+      });
       onLoggedIn(data.token);
     } catch (err) {
       setError(err.message);

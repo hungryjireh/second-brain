@@ -44,6 +44,7 @@ import {
   countBillableGlobalTags,
   normalizeTagValue,
 } from "../utils/secondBrainTagUtils";
+import { confirmAction } from "../utils/confirmAction";
 
 const PRIORITY_LEVELS = [
   { key: "high", label: "High (8-10)" },
@@ -84,6 +85,25 @@ const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 const OFFLINE_QUEUE_VERSION = 1;
 const VOICE_RECORDING_PRESET =
   RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
+
+async function confirmArchiveEntry(entry) {
+  const isReminder = entry?.category === "reminder";
+  const promptTitle = isReminder ? "Mark done?" : "Archive entry?";
+  const confirmLabel = isReminder ? "Mark Done" : "Archive";
+  return confirmAction({
+    title: promptTitle,
+    message: "This will move the entry to Archived/Done.",
+    confirmLabel,
+  });
+}
+
+async function confirmDeleteEntry() {
+  return confirmAction({
+    title: "Delete entry?",
+    message: "This action cannot be undone.",
+    confirmLabel: "Delete",
+  });
+}
 
 function formatElapsedTime(elapsedMs) {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
@@ -171,6 +191,22 @@ function formatCreatingTitle(description) {
   return firstLine.slice(0, 80);
 }
 
+function getEntrySortUnix(entry) {
+  const updatedAt = entry?.updated_at;
+  if (Number.isFinite(updatedAt)) return updatedAt;
+  const createdAt = entry?.created_at;
+  if (Number.isFinite(createdAt)) return createdAt;
+  return 0;
+}
+
+export function sortEntriesByUpdatedAt(entries) {
+  return [...entries].sort((a, b) => {
+    const delta = getEntrySortUnix(b) - getEntrySortUnix(a);
+    if (delta !== 0) return delta;
+    return (b?.id ?? 0) - (a?.id ?? 0);
+  });
+}
+
 function groupByDate(entries) {
   const groups = {};
   const now = new Date();
@@ -182,7 +218,7 @@ function groupByDate(entries) {
   const weekStart = todayStart - 6 * 86400000;
 
   for (const entry of entries) {
-    const ts = (entry.created_at ?? 0) * 1000;
+    const ts = getEntrySortUnix(entry) * 1000;
     let group;
     if (ts >= todayStart) group = "Today";
     else if (ts >= todayStart - 86400000) group = "Yesterday";
@@ -201,6 +237,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   const { width } = useWindowDimensions();
   const isSmallScreen = width <= SMALL_SCREEN_FILTER_BREAKPOINT;
   const [entries, setEntries] = useState([]);
+  const [loadingEntries, setLoadingEntries] = useState(true);
   const [userTags, setUserTags] = useState([]);
   const [userTagsLoaded, setUserTagsLoaded] = useState(false);
   const [draft, setDraft] = useState("");
@@ -359,6 +396,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   }
 
   async function loadEntries({ bypassCache = false } = {}) {
+    setLoadingEntries(true);
     try {
       setError("");
       setOfflineMode(false);
@@ -378,7 +416,8 @@ export default function SecondBrainScreen({ token, navigation }) {
         : Array.isArray(data)
           ? data
           : [];
-      setEntries(list);
+      const sortedEntries = sortEntriesByUpdatedAt(list);
+      setEntries(sortedEntries);
 
       const normalizedUserTags = (
         Array.isArray(tagsData?.tags) ? tagsData.tags : []
@@ -390,13 +429,13 @@ export default function SecondBrainScreen({ token, navigation }) {
       );
       setUserTags(nextUserTags);
       setUserTagsLoaded(true);
-      await persistCurrentOfflineState(list, nextUserTags);
+      await persistCurrentOfflineState(sortedEntries, nextUserTags);
       setOfflineMode(false);
     } catch (err) {
       if (isLikelyOfflineError(err)) {
         const snapshot = await readOfflineState();
         if (Array.isArray(snapshot?.entries) && snapshot.entries.length > 0) {
-          setEntries(snapshot.entries);
+          setEntries(sortEntriesByUpdatedAt(snapshot.entries));
           setUserTags(
             Array.isArray(snapshot.userTags) ? snapshot.userTags : [],
           );
@@ -410,6 +449,8 @@ export default function SecondBrainScreen({ token, navigation }) {
         }
       }
       setError(err.message);
+    } finally {
+      setLoadingEntries(false);
     }
   }
 
@@ -538,14 +579,15 @@ export default function SecondBrainScreen({ token, navigation }) {
           created_at: Math.floor(Date.now() / 1000),
         };
         const nextEntries = [optimisticEntry, ...entries];
-        setEntries(nextEntries);
+        const sortedEntries = sortEntriesByUpdatedAt(nextEntries);
+        setEntries(sortedEntries);
         setOfflineMode(true);
         setError("Offline mode: changes will sync automatically.");
         await enqueueOfflineAction({
           type: "create",
           description: optimisticEntry.description,
         });
-        await persistCurrentOfflineState(nextEntries, userTags);
+        await persistCurrentOfflineState(sortedEntries, userTags);
         return;
       }
       setDraft((prev) => (prev.trim() ? prev : description));
@@ -615,7 +657,7 @@ export default function SecondBrainScreen({ token, navigation }) {
         },
       });
       if (response?.entry) {
-        setEntries((prev) => [response.entry, ...prev]);
+        setEntries((prev) => sortEntriesByUpdatedAt([response.entry, ...prev]));
       } else {
         await loadEntries();
       }
@@ -676,7 +718,7 @@ export default function SecondBrainScreen({ token, navigation }) {
         return;
       }
 
-      setEntries((prev) => [...created, ...prev]);
+      setEntries((prev) => sortEntriesByUpdatedAt([...created, ...prev]));
       Alert.alert(
         "Import LLM conversations",
         `Imported ${created.length} conversation${created.length === 1 ? "" : "s"}.`,
@@ -716,6 +758,10 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   const toggleArchive = useCallback(
     async (entry) => {
+      if (!entry?.is_archived) {
+        const confirmed = await confirmArchiveEntry(entry);
+        if (!confirmed) return;
+      }
       setBusyId(entry.id);
       try {
         setOfflineMode(false);
@@ -727,8 +773,9 @@ export default function SecondBrainScreen({ token, navigation }) {
         const nextEntries = entries.map((item) =>
           item.id === entry.id ? updated : item,
         );
-        setEntries(nextEntries);
-        await persistCurrentOfflineState(nextEntries, userTags);
+        const sortedEntries = sortEntriesByUpdatedAt(nextEntries);
+        setEntries(sortedEntries);
+        await persistCurrentOfflineState(sortedEntries, userTags);
       } catch (err) {
         if (isLikelyOfflineError(err)) {
           const nextEntries = entries.map((item) =>
@@ -736,7 +783,8 @@ export default function SecondBrainScreen({ token, navigation }) {
               ? { ...item, is_archived: !item.is_archived }
               : item,
           );
-          setEntries(nextEntries);
+          const sortedEntries = sortEntriesByUpdatedAt(nextEntries);
+          setEntries(sortedEntries);
           setOfflineMode(true);
           setError("Offline mode: changes will sync automatically.");
           await enqueueOfflineAction({
@@ -744,7 +792,7 @@ export default function SecondBrainScreen({ token, navigation }) {
             id: entry.id,
             is_archived: !entry.is_archived,
           });
-          await persistCurrentOfflineState(nextEntries, userTags);
+          await persistCurrentOfflineState(sortedEntries, userTags);
           setBusyId(null);
           return;
         }
@@ -785,8 +833,10 @@ export default function SecondBrainScreen({ token, navigation }) {
   );
 
   const requestDelete = useCallback(
-    (entryId) => {
+    async (entryId) => {
       setOpenSwipeId(entryId);
+      const confirmed = await confirmDeleteEntry();
+      if (!confirmed) return;
       deleteEntry(entryId);
     },
     [deleteEntry],
@@ -1171,7 +1221,7 @@ export default function SecondBrainScreen({ token, navigation }) {
           key: `entry-${entry.id}`,
           entry,
           displayDate: formatDateWithFormatters(
-            entry.created_at,
+            entry.updated_at ?? entry.created_at,
             dateFormatters,
           ),
           displayRemindAt: formatRemindAtWithFormatters(
@@ -1503,13 +1553,20 @@ export default function SecondBrainScreen({ token, navigation }) {
           style={styles.list}
           contentContainerStyle={[
             styles.listContent,
+            loadingEntries &&
+              groupedRows.length === 0 &&
+              styles.listContentEmpty,
             { paddingBottom: listBottomPadding },
           ]}
           keyExtractor={keyExtractor}
           CellRendererComponent={renderCell}
           renderItem={renderListItem}
           ListEmptyComponent={
-            hasActiveFilters ? (
+            loadingEntries ? (
+              <View style={styles.listEmptyCentered}>
+                <Text style={styles.listEmptyText}>Loading thoughts...</Text>
+              </View>
+            ) : hasActiveFilters ? (
               <Text style={styles.listEmptyText}>No matching entries</Text>
             ) : null
           }

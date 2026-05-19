@@ -1,4 +1,6 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import * as ReactNative from "react-native";
+import { Alert } from "react-native";
 import SecondBrainEntryDetailsScreen from "../SecondBrainEntryDetailsScreen";
 import { apiRequest } from "../../api";
 
@@ -17,6 +19,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       title: "Ship tests",
       summary: "Write behavior checks",
       raw_text: "Full detail content",
+      category: "todo",
       tags: ["work"],
     };
 
@@ -25,9 +28,46 @@ describe("SecondBrainEntryDetailsScreen", () => {
     );
 
     expect(getByText("Ship tests")).toBeTruthy();
+    expect(getByText("TODO")).toBeTruthy();
     expect(getByText("Write behavior checks")).toBeTruthy();
     expect(getByText("Full detail content")).toBeTruthy();
     expect(getByText("#work")).toBeTruthy();
+  });
+
+  it("renders a category pill for the entry above the title section", () => {
+    const entry = {
+      id: 314,
+      category: "reminder",
+      title: "Pay internet bill",
+      summary: "Monthly payment",
+      raw_text: "Body",
+    };
+
+    const { getByTestId, getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(getByTestId("entry-category-pill")).toBeTruthy();
+    expect(getByText("Reminder")).toBeTruthy();
+    expect(getByText("Pay internet bill")).toBeTruthy();
+  });
+
+  it("shows created and updated timestamps below the summary", () => {
+    const entry = {
+      id: 101,
+      title: "Timestamped entry",
+      summary: "Check time metadata",
+      raw_text: "Body",
+      created_at: 1710000000,
+      updated_at: 1710003600,
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(getByText(/Created /)).toBeTruthy();
+    expect(getByText(/Updated /)).toBeTruthy();
   });
 
   it("does not render the in-page back button", () => {
@@ -117,9 +157,10 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("shows Delete in the action drawer and switches to confirm state", () => {
+  it("shows Delete in the action drawer and prompts for confirmation", () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const entry = { id: 11, title: "Entry 11", category: "note" };
-    const { getByLabelText, getByText, queryByText } = render(
+    const { getByLabelText, getByText } = render(
       <SecondBrainEntryDetailsScreen
         route={{ params: { entry } }}
         token="token"
@@ -131,10 +172,40 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Edit")).toBeTruthy();
     expect(getByText("Archive")).toBeTruthy();
     expect(getByText("Delete")).toBeTruthy();
-    expect(queryByText("Confirm Delete")).toBeNull();
 
     fireEvent.press(getByText("Delete"));
-    expect(getByText("Confirm Delete")).toBeTruthy();
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Delete entry?",
+      "This action cannot be undone.",
+      expect.any(Array),
+    );
+    alertSpy.mockRestore();
+  });
+
+  it("shows 'Mark done?' confirmation when archiving a reminder", () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const entry = {
+      id: 19,
+      title: "Take medicine",
+      category: "reminder",
+      is_archived: false,
+    };
+    const { getByLabelText, getByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entry } }}
+        token="token"
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Open entry actions"));
+    fireEvent.press(getByText("Mark Done"));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Mark done?",
+      "This will move the entry to Archived/Done.",
+      expect.any(Array),
+    );
+    alertSpy.mockRestore();
   });
 
   it("closes inline actions when tapping outside the menu", async () => {
@@ -157,6 +228,57 @@ describe("SecondBrainEntryDetailsScreen", () => {
     await waitFor(() => {
       expect(queryByTestId("entry-actions-dismiss-overlay")).toBeNull();
     });
+  });
+
+  it("keeps the title visible when opening actions on large screens", () => {
+    const useWindowDimensionsSpy = jest
+      .spyOn(ReactNative, "useWindowDimensions")
+      .mockReturnValue({
+        width: 1024,
+        height: 768,
+        scale: 1,
+        fontScale: 1,
+      });
+    const entry = { id: 22, title: "Persistent title", category: "note" };
+
+    const { getByLabelText, getByTestId, getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    fireEvent.press(getByLabelText("Open entry actions"));
+
+    expect(getByText("Persistent title")).toBeTruthy();
+    expect(getByText("Edit")).toBeTruthy();
+    expect(getByTestId("entry-inline-actions-large")).toBeTruthy();
+    useWindowDimensionsSpy.mockRestore();
+  });
+
+  it("keeps large-screen title row height stable when actions are toggled", () => {
+    const useWindowDimensionsSpy = jest
+      .spyOn(ReactNative, "useWindowDimensions")
+      .mockReturnValue({
+        width: 1024,
+        height: 768,
+        scale: 1,
+        fontScale: 1,
+      });
+    const entry = { id: 23, title: "Stable summary spacing", category: "note" };
+
+    const { getByLabelText, getByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    const titleRowBefore = getByTestId("entry-title-row");
+    fireEvent.press(getByLabelText("Open entry actions"));
+    const titleRowAfter = getByTestId("entry-title-row");
+
+    expect(titleRowBefore.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minHeight: 32 })]),
+    );
+    expect(titleRowAfter.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minHeight: 32 })]),
+    );
+    useWindowDimensionsSpy.mockRestore();
   });
 
   it("loads entry by route entryId and renders fetched title", async () => {

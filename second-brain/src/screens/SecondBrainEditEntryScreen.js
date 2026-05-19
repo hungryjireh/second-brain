@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Keyboard,
   Platform,
   Pressable,
   ScrollView,
   Switch,
   Text,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { apiRequest } from "../api";
 import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import MarkdownBody from "../components/MarkdownBody";
@@ -29,6 +28,9 @@ import {
 } from "../utils/secondBrainTagUtils";
 import { datetimeLocalToUnix, unixToDatetimeLocal } from "../utils/dateUtils";
 import styles from "./SecondBrainScreen.styles";
+
+const TITLE_MIN_INPUT_HEIGHT = 60;
+const SUMMARY_MIN_INPUT_HEIGHT = 80;
 
 export default function SecondBrainEditEntryScreen({
   route,
@@ -61,9 +63,23 @@ export default function SecondBrainEditEntryScreen({
   const [editTagError, setEditTagError] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [titleInputHeight, setTitleInputHeight] = useState(
+    TITLE_MIN_INPUT_HEIGHT,
+  );
+  const [summaryInputHeight, setSummaryInputHeight] = useState(
+    SUMMARY_MIN_INPUT_HEIGHT,
+  );
   const [globalTags, setGlobalTags] = useState([]);
   const [isMarkdownPreviewEnabled, setIsMarkdownPreviewEnabled] =
     useState(false);
+
+  const reminderPickerDate = useMemo(() => {
+    const unixTimestamp = datetimeLocalToUnix(editRemindAt);
+    if (Number.isInteger(unixTimestamp)) {
+      return new Date(unixTimestamp * 1000);
+    }
+    return new Date();
+  }, [editRemindAt]);
 
   useEffect(() => {
     setEntry(entryFromRoute);
@@ -255,168 +271,231 @@ export default function SecondBrainEditEntryScreen({
     }
   }
 
+  function updateReminderDate(nextDate) {
+    if (!(nextDate instanceof Date) || Number.isNaN(nextDate.getTime())) return;
+    setEditRemindAt(unixToDatetimeLocal(Math.floor(nextDate.getTime() / 1000)));
+  }
+
   return (
     <SecondBrainEntryPageLayout>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <ScrollView
+        style={styles.editScroll}
+        contentContainerStyle={styles.editScrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+      >
+        <Text style={styles.editLabel}>Category</Text>
         <ScrollView
-          style={styles.editScroll}
-          contentContainerStyle={styles.editScrollContent}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryRow}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.editLabel}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryRow}
-            keyboardShouldPersistTaps="handled"
-          >
-            {CATEGORIES.map((category) => {
-              const isActive = editCategory === category;
-              return (
-                <Pressable
-                  key={category}
-                  style={[styles.pill, isActive && styles.pillActive]}
-                  onPress={() => setEditCategory(category)}
-                >
-                  <Text
-                    style={[styles.pillText, isActive && styles.pillTextActive]}
-                  >
-                    {category}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-          <Text style={styles.editLabel}>Title</Text>
-          <TextInput
-            value={editTitle}
-            onChangeText={setEditTitle}
-            style={styles.editField}
-            placeholder="Title"
-            placeholderTextColor={theme.colors.textSecondary}
-          />
-          <Text style={styles.editLabel}>Summary</Text>
-          <TextInput
-            value={editSummary}
-            onChangeText={setEditSummary}
-            multiline
-            style={styles.editInputCompact}
-            placeholder="Summary"
-            placeholderTextColor={theme.colors.textSecondary}
-          />
-          <View style={styles.editLabelRow}>
-            <Text style={styles.editLabel}>Description</Text>
-            <View style={styles.editLabelToggleRow}>
-              <Text style={styles.editToggleText}>Render Markdown</Text>
-              <Switch
-                testID="description-markdown-toggle"
-                value={isMarkdownPreviewEnabled}
-                onValueChange={setIsMarkdownPreviewEnabled}
-                trackColor={{
-                  false: theme.colors.border,
-                  true: theme.colors.brand,
-                }}
-                thumbColor={theme.colors.bg}
-                ios_backgroundColor={theme.colors.border}
-              />
-            </View>
-          </View>
-          {isMarkdownPreviewEnabled ? (
-            <View
-              testID="description-markdown-preview"
-              style={styles.editMarkdownPreview}
-            >
-              <MarkdownBody text={editText} styles={styles} />
-            </View>
-          ) : (
-            <TextInput
-              testID="description-input"
-              value={editText}
-              onChangeText={setEditText}
-              multiline
-              style={styles.editInput}
-              placeholder="Description"
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-          )}
-          {editCategory === "reminder" ? (
-            <>
-              <Text style={styles.editLabel}>Reminder date and time</Text>
-              <TextInput
-                value={editRemindAt}
-                onChangeText={setEditRemindAt}
-                style={styles.editField}
-                placeholder="Select reminder date and time"
-                placeholderTextColor={theme.colors.textSecondary}
-                {...(Platform.OS === "web" ? { type: "datetime-local" } : {})}
-              />
-            </>
-          ) : null}
-          <Text style={styles.editLabel}>Priority (0-10)</Text>
-          <TextInput
-            value={editPriority}
-            onChangeText={setEditPriority}
-            style={styles.editField}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor={theme.colors.textSecondary}
-          />
-          <Text style={styles.editLabel}>Tags</Text>
-          <View style={styles.tagInputRow}>
-            <TextInput
-              value={editTagDraft}
-              onChangeText={(value) => {
-                setEditTagDraft(value);
-                setEditTagError("");
-              }}
-              style={[styles.editField, styles.tagInput]}
-              placeholder={
-                parsedEditTags.length >= MAX_ENTRY_TAGS
-                  ? `Maximum ${MAX_ENTRY_TAGS} tags reached`
-                  : "Type a tag"
-              }
-              placeholderTextColor={theme.colors.textSecondary}
-              editable={parsedEditTags.length < MAX_ENTRY_TAGS}
-            />
-            <Pressable style={styles.secondaryButton} onPress={addEditTag}>
-              <Text style={styles.secondaryButtonText}>Add</Text>
-            </Pressable>
-          </View>
-          {editTagError ? (
-            <Text style={[styles.tagCountText, { color: theme.colors.danger }]}>
-              {editTagError}
-            </Text>
-          ) : null}
-          <Text
-            style={styles.tagCountText}
-          >{`${parsedEditTags.length}/${MAX_ENTRY_TAGS} tags`}</Text>
-          <View style={styles.tagsRow}>
-            {parsedEditTags.map((tag) => (
+          {CATEGORIES.map((category) => {
+            const isActive = editCategory === category;
+            return (
               <Pressable
-                key={tag}
-                style={styles.itemTagPill}
-                onPress={() => removeEditTag(tag)}
+                key={category}
+                style={[styles.pill, isActive && styles.pillActive]}
+                onPress={() => setEditCategory(category)}
               >
-                <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
+                <Text
+                  style={[styles.pillText, isActive && styles.pillTextActive]}
+                >
+                  {category}
+                </Text>
               </Pressable>
-            ))}
-          </View>
-          {!!error && <Text style={styles.error}>{error}</Text>}
-          <View style={styles.editActionRow}>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.editSaveButton} onPress={saveEdit}>
-              <Text style={styles.buttonText}>
-                {busy ? "Saving..." : "Save changes"}
-              </Text>
-            </Pressable>
-          </View>
+            );
+          })}
         </ScrollView>
-      </TouchableWithoutFeedback>
+        <Text style={styles.editLabel}>Title</Text>
+        <TextInput
+          value={editTitle}
+          onChangeText={setEditTitle}
+          multiline
+          onContentSizeChange={(event) => {
+            const nextHeight = Math.max(
+              TITLE_MIN_INPUT_HEIGHT,
+              Math.ceil(event?.nativeEvent?.contentSize?.height || 0),
+            );
+            setTitleInputHeight((currentHeight) =>
+              currentHeight === nextHeight ? currentHeight : nextHeight,
+            );
+          }}
+          style={[styles.editInputCompact, { height: titleInputHeight }]}
+          placeholder="Title"
+          placeholderTextColor={theme.colors.textSecondary}
+        />
+        <Text style={styles.editLabel}>Summary</Text>
+        <TextInput
+          value={editSummary}
+          onChangeText={setEditSummary}
+          multiline
+          onContentSizeChange={(event) => {
+            const nextHeight = Math.max(
+              SUMMARY_MIN_INPUT_HEIGHT,
+              Math.ceil(event?.nativeEvent?.contentSize?.height || 0),
+            );
+            setSummaryInputHeight((currentHeight) =>
+              currentHeight === nextHeight ? currentHeight : nextHeight,
+            );
+          }}
+          style={[styles.editInputCompact, { height: summaryInputHeight }]}
+          placeholder="Summary"
+          placeholderTextColor={theme.colors.textSecondary}
+        />
+        <View style={styles.editLabelRow}>
+          <Text style={styles.editLabel}>Description</Text>
+          <View style={styles.editLabelToggleRow}>
+            <Text style={styles.editToggleText}>Render Markdown</Text>
+            <Switch
+              testID="description-markdown-toggle"
+              value={isMarkdownPreviewEnabled}
+              onValueChange={setIsMarkdownPreviewEnabled}
+              trackColor={{
+                false: theme.colors.border,
+                true: theme.colors.brand,
+              }}
+              thumbColor={theme.colors.bg}
+              ios_backgroundColor={theme.colors.border}
+            />
+          </View>
+        </View>
+        {isMarkdownPreviewEnabled ? (
+          <View
+            testID="description-markdown-preview"
+            style={styles.editMarkdownPreview}
+          >
+            <MarkdownBody text={editText} styles={styles} />
+          </View>
+        ) : (
+          <TextInput
+            testID="description-input"
+            value={editText}
+            onChangeText={setEditText}
+            multiline
+            style={styles.editInput}
+            placeholder="Description"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+        )}
+        {editCategory === "reminder" ? (
+          <>
+            <Text style={styles.editLabel}>Reminder date and time</Text>
+            {Platform.OS === "web" ? null : (
+              <View style={{ alignItems: "center", marginBottom: 8 }}>
+                {Platform.OS === "ios" ? (
+                  <DateTimePicker
+                    value={reminderPickerDate}
+                    mode="datetime"
+                    display="compact"
+                    onChange={(_, selectedDate) => {
+                      if (!selectedDate) return;
+                      updateReminderDate(selectedDate);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <DateTimePicker
+                      value={reminderPickerDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        if (event?.type === "dismissed" || !selectedDate)
+                          return;
+                        const nextDate = new Date(selectedDate);
+                        nextDate.setHours(reminderPickerDate.getHours());
+                        nextDate.setMinutes(reminderPickerDate.getMinutes());
+                        nextDate.setSeconds(0);
+                        nextDate.setMilliseconds(0);
+                        updateReminderDate(nextDate);
+                      }}
+                    />
+                    <DateTimePicker
+                      value={reminderPickerDate}
+                      mode="time"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        if (event?.type === "dismissed" || !selectedDate)
+                          return;
+                        const nextDate = new Date(reminderPickerDate);
+                        nextDate.setHours(selectedDate.getHours());
+                        nextDate.setMinutes(selectedDate.getMinutes());
+                        nextDate.setSeconds(0);
+                        nextDate.setMilliseconds(0);
+                        updateReminderDate(nextDate);
+                      }}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        ) : null}
+        <Text style={styles.editLabel}>Priority (0-10)</Text>
+        <TextInput
+          value={editPriority}
+          onChangeText={setEditPriority}
+          style={styles.editField}
+          keyboardType="numeric"
+          placeholder="0"
+          placeholderTextColor={theme.colors.textSecondary}
+        />
+        <Text style={styles.editLabel}>Tags</Text>
+        <View style={styles.tagInputRow}>
+          <TextInput
+            value={editTagDraft}
+            onChangeText={(value) => {
+              setEditTagDraft(value);
+              setEditTagError("");
+            }}
+            style={[styles.editField, styles.tagInput]}
+            placeholder={
+              parsedEditTags.length >= MAX_ENTRY_TAGS
+                ? `Maximum ${MAX_ENTRY_TAGS} tags reached`
+                : "Type a tag"
+            }
+            placeholderTextColor={theme.colors.textSecondary}
+            editable={parsedEditTags.length < MAX_ENTRY_TAGS}
+          />
+          <Pressable style={styles.secondaryButton} onPress={addEditTag}>
+            <Text style={styles.secondaryButtonText}>Add</Text>
+          </Pressable>
+        </View>
+        {editTagError ? (
+          <Text style={[styles.tagCountText, { color: theme.colors.danger }]}>
+            {editTagError}
+          </Text>
+        ) : null}
+        <Text
+          style={styles.tagCountText}
+        >{`${parsedEditTags.length}/${MAX_ENTRY_TAGS} tags`}</Text>
+        <View style={styles.tagsRow}>
+          {parsedEditTags.map((tag) => (
+            <Pressable
+              key={tag}
+              style={styles.itemTagPill}
+              onPress={() => removeEditTag(tag)}
+            >
+              <Text style={styles.itemTagText}>{`#${tag} ×`}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {!!error && <Text style={styles.error}>{error}</Text>}
+        <View style={styles.editActionRow}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.secondaryButtonText}>Cancel</Text>
+          </Pressable>
+          <Pressable style={styles.editSaveButton} onPress={saveEdit}>
+            <Text style={styles.buttonText}>
+              {busy ? "Saving..." : "Save changes"}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </SecondBrainEntryPageLayout>
   );
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 function isLocalHostName(hostname) {
   const host = String(hostname || "").toLowerCase();
@@ -48,6 +49,7 @@ function resolveApiBase() {
 
 const API_BASE = resolveApiBase();
 const TOKEN_KEY = "authToken";
+const REFRESH_TOKEN_KEY = "authRefreshToken";
 const TOKEN_STORAGE_OPTIONS = {
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 };
@@ -173,6 +175,39 @@ export async function getToken() {
   return AsyncStorage.getItem(TOKEN_KEY);
 }
 
+export async function getRefreshToken() {
+  try {
+    const secureToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    if (secureToken) return secureToken;
+  } catch {
+    // Fall back to AsyncStorage when SecureStore is unavailable.
+  }
+
+  return AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+async function setRefreshToken(refreshToken) {
+  const normalizedRefreshToken = String(refreshToken || "");
+  if (!normalizedRefreshToken) {
+    await clearRefreshToken();
+    return;
+  }
+
+  try {
+    await SecureStore.setItemAsync(
+      REFRESH_TOKEN_KEY,
+      normalizedRefreshToken,
+      TOKEN_STORAGE_OPTIONS,
+    );
+    await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+    return;
+  } catch {
+    // Fall back to AsyncStorage when SecureStore is unavailable.
+  }
+
+  return AsyncStorage.setItem(REFRESH_TOKEN_KEY, normalizedRefreshToken);
+}
+
 export async function setToken(token) {
   const normalizedToken = String(token || "");
   if (!normalizedToken) {
@@ -195,13 +230,58 @@ export async function setToken(token) {
   return AsyncStorage.setItem(TOKEN_KEY, normalizedToken);
 }
 
+export async function setSessionTokens({ token, refreshToken }) {
+  await setToken(token);
+  await setRefreshToken(refreshToken);
+}
+
+async function clearRefreshToken() {
+  try {
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+  } catch {
+    // Keep clearing AsyncStorage even if SecureStore delete fails.
+  }
+  return AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
 export async function clearToken() {
   try {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch {
     // Keep clearing AsyncStorage even if SecureStore delete fails.
   }
+  await clearRefreshToken();
   return AsyncStorage.removeItem(TOKEN_KEY);
+}
+
+function isNativeMobilePlatform() {
+  return Platform.OS === "ios" || Platform.OS === "android";
+}
+
+async function refreshAccessToken() {
+  if (!isNativeMobilePlatform()) return "";
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) return "";
+
+  const response = await fetch(buildApiUrl("/auth/refresh"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const raw = await response.text();
+  const data = raw ? JSON.parse(raw) : {};
+  if (!response.ok) {
+    return "";
+  }
+
+  const refreshedAccessToken = String(data?.token || "").trim();
+  if (!refreshedAccessToken) return "";
+
+  await setSessionTokens({
+    token: refreshedAccessToken,
+    refreshToken: String(data?.refreshToken || refreshToken),
+  });
+  return refreshedAccessToken;
 }
 
 export async function invalidateApiCache({
@@ -239,7 +319,7 @@ export async function invalidateApiCache({
 
 export async function apiRequest(
   path,
-  { method = "GET", body, token, cache } = {},
+  { method = "GET", body, token, cache, _retryOnAuthFailure = true } = {},
 ) {
   const normalizedMethod = String(method || "GET").toUpperCase();
   const cacheEnabled = normalizedMethod === "GET" && cache?.enabled !== false;
@@ -309,6 +389,19 @@ export async function apiRequest(
       response.status === 401 ||
       (response.status === 403 &&
         (lowerMessage.includes("expired") || lowerMessage.includes("jwt")));
+
+    if (authExpired && _retryOnAuthFailure && isNativeMobilePlatform()) {
+      const refreshedAccessToken = await refreshAccessToken();
+      if (refreshedAccessToken) {
+        return apiRequest(path, {
+          method: normalizedMethod,
+          body,
+          token: refreshedAccessToken,
+          cache,
+          _retryOnAuthFailure: false,
+        });
+      }
+    }
 
     if (authExpired && typeof authExpiredHandler === "function") {
       await authExpiredHandler();

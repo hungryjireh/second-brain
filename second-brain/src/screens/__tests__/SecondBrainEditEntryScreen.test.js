@@ -1,10 +1,23 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Platform } from "react-native";
 import SecondBrainEditEntryScreen from "../SecondBrainEditEntryScreen";
 import { apiRequest } from "../../api";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
+
+jest.mock("@react-native-community/datetimepicker", () => {
+  const { Text: MockText } = require("react-native");
+
+  function MockDateTimePicker() {
+    return (
+      <MockText testID="native-datetime-picker">MockDateTimePicker</MockText>
+    );
+  }
+
+  return MockDateTimePicker;
+});
 
 describe("SecondBrainEditEntryScreen", () => {
   const token = "token";
@@ -21,6 +34,10 @@ describe("SecondBrainEditEntryScreen", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "ios",
+    });
   });
 
   it("saves edited text and navigates to entry details", async () => {
@@ -100,5 +117,94 @@ describe("SecondBrainEditEntryScreen", () => {
     expect(queryByTestId("description-input")).toBeNull();
     expect(getByTestId("description-markdown-preview")).toBeTruthy();
     expect(getByText("Bold")).toBeTruthy();
+  });
+
+  it("uses multiline title and summary inputs when values are long", async () => {
+    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
+    const longEntry = {
+      ...entry,
+      title:
+        "This is a deliberately long title that should switch to multiline input mode",
+      summary:
+        "This is a deliberately long summary that should also switch to multiline mode in the edit form field.",
+    };
+
+    const { getByPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: longEntry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    expect(getByPlaceholderText("Title").props.multiline).toBe(true);
+    expect(getByPlaceholderText("Summary").props.multiline).toBe(true);
+  });
+
+  it("expands title and summary input heights as content grows", async () => {
+    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
+
+    const { getByPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    const titleInput = getByPlaceholderText("Title");
+    const summaryInput = getByPlaceholderText("Summary");
+
+    fireEvent(titleInput, "contentSizeChange", {
+      nativeEvent: { contentSize: { height: 150 } },
+    });
+    fireEvent(summaryInput, "contentSizeChange", {
+      nativeEvent: { contentSize: { height: 190 } },
+    });
+
+    expect(titleInput.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ height: 150 })]),
+    );
+    expect(summaryInput.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ height: 190 })]),
+    );
+  });
+
+  it("renders centralized reminder picker without action buttons and hides web reminder input", async () => {
+    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
+    const reminderEntry = {
+      ...entry,
+      category: "reminder",
+      remind_at: 1798763400,
+    };
+
+    const { queryByText, queryByPlaceholderText, getAllByTestId, unmount } =
+      render(
+        <SecondBrainEditEntryScreen
+          route={{ params: { entry: reminderEntry, token } }}
+          navigation={{ goBack: jest.fn() }}
+        />,
+      );
+
+    expect(queryByText("Set date & time")).toBeNull();
+    expect(queryByText("Done")).toBeNull();
+    expect(queryByPlaceholderText("Select reminder date and time")).toBeNull();
+    expect(getAllByTestId("native-datetime-picker").length).toBe(1);
+
+    unmount();
+
+    Object.defineProperty(Platform, "OS", {
+      configurable: true,
+      value: "web",
+    });
+
+    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
+
+    const { queryByPlaceholderText: queryWebPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: reminderEntry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    expect(queryWebPlaceholderText("Select reminder date and time")).toBeNull();
   });
 });

@@ -1,8 +1,10 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Alert } from "react-native";
 import fs from "node:fs";
 import path from "node:path";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SecondBrainScreen from "../SecondBrainScreen";
+import { sortEntriesByUpdatedAt } from "../SecondBrainScreen";
 import { apiRequest, isLikelyOfflineError } from "../../api";
 
 jest.mock("../../api", () => ({
@@ -32,7 +34,17 @@ describe("SecondBrainScreen", () => {
     global.fetch = originalFetch;
   });
 
+  it("sorts entries by updated_at descending with created_at fallback", () => {
+    const sorted = sortEntriesByUpdatedAt([
+      { id: 1, created_at: 100, updated_at: 120 },
+      { id: 2, created_at: 200 },
+      { id: 3, created_at: 90, updated_at: 180 },
+    ]);
+    expect(sorted.map((entry) => entry.id)).toEqual([2, 3, 1]);
+  });
+
   it("archives an entry and updates button label", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const entry = {
       id: 42,
       title: "Ship tests",
@@ -54,6 +66,16 @@ describe("SecondBrainScreen", () => {
 
     await waitFor(() => expect(getByText("Ship tests")).toBeTruthy());
     fireEvent.press(getByText("Archive"));
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Archive entry?",
+      "This will move the entry to Archived/Done.",
+      expect.any(Array),
+    );
+    const alertActions = alertSpy.mock.calls.at(-1)?.[2] ?? [];
+    const archiveAction = alertActions.find(
+      (action) => action.text === "Archive",
+    );
+    archiveAction?.onPress?.();
 
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith(
@@ -61,6 +83,41 @@ describe("SecondBrainScreen", () => {
         expect.objectContaining({ method: "PATCH" }),
       );
     });
+    alertSpy.mockRestore();
+  });
+
+  it("shows 'Mark done?' confirmation when archiving a reminder", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    const entry = {
+      id: 77,
+      title: "Pay bill",
+      summary: "Due tonight",
+      category: "reminder",
+      is_archived: false,
+    };
+    const archived = { ...entry, is_archived: true };
+
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/entries?limit=60") return { entries: [entry] };
+      if (url === "/entries?id=77" && options.method === "PATCH")
+        return archived;
+      return {};
+    });
+
+    const { getByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => expect(getByText("Pay bill")).toBeTruthy());
+    fireEvent.press(getByText("Mark Done"));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Mark done?",
+      "This will move the entry to Archived/Done.",
+      expect.any(Array),
+    );
+
+    alertSpy.mockRestore();
   });
 
   it("loads entries once on mount without re-fetch loop", async () => {
@@ -85,6 +142,40 @@ describe("SecondBrainScreen", () => {
       ([url]) => url === "/entries?limit=60",
     );
     expect(entryLoadCalls).toHaveLength(1);
+  });
+
+  it("shows centered loading thoughts state while entries are being fetched", async () => {
+    let resolveEntries;
+    let resolveTags;
+    const entriesPromise = new Promise((resolve) => {
+      resolveEntries = resolve;
+    });
+    const tagsPromise = new Promise((resolve) => {
+      resolveTags = resolve;
+    });
+
+    apiRequest.mockImplementation((url) => {
+      if (url === "/entries?limit=60") return entriesPromise;
+      if (url === "/tags") return tagsPromise;
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    const { getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    expect(getByText("Loading thoughts...")).toBeTruthy();
+
+    await act(async () => {
+      resolveEntries({ entries: [] });
+      resolveTags({ tags: [] });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(queryByText("Loading thoughts...")).toBeNull();
+    });
   });
 
   it("reloads entries with cache bypass when screen regains focus", async () => {
@@ -132,7 +223,8 @@ describe("SecondBrainScreen", () => {
     });
   });
 
-  it("deletes an entry on first swipe delete action", async () => {
+  it("prompts before deleting an entry from swipe action", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const entry = {
       id: 42,
       title: "Ship tests",
@@ -152,6 +244,16 @@ describe("SecondBrainScreen", () => {
 
     await waitFor(() => expect(getByText("Ship tests")).toBeTruthy());
     fireEvent.press(getByTestId("entry-swipe-delete-42"));
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Delete entry?",
+      "This action cannot be undone.",
+      expect.any(Array),
+    );
+    const alertActions = alertSpy.mock.calls.at(-1)?.[2] ?? [];
+    const deleteAction = alertActions.find(
+      (action) => action.text === "Delete",
+    );
+    deleteAction?.onPress?.();
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith(
         "/entries?id=42",
@@ -159,6 +261,7 @@ describe("SecondBrainScreen", () => {
       );
     });
     expect(queryByText("Confirm")).toBeNull();
+    alertSpy.mockRestore();
   });
 
   it("navigates to entry edit screen on edit action", async () => {
