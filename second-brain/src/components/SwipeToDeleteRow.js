@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View, PanResponder } from "react-native";
 
 const SWIPE_OPEN_THRESHOLD = 44;
+const FULL_LEFT_SWIPE_EPSILON = 4;
+const FULL_SWIPE_DELETE_RATIO = 0.92;
+
+export function isFullLeftSwipe(currentOffset, dx, actionWidth) {
+  return currentOffset + dx <= -actionWidth + FULL_LEFT_SWIPE_EPSILON;
+}
 
 export default function SwipeToDeleteRow({
   id,
@@ -16,6 +22,8 @@ export default function SwipeToDeleteRow({
 }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const currentOffsetRef = useRef(0);
+  const [rowWidth, setRowWidth] = useState(actionWidth);
+  const maxSwipeDistance = Math.max(actionWidth, rowWidth);
 
   const animateTo = useCallback(
     (value, immediate = false) => {
@@ -51,12 +59,23 @@ export default function SwipeToDeleteRow({
         },
         onPanResponderMove: (_, gestureState) => {
           const next = Math.max(
-            -actionWidth,
+            -maxSwipeDistance,
             Math.min(0, currentOffsetRef.current + gestureState.dx),
           );
           translateX.setValue(next);
         },
         onPanResponderRelease: (_, gestureState) => {
+          const didFullySwipeLeft = isFullLeftSwipe(
+            currentOffsetRef.current,
+            gestureState.dx,
+            maxSwipeDistance * FULL_SWIPE_DELETE_RATIO,
+          );
+          if (didFullySwipeLeft) {
+            animateTo(-maxSwipeDistance, true);
+            onOpen(id);
+            onActionPress?.();
+            return;
+          }
           const shouldOpen =
             gestureState.dx < -SWIPE_OPEN_THRESHOLD ||
             (isOpen && gestureState.dx < SWIPE_OPEN_THRESHOLD);
@@ -67,11 +86,26 @@ export default function SwipeToDeleteRow({
           animateTo(isOpen ? -actionWidth : 0);
         },
       }),
-    [actionWidth, animateTo, id, isOpen, onOpen, translateX],
+    [
+      animateTo,
+      id,
+      isOpen,
+      maxSwipeDistance,
+      onActionPress,
+      onOpen,
+      translateX,
+    ],
   );
 
   return (
-    <View style={[styles.swipeRow, isRaised ? styles.swipeRowRaised : null]}>
+    <View
+      style={[styles.swipeRow, isRaised ? styles.swipeRowRaised : null]}
+      onLayout={(event) => {
+        const nextWidth = event?.nativeEvent?.layout?.width;
+        if (!nextWidth) return;
+        setRowWidth(nextWidth);
+      }}
+    >
       <View style={styles.swipeActionWrap}>
         <Pressable
           testID={`entry-swipe-delete-${id}`}
@@ -82,6 +116,7 @@ export default function SwipeToDeleteRow({
         </Pressable>
       </View>
       <Animated.View
+        testID={`entry-swipe-card-${id}`}
         style={[styles.swipeCardWrap, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >

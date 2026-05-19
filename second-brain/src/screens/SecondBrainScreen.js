@@ -216,7 +216,6 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [creatingEntries, setCreatingEntries] = useState([]);
   const [typebarInputHeight, setTypebarInputHeight] =
     useState(TYPEBAR_MIN_HEIGHT);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [openSwipeId, setOpenSwipeId] = useState(null);
   const [importingConversations, setImportingConversations] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -244,8 +243,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineQueueSize, setOfflineQueueSize] = useState(0);
-  const confirmDeleteTimeoutRef = useRef(null);
-  const openActionDrawerIdRef = useRef(null);
+  const filterDropdownOpenedAtMsRef = useRef(0);
   const hasMicrophonePermissionRef = useRef(false);
   const audioRecordingModeEnabledRef = useRef(false);
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
@@ -360,7 +358,7 @@ export default function SecondBrainScreen({ token, navigation }) {
     });
   }
 
-  async function loadEntries() {
+  async function loadEntries({ bypassCache = false } = {}) {
     try {
       setError("");
       setOfflineMode(false);
@@ -368,9 +366,12 @@ export default function SecondBrainScreen({ token, navigation }) {
       const [data, tagsData] = await Promise.all([
         apiRequest("/entries?limit=60", {
           token,
-          cache: { ttlMs: CACHE_TTL_MS.FEED },
+          cache: { ttlMs: CACHE_TTL_MS.FEED, bypass: bypassCache },
         }),
-        apiRequest("/tags", { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } }),
+        apiRequest("/tags", {
+          token,
+          cache: { ttlMs: CACHE_TTL_MS.SETTINGS, bypass: bypassCache },
+        }),
       ]);
       const list = Array.isArray(data.entries)
         ? data.entries
@@ -415,6 +416,13 @@ export default function SecondBrainScreen({ token, navigation }) {
   useEffect(() => {
     loadEntries();
   }, [token]);
+  useEffect(() => {
+    if (!navigation?.addListener) return undefined;
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadEntries({ bypassCache: true });
+    });
+    return unsubscribe;
+  }, [navigation, token]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -433,20 +441,6 @@ export default function SecondBrainScreen({ token, navigation }) {
     }
     loadSettings();
   }, [token]);
-
-  useEffect(
-    () => () => {
-      if (confirmDeleteTimeoutRef.current) {
-        clearTimeout(confirmDeleteTimeoutRef.current);
-        confirmDeleteTimeoutRef.current = null;
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    openActionDrawerIdRef.current = openActionDrawerId;
-  }, [openActionDrawerId]);
 
   useEffect(() => {
     if (isSmallScreen) {
@@ -793,25 +787,9 @@ export default function SecondBrainScreen({ token, navigation }) {
   const requestDelete = useCallback(
     (entryId) => {
       setOpenSwipeId(entryId);
-      if (confirmDeleteId !== entryId) {
-        setConfirmDeleteId(entryId);
-        if (confirmDeleteTimeoutRef.current)
-          clearTimeout(confirmDeleteTimeoutRef.current);
-        confirmDeleteTimeoutRef.current = setTimeout(() => {
-          setConfirmDeleteId(null);
-          confirmDeleteTimeoutRef.current = null;
-        }, 2500);
-        return;
-      }
-
-      if (confirmDeleteTimeoutRef.current) {
-        clearTimeout(confirmDeleteTimeoutRef.current);
-        confirmDeleteTimeoutRef.current = null;
-      }
-      setConfirmDeleteId(null);
       deleteEntry(entryId);
     },
-    [confirmDeleteId, deleteEntry],
+    [deleteEntry],
   );
 
   const downloadIcs = useCallback(
@@ -926,21 +904,24 @@ export default function SecondBrainScreen({ token, navigation }) {
     });
   }, []);
   const keyExtractor = useCallback((item) => item.key, []);
-  const renderCell = useCallback(({ item, children, style, ...rest }) => {
-    const isRaised = item?.entry?.id === openActionDrawerIdRef.current;
-    return (
-      <View
-        {...rest}
-        style={[
-          style,
-          styles.listCell,
-          isRaised ? styles.listCellRaised : null,
-        ]}
-      >
-        {children}
-      </View>
-    );
-  }, []);
+  const renderCell = useCallback(
+    ({ item, children, style, ...rest }) => {
+      const isRaised = item?.entry?.id === openActionDrawerId;
+      return (
+        <View
+          {...rest}
+          style={[
+            style,
+            styles.listCell,
+            isRaised ? styles.listCellRaised : null,
+          ]}
+        >
+          {children}
+        </View>
+      );
+    },
+    [openActionDrawerId],
+  );
   const renderListItem = useCallback(
     ({ item }) => {
       if (item.type === "header") {
@@ -962,7 +943,7 @@ export default function SecondBrainScreen({ token, navigation }) {
           theme={theme}
           isBusy={isBusy}
           isSwipeOpen={openSwipeId === entry.id}
-          isDeleteConfirm={confirmDeleteId === entry.id}
+          isDeleteConfirm={false}
           displayDate={item.displayDate}
           displayRemindAt={item.displayRemindAt}
           onOpenEntry={openEntry}
@@ -972,6 +953,9 @@ export default function SecondBrainScreen({ token, navigation }) {
           onDownloadIcs={downloadIcs}
           onRequestDelete={requestDelete}
           onActionDrawerChange={handleActionDrawerChange}
+          isActionDrawerActive={openActionDrawerId === entry.id}
+          hasOpenActionDrawer={openActionDrawerId !== null}
+          onCloseAnyActionDrawer={() => setOpenActionDrawerId(null)}
         />
       );
       if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
@@ -981,9 +965,7 @@ export default function SecondBrainScreen({ token, navigation }) {
           isOpen={openSwipeId === entry.id}
           isRaised={openActionDrawerId === entry.id}
           onOpen={setOpenSwipeId}
-          actionLabel={
-            isBusy ? "..." : confirmDeleteId === entry.id ? "Confirm" : "Delete"
-          }
+          actionLabel={isBusy ? "..." : "Delete"}
           onActionPress={() => requestDelete(entry.id)}
           actionWidth={SWIPE_ACTION_WIDTH}
           styles={styles}
@@ -995,7 +977,6 @@ export default function SecondBrainScreen({ token, navigation }) {
     [
       busyId,
       closeSwipe,
-      confirmDeleteId,
       downloadIcs,
       handleActionDrawerChange,
       openActionDrawerId,
@@ -1220,6 +1201,9 @@ export default function SecondBrainScreen({ token, navigation }) {
     setSearchQuery("");
     setShowArchived(false);
   }, []);
+  const closeOpenActionDrawer = useCallback(() => {
+    setOpenActionDrawerId(null);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -1245,11 +1229,12 @@ export default function SecondBrainScreen({ token, navigation }) {
                   isSmallScreen && styles.statCardSmall,
                   isActive && styles.statCardActive,
                 ]}
-                onPress={() =>
+                onPress={() => {
+                  closeOpenActionDrawer();
                   setActiveCategory((prev) =>
                     prev === stat.key ? "" : stat.key,
-                  )
-                }
+                  );
+                }}
               >
                 <View
                   style={[
@@ -1280,7 +1265,12 @@ export default function SecondBrainScreen({ token, navigation }) {
           })}
         </View>
 
-        <View style={styles.filterSection}>
+        <View
+          style={[
+            styles.filterSection,
+            isFilterDropdownOpen && styles.filterSectionOpen,
+          ]}
+        >
           {isNativeOfflineMode ? (
             <View testID="offline-banner" style={styles.offlineBanner}>
               <Text style={styles.offlineBannerTitle}>Offline mode</Text>
@@ -1291,160 +1281,188 @@ export default function SecondBrainScreen({ token, navigation }) {
               </Text>
             </View>
           ) : null}
-          <View
-            style={[
-              styles.filterHeaderRow,
-              !isSmallScreen && styles.filterHeaderRowWithSpacing,
-            ]}
-          >
-            {isSmallScreen ? (
-              <Pressable
-                testID="filter-dropdown-toggle"
-                style={[
-                  styles.filterDropdownToggle,
-                  isFilterDropdownOpen && styles.filterDropdownToggleOpen,
-                ]}
-                onPress={() => setIsFilterDropdownOpen((prev) => !prev)}
-              >
-                <Text style={styles.filterLabel}>FILTER</Text>
-                <Feather
-                  name={isFilterDropdownOpen ? "chevron-up" : "chevron-down"}
-                  size={12}
-                  style={styles.filterDropdownChevronIcon}
-                />
-              </Pressable>
-            ) : (
-              <>
-                <Text style={styles.filterLabel}>FILTER</Text>
-                <View style={styles.archivedToggle}>
-                  <Text style={styles.archivedToggleText}>
-                    Show Archived/Done
-                  </Text>
-                  <Switch
-                    value={showArchived}
-                    onValueChange={setShowArchived}
-                    trackColor={{
-                      false: theme.colors.border,
-                      true: theme.colors.brand,
-                    }}
-                    thumbColor={theme.colors.bg}
-                    ios_backgroundColor={theme.colors.border}
-                  />
-                </View>
-              </>
-            )}
-          </View>
-
-          {isFilterDropdownOpen ? (
+          <View>
             <View
               style={[
-                styles.filterDropdownContent,
-                styles.filterDropdownContentOpen,
+                styles.filterHeaderRow,
+                !isSmallScreen && styles.filterHeaderRowWithSpacing,
               ]}
             >
-              <Pressable
-                style={[
-                  styles.clearFiltersButton,
-                  !hasActiveFilters && styles.clearFiltersButtonDisabled,
-                ]}
-                onPress={clearFilters}
-                disabled={!hasActiveFilters}
-              >
-                <Text
-                  style={[
-                    styles.clearFiltersButtonText,
-                    !hasActiveFilters && styles.clearFiltersButtonTextDisabled,
-                  ]}
-                >
-                  Clear filters
-                </Text>
-              </Pressable>
               {isSmallScreen ? (
-                <View
-                  style={[styles.archivedToggle, styles.archivedToggleDropdown]}
+                <Pressable
+                  testID="filter-dropdown-toggle"
+                  style={[
+                    styles.filterDropdownToggle,
+                    isFilterDropdownOpen && styles.filterDropdownToggleOpen,
+                  ]}
+                  onPress={() => {
+                    closeOpenActionDrawer();
+                    setIsFilterDropdownOpen((prev) => {
+                      const nextOpen = !prev;
+                      if (nextOpen) {
+                        filterDropdownOpenedAtMsRef.current = Date.now();
+                      }
+                      return nextOpen;
+                    });
+                  }}
                 >
-                  <Text style={styles.archivedToggleText}>
-                    Show Archived/Done
-                  </Text>
-                  <Switch
-                    value={showArchived}
-                    onValueChange={setShowArchived}
-                    trackColor={{
-                      false: theme.colors.border,
-                      true: theme.colors.brand,
-                    }}
-                    thumbColor={theme.colors.bg}
-                    ios_backgroundColor={theme.colors.border}
+                  <Text style={styles.filterLabel}>FILTER</Text>
+                  <Feather
+                    name={isFilterDropdownOpen ? "chevron-up" : "chevron-down"}
+                    size={12}
+                    style={styles.filterDropdownChevronIcon}
                   />
-                </View>
+                </Pressable>
               ) : null}
-              <View style={styles.filterRow}>
-                <Text style={styles.filterRowLabel}>PRIORITY</Text>
-                {PRIORITY_LEVELS.map((level) => {
-                  const isActive = activePriorityLevel === level.key;
-                  return (
-                    <Pressable
-                      key={level.key}
-                      style={[styles.pill, isActive && styles.pillActive]}
-                      onPress={() =>
-                        setActivePriorityLevel((prev) =>
-                          prev === level.key ? "" : level.key,
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.pillText,
-                          isActive && styles.pillTextActive,
-                        ]}
-                      >
-                        {level.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <View style={styles.filterRow}>
-                <Text
-                  style={styles.filterRowLabel}
-                >{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
-                {globalTags.map((tag) => {
-                  const isActive =
-                    activeTag.toLowerCase() === tag.toLowerCase();
-                  const isDisabled = !tagUsageCounts.has(tag);
-                  return (
-                    <Pressable
-                      key={tag}
-                      testID={`tag-filter-${tag.toLowerCase()}`}
-                      style={[
-                        styles.pill,
-                        isActive && styles.pillActive,
-                        isDisabled && styles.pillDisabled,
-                      ]}
-                      disabled={isDisabled}
-                      onPress={() =>
-                        setActiveTag((prev) =>
-                          prev.toLowerCase() === tag.toLowerCase() ? "" : tag,
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.pillText,
-                          isActive && styles.pillTextActive,
-                          isDisabled && styles.pillTextDisabled,
-                        ]}
-                      >{`#${tag}`}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {!isSmallScreen ? (
+                <>
+                  <Text style={styles.filterLabel}>FILTER</Text>
+                  <View style={styles.archivedToggle}>
+                    <Text style={styles.archivedToggleText}>
+                      Show Archived/Done
+                    </Text>
+                    <Switch
+                      value={showArchived}
+                      onValueChange={(next) => {
+                        closeOpenActionDrawer();
+                        setShowArchived(next);
+                      }}
+                      trackColor={{
+                        false: theme.colors.border,
+                        true: theme.colors.brand,
+                      }}
+                      thumbColor={theme.colors.bg}
+                      ios_backgroundColor={theme.colors.border}
+                    />
+                  </View>
+                </>
+              ) : null}
             </View>
-          ) : null}
+
+            {isFilterDropdownOpen ? (
+              <View
+                style={[
+                  styles.filterDropdownContent,
+                  styles.filterDropdownContentOpen,
+                ]}
+              >
+                <Pressable
+                  style={[
+                    styles.clearFiltersButton,
+                    !hasActiveFilters && styles.clearFiltersButtonDisabled,
+                  ]}
+                  onPress={() => {
+                    closeOpenActionDrawer();
+                    clearFilters();
+                  }}
+                  disabled={!hasActiveFilters}
+                >
+                  <Text
+                    style={[
+                      styles.clearFiltersButtonText,
+                      !hasActiveFilters &&
+                        styles.clearFiltersButtonTextDisabled,
+                    ]}
+                  >
+                    Clear filters
+                  </Text>
+                </Pressable>
+                {isSmallScreen ? (
+                  <View
+                    style={[
+                      styles.archivedToggle,
+                      styles.archivedToggleDropdown,
+                    ]}
+                  >
+                    <Text style={styles.archivedToggleText}>
+                      Show Archived/Done
+                    </Text>
+                    <Switch
+                      value={showArchived}
+                      onValueChange={(next) => {
+                        closeOpenActionDrawer();
+                        setShowArchived(next);
+                      }}
+                      trackColor={{
+                        false: theme.colors.border,
+                        true: theme.colors.brand,
+                      }}
+                      thumbColor={theme.colors.bg}
+                      ios_backgroundColor={theme.colors.border}
+                    />
+                  </View>
+                ) : null}
+                <View style={styles.filterRow}>
+                  <Text style={styles.filterRowLabel}>PRIORITY</Text>
+                  {PRIORITY_LEVELS.map((level) => {
+                    const isActive = activePriorityLevel === level.key;
+                    return (
+                      <Pressable
+                        key={level.key}
+                        style={[styles.pill, isActive && styles.pillActive]}
+                        onPress={() => {
+                          closeOpenActionDrawer();
+                          setActivePriorityLevel((prev) =>
+                            prev === level.key ? "" : level.key,
+                          );
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.pillText,
+                            isActive && styles.pillTextActive,
+                          ]}
+                        >
+                          {level.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.filterRow}>
+                  <Text
+                    style={styles.filterRowLabel}
+                  >{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
+                  {globalTags.map((tag) => {
+                    const isActive =
+                      activeTag.toLowerCase() === tag.toLowerCase();
+                    const isDisabled = !tagUsageCounts.has(tag);
+                    return (
+                      <Pressable
+                        key={tag}
+                        testID={`tag-filter-${tag.toLowerCase()}`}
+                        style={[
+                          styles.pill,
+                          isActive && styles.pillActive,
+                          isDisabled && styles.pillDisabled,
+                        ]}
+                        disabled={isDisabled}
+                        onPress={() => {
+                          closeOpenActionDrawer();
+                          setActiveTag((prev) =>
+                            prev.toLowerCase() === tag.toLowerCase() ? "" : tag,
+                          );
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.pillText,
+                            isActive && styles.pillTextActive,
+                            isDisabled && styles.pillTextDisabled,
+                          ]}
+                        >{`#${tag}`}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+          </View>
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={closeOpenActionDrawer}
             placeholder="Search entries..."
             placeholderTextColor={theme.colors.textMuted}
             style={styles.filterSearchInput}
@@ -1465,10 +1483,23 @@ export default function SecondBrainScreen({ token, navigation }) {
           ) : null}
         </View>
 
+        {isSmallScreen && isFilterDropdownOpen ? (
+          <Pressable
+            style={styles.filterDropdownDismissOverlay}
+            onPress={() => {
+              const elapsedMs =
+                Date.now() - filterDropdownOpenedAtMsRef.current;
+              if (elapsedMs < 180) return;
+              setIsFilterDropdownOpen(false);
+            }}
+          />
+        ) : null}
+
         {!!error && <Text style={styles.error}>{error}</Text>}
 
         <FlatList
           data={groupedRows}
+          extraData={openActionDrawerId}
           style={styles.list}
           contentContainerStyle={[
             styles.listContent,
@@ -1487,6 +1518,7 @@ export default function SecondBrainScreen({ token, navigation }) {
           updateCellsBatchingPeriod={50}
           windowSize={9}
           removeClippedSubviews={false}
+          onScrollBeginDrag={closeOpenActionDrawer}
         />
       </View>
 
@@ -1638,7 +1670,10 @@ export default function SecondBrainScreen({ token, navigation }) {
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={createEntry}
-          onFocus={() => setTypebarFocused(true)}
+          onFocus={() => {
+            closeOpenActionDrawer();
+            setTypebarFocused(true);
+          }}
           onBlur={() => setTypebarFocused(false)}
           placeholder={typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
@@ -1708,9 +1743,14 @@ export default function SecondBrainScreen({ token, navigation }) {
                 (voiceBusy || voiceStarting || loadingTelegramLinkKey) &&
                   styles.typebarButtonDisabled,
               ]}
-              onPress={
-                recording ? stopVoiceCaptureAndSubmit : startVoiceCapture
-              }
+              onPress={() => {
+                closeOpenActionDrawer();
+                if (recording) {
+                  stopVoiceCaptureAndSubmit();
+                  return;
+                }
+                startVoiceCapture();
+              }}
               disabled={voiceBusy || voiceStarting}
               accessibilityRole="button"
               accessibilityLabel={
@@ -1750,7 +1790,10 @@ export default function SecondBrainScreen({ token, navigation }) {
               styles.typebarButton,
               !draft.trim() && styles.typebarButtonDisabled,
             ]}
-            onPress={createEntry}
+            onPress={() => {
+              closeOpenActionDrawer();
+              createEntry();
+            }}
             disabled={!draft.trim()}
             accessibilityRole="button"
             accessibilityLabel="Enter note"
@@ -1780,7 +1823,10 @@ export default function SecondBrainScreen({ token, navigation }) {
             ) : null}
             <Pressable
               style={[styles.typebarButton, styles.typebarUploadButton]}
-              onPress={openSettings}
+              onPress={() => {
+                closeOpenActionDrawer();
+                openSettings();
+              }}
               accessibilityRole="button"
               accessibilityLabel="Open settings"
               onHoverIn={() => setActionTooltip("settings")}

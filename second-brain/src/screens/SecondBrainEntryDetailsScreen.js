@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Modal,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import MarkdownBody from "../components/MarkdownBody";
 import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
@@ -47,12 +47,12 @@ export default function SecondBrainEntryDetailsScreen({
   const token = tokenFromProps ?? null;
   const [entry, setEntry] = useState(entryFromRoute);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
-  const [drawerAnchor, setDrawerAnchor] = useState(null);
+  const [isInlineActionsMounted, setIsInlineActionsMounted] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isDeleteConfirm, setIsDeleteConfirm] = useState(false);
   const actionTriggerRef = useRef(null);
+  const inlineActionsAnim = useRef(new Animated.Value(0)).current;
   const deleteConfirmTimeoutRef = useRef(null);
-  const { width } = useWindowDimensions();
   const importedConversation = useMemo(
     () => parseImportedConversationFromEntry(entry),
     [entry?.raw_text],
@@ -81,13 +81,7 @@ export default function SecondBrainEntryDetailsScreen({
       : entry?.is_archived
         ? "Unarchive"
         : "Archive";
-  const drawerLeft = drawerAnchor
-    ? Math.max(
-        8,
-        Math.min(width - 8 - 132, drawerAnchor.x + drawerAnchor.w - 132),
-      )
-    : 8;
-  const drawerTop = drawerAnchor ? drawerAnchor.y + drawerAnchor.h + 6 : 0;
+  const showInlineActions = isInlineActionsMounted;
 
   useEffect(() => {
     setEntry(entryFromRoute);
@@ -123,18 +117,35 @@ export default function SecondBrainEntryDetailsScreen({
     [],
   );
 
-  function closeActionDrawer() {
+  function closeActionDrawer(onClosed) {
+    if (!isInlineActionsMounted) {
+      setIsActionDrawerOpen(false);
+      onClosed?.();
+      return;
+    }
     setIsActionDrawerOpen(false);
+    Animated.timing(inlineActionsAnim, {
+      toValue: 0,
+      duration: 180,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setIsInlineActionsMounted(false);
+      onClosed?.();
+    });
   }
 
   function openActionDrawer() {
-    const triggerNode = actionTriggerRef.current;
+    if (isInlineActionsMounted) return;
     setIsActionDrawerOpen(true);
-    if (triggerNode?.measureInWindow) {
-      triggerNode.measureInWindow((x, y, w, h) => {
-        setDrawerAnchor({ x, y, w, h });
-      });
-    }
+    inlineActionsAnim.setValue(0);
+    setIsInlineActionsMounted(true);
+    Animated.timing(inlineActionsAnim, {
+      toValue: 1,
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   }
 
   function handleEditEntry() {
@@ -192,30 +203,87 @@ export default function SecondBrainEntryDetailsScreen({
 
   return (
     <SecondBrainEntryPageLayout>
+      {isActionDrawerOpen ? (
+        <Pressable
+          testID="entry-actions-dismiss-overlay"
+          style={styles.entryActionDismissOverlay}
+          onPress={() => closeActionDrawer()}
+        />
+      ) : null}
       <View style={styles.entryPanelTitleRow}>
-        <Text style={styles.entryPanelTitle}>{title}</Text>
-        <View style={styles.mobileActionDrawerWrap}>
-          <Pressable
-            ref={actionTriggerRef}
-            accessibilityRole="button"
-            accessibilityLabel="Open entry actions"
-            onPress={() => {
-              if (isActionDrawerOpen) {
-                closeActionDrawer();
-                return;
-              }
-              openActionDrawer();
-            }}
-            disabled={isBusy}
-            style={styles.mobileActionTrigger}
+        {showInlineActions ? (
+          <Animated.View
+            style={[
+              styles.mobileInlineActionsRow,
+              {
+                opacity: inlineActionsAnim,
+                transform: [
+                  {
+                    translateX: inlineActionsAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [16, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
           >
-            {isBusy ? (
-              <Text style={styles.mobileActionTriggerText}>...</Text>
-            ) : (
-              <Text style={styles.mobileActionTriggerText}>...</Text>
-            )}
-          </Pressable>
-        </View>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={handleEditEntry}
+              disabled={isBusy}
+            >
+              <Text style={styles.secondaryButtonText}>Edit</Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={handleToggleArchive}
+              disabled={isBusy}
+            >
+              <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={handleDeleteEntry}
+              disabled={isBusy}
+            >
+              <Text
+                style={[
+                  styles.secondaryButtonText,
+                  styles.mobileActionDrawerDeleteText,
+                ]}
+              >
+                {isDeleteConfirm ? "Confirm Delete" : "Delete"}
+              </Text>
+            </Pressable>
+          </Animated.View>
+        ) : (
+          <>
+            <Text style={styles.entryPanelTitle}>{title}</Text>
+            <View style={styles.mobileActionDrawerWrap}>
+              <Pressable
+                ref={actionTriggerRef}
+                accessibilityRole="button"
+                accessibilityLabel="Open entry actions"
+                onPress={() => {
+                  if (isActionDrawerOpen) {
+                    closeActionDrawer();
+                    return;
+                  }
+                  openActionDrawer();
+                }}
+                disabled={isBusy}
+                style={styles.mobileActionTrigger}
+              >
+                {isBusy ? (
+                  <Text style={styles.mobileActionTriggerText}>...</Text>
+                ) : (
+                  <Text style={styles.mobileActionTriggerText}>...</Text>
+                )}
+              </Pressable>
+            </View>
+          </>
+        )}
       </View>
       <Text style={styles.entryPanelSummary}>{summary}</Text>
       {Array.isArray(entry?.tags) && entry.tags.length > 0 ? (
@@ -273,51 +341,6 @@ export default function SecondBrainEntryDetailsScreen({
           )}
         </ScrollView>
       </View>
-      <Modal
-        transparent
-        visible={isActionDrawerOpen}
-        animationType="none"
-        onRequestClose={closeActionDrawer}
-      >
-        <Pressable
-          style={styles.mobileActionDrawerBackdrop}
-          onPress={closeActionDrawer}
-        >
-          <View
-            style={[
-              styles.mobileActionDrawer,
-              styles.mobileActionDrawerPortal,
-              { top: drawerTop, left: drawerLeft },
-            ]}
-          >
-            <Pressable
-              style={styles.mobileActionDrawerItem}
-              onPress={handleEditEntry}
-            >
-              <Text style={styles.mobileActionDrawerText}>Edit</Text>
-            </Pressable>
-            <Pressable
-              style={styles.mobileActionDrawerItem}
-              onPress={handleToggleArchive}
-            >
-              <Text style={styles.mobileActionDrawerText}>{archiveLabel}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.mobileActionDrawerItem}
-              onPress={handleDeleteEntry}
-            >
-              <Text
-                style={[
-                  styles.mobileActionDrawerText,
-                  styles.mobileActionDrawerDeleteText,
-                ]}
-              >
-                {isDeleteConfirm ? "Confirm Delete" : "Delete"}
-              </Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
     </SecondBrainEntryPageLayout>
   );
 }

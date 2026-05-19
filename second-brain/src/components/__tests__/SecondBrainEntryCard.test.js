@@ -9,6 +9,7 @@ const styles = {
   cardIcon: {},
   priorityText: {},
   cardTitle: {},
+  cardTitleBlock: {},
   cardBody: {},
   cardActionCol: {},
   cardActionRow: {},
@@ -103,5 +104,117 @@ describe("SecondBrainEntryCard", () => {
     fireEvent.press(getByText("Pay bill"));
     expect(onOpenEntry).toHaveBeenCalledWith(entry);
     expect(onCloseSwipe).not.toHaveBeenCalled();
+  });
+
+  it("closes open menu from another card before navigating", () => {
+    const onOpenEntry = jest.fn();
+    const onCloseAnyActionDrawer = jest.fn();
+    const entry = {
+      id: 8,
+      category: "note",
+      title: "Inbox",
+      summary: "Quick note",
+      priority: 2,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={onOpenEntry}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        hasOpenActionDrawer
+        isActionDrawerActive={false}
+        onCloseAnyActionDrawer={onCloseAnyActionDrawer}
+      />,
+    );
+
+    fireEvent.press(getByText("Inbox"));
+    expect(onCloseAnyActionDrawer).toHaveBeenCalledTimes(1);
+    expect(onOpenEntry).not.toHaveBeenCalled();
+  });
+
+  it("opens action menu from 3-dots on mobile layout", () => {
+    const onActionDrawerChange = jest.fn();
+    const entry = {
+      id: 11,
+      category: "note",
+      title: "Mobile menu",
+      summary: "Tap trigger",
+      priority: 1,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByTestId } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        onActionDrawerChange={onActionDrawerChange}
+        isActionDrawerActive={false}
+        hasOpenActionDrawer={false}
+        isSmallScreenOverride
+      />,
+    );
+
+    fireEvent.press(getByTestId("entry-action-trigger-11"));
+    expect(onActionDrawerChange).toHaveBeenCalledWith(11, true);
+  });
+
+  it("closes its open mobile action menu when tapping card body", () => {
+    const onActionDrawerChange = jest.fn();
+    const entry = {
+      id: 21,
+      category: "note",
+      title: "Body tap closes",
+      summary: "Outside action row tap",
+      priority: 1,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        onActionDrawerChange={onActionDrawerChange}
+        isActionDrawerActive
+        hasOpenActionDrawer
+        isSmallScreenOverride
+      />,
+    );
+
+    fireEvent.press(getByText("Outside action row tap"));
+    expect(onActionDrawerChange).toHaveBeenCalledWith(21, false);
   });
 });

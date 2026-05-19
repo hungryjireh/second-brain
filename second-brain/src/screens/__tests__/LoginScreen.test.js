@@ -37,7 +37,7 @@ describe("LoginScreen", () => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
       expect(setToken).toHaveBeenCalledWith("token-123");
       expect(onLoggedIn).toHaveBeenCalledWith("token-123");
-      expect(mockReplace).toHaveBeenCalledWith("Apps");
+      expect(mockReplace).not.toHaveBeenCalled();
     });
   });
 
@@ -96,7 +96,7 @@ describe("LoginScreen", () => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
       expect(setToken).toHaveBeenCalledWith("token-enter");
       expect(onLoggedIn).toHaveBeenCalledWith("token-enter");
-      expect(mockReplace).toHaveBeenCalledWith("Apps");
+      expect(mockReplace).not.toHaveBeenCalled();
     });
   });
 

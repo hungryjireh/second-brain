@@ -1,6 +1,7 @@
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
-  Modal,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   Text,
@@ -50,6 +51,42 @@ const CATEGORY_ICONS = {
   note: "edit-3",
 };
 
+function TwoLineClampText({ text, style, testID }) {
+  const sourceText = String(text || "").trim();
+  const [displayText, setDisplayText] = useState(sourceText);
+  const [didClamp, setDidClamp] = useState(false);
+
+  useEffect(() => {
+    setDisplayText(sourceText);
+    setDidClamp(false);
+  }, [sourceText]);
+
+  return (
+    <Text
+      testID={testID}
+      style={style}
+      numberOfLines={2}
+      onTextLayout={(event) => {
+        if (didClamp || !sourceText) return;
+        const lines = event?.nativeEvent?.lines;
+        if (!Array.isArray(lines) || lines.length <= 2) return;
+        const firstTwoLinesText = lines
+          .slice(0, 2)
+          .map((line) => String(line?.text || ""))
+          .join("")
+          .trimEnd();
+        const nextDisplayText = firstTwoLinesText
+          ? `${firstTwoLinesText}...`
+          : "...";
+        setDisplayText(nextDisplayText);
+        setDidClamp(true);
+      }}
+    >
+      {displayText}
+    </Text>
+  );
+}
+
 function SecondBrainEntryCard({
   entry,
   styles,
@@ -64,12 +101,17 @@ function SecondBrainEntryCard({
   onDownloadIcs,
   onRequestDelete,
   onActionDrawerChange,
+  isActionDrawerActive,
+  hasOpenActionDrawer,
+  onCloseAnyActionDrawer,
   displayRemindAt,
   displayDate,
+  isSmallScreenOverride,
 }) {
-  const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
-  const [drawerAnchor, setDrawerAnchor] = useState(null);
   const actionTriggerRef = useRef(null);
+  const ignoreCardPressUntilRef = useRef(0);
+  const inlineActionsAnim = useRef(new Animated.Value(0)).current;
+  const [isInlineActionsMounted, setIsInlineActionsMounted] = useState(false);
   const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? "edit-3";
@@ -83,41 +125,69 @@ function SecondBrainEntryCard({
         ? "Unarchive"
         : "Archive";
   const isWeb = Platform.OS === "web";
-  const isSmallScreen = width < 720;
-  const isDrawerOpen = isActionDrawerOpen === true;
+  const isSmallScreen =
+    typeof isSmallScreenOverride === "boolean"
+      ? isSmallScreenOverride
+      : width < 720;
+  const showInlineActions = isSmallScreen && isInlineActionsMounted;
 
-  function closeActionDrawer() {
+  useEffect(() => {
+    if (!isSmallScreen) return;
+    if (isActionDrawerActive) {
+      setIsInlineActionsMounted(true);
+      inlineActionsAnim.setValue(0);
+      Animated.timing(inlineActionsAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+    if (!isInlineActionsMounted) return;
+    Animated.timing(inlineActionsAnim, {
+      toValue: 0,
+      duration: 180,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setIsInlineActionsMounted(false);
+    });
+  }, [
+    inlineActionsAnim,
+    isActionDrawerActive,
+    isInlineActionsMounted,
+    isSmallScreen,
+  ]);
+
+  function closeActionDrawer(onClosed) {
     onActionDrawerChange?.(entry.id, false);
-    setIsActionDrawerOpen(false);
+    onClosed?.();
   }
 
   function openActionDrawer() {
-    const triggerNode = actionTriggerRef.current;
-    if (triggerNode?.measureInWindow) {
-      triggerNode.measureInWindow((x, y, w, h) => {
-        setDrawerAnchor({ x, y, w, h });
-        onActionDrawerChange?.(entry.id, true);
-        setIsActionDrawerOpen(true);
-      });
-      return;
-    }
     onActionDrawerChange?.(entry.id, true);
-    setIsActionDrawerOpen(true);
   }
 
-  const drawerLeft = drawerAnchor
-    ? Math.max(
-        8,
-        Math.min(width - 8 - 132, drawerAnchor.x + drawerAnchor.w - 132),
-      )
-    : 8;
-  const drawerTop = drawerAnchor ? drawerAnchor.y + drawerAnchor.h + 6 : 0;
+  function markIgnoreCardPress() {
+    ignoreCardPressUntilRef.current = Date.now() + 300;
+  }
 
   return (
     <Pressable
       style={styles.card}
       onPress={() => {
-        closeActionDrawer();
+        if (Date.now() < ignoreCardPressUntilRef.current) {
+          return;
+        }
+        if (hasOpenActionDrawer && !isActionDrawerActive) {
+          onCloseAnyActionDrawer?.();
+          return;
+        }
+        if (showInlineActions) {
+          closeActionDrawer();
+          return;
+        }
         if (!isWeb && isSwipeOpen) {
           onCloseSwipe();
           return;
@@ -128,59 +198,128 @@ function SecondBrainEntryCard({
       <View style={styles.cardTopRow}>
         <View style={styles.cardMainCol}>
           {isSmallScreen ? (
-            <View style={styles.cardMetaRowMobile}>
-              <View style={styles.cardMetaLead}>
-                <Feather
-                  name={icon}
-                  size={14}
-                  style={styles.cardIcon}
-                  color={theme.colors.brand}
-                />
-                <Text
-                  style={[
-                    styles.priorityText,
-                    { color: getPriorityColor(priority, theme) },
-                  ]}
+            showInlineActions ? (
+              <Animated.View
+                style={[
+                  styles.mobileInlineActionsRow,
+                  {
+                    opacity: inlineActionsAnim,
+                    transform: [
+                      {
+                        translateX: inlineActionsAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [16, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={(event) => {
+                    event?.stopPropagation?.();
+                    closeActionDrawer(() => {
+                      onStartEdit(entry);
+                    });
+                  }}
+                  disabled={isBusy}
                 >
-                  P{priority}
-                </Text>
-                <Text style={styles.cardTitle}>
-                  {entry.title || "Untitled"}
-                </Text>
-              </View>
-              <View style={styles.mobileTitleActionRow}>
-                <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-                  <Text style={[styles.tagPillText, { color: tag.color }]}>
-                    {tag.label}
-                  </Text>
-                </View>
-                <View style={styles.mobileActionDrawerWrap}>
+                  <Text style={styles.secondaryButtonText}>Edit</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={(event) => {
+                    event?.stopPropagation?.();
+                    closeActionDrawer(() => {
+                      onToggleArchive(entry);
+                    });
+                  }}
+                  disabled={isBusy}
+                >
+                  <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
+                </Pressable>
+                {entry.category === "reminder" && entry.remind_at ? (
                   <Pressable
-                    ref={actionTriggerRef}
-                    style={styles.mobileActionTrigger}
+                    style={styles.secondaryButton}
                     onPress={(event) => {
                       event?.stopPropagation?.();
-                      if (isDrawerOpen) {
-                        closeActionDrawer();
-                        return;
-                      }
-                      openActionDrawer();
+                      closeActionDrawer(() => {
+                        onDownloadIcs(entry.id);
+                      });
                     }}
                     disabled={isBusy}
                   >
-                    {isBusy ? (
-                      <Text style={styles.mobileActionTriggerText}>...</Text>
-                    ) : (
-                      <Feather
-                        name="more-horizontal"
-                        size={16}
-                        style={styles.mobileActionTriggerIcon}
-                      />
-                    )}
+                    <Text style={styles.secondaryButtonText}>
+                      Add to Calendar
+                    </Text>
                   </Pressable>
+                ) : null}
+              </Animated.View>
+            ) : (
+              <View style={styles.cardMetaRowMobile}>
+                <View style={styles.cardMetaLead}>
+                  <Feather
+                    name={icon}
+                    size={14}
+                    style={styles.cardIcon}
+                    color={theme.colors.brand}
+                  />
+                  <Text
+                    style={[
+                      styles.priorityText,
+                      { color: getPriorityColor(priority, theme) },
+                    ]}
+                  >
+                    P{priority}
+                  </Text>
+                  <View style={styles.cardTitleBlock}>
+                    <TwoLineClampText
+                      style={styles.cardTitle}
+                      text={entry.title || "Untitled"}
+                    />
+                  </View>
+                </View>
+                <View style={styles.mobileTitleActionRow}>
+                  <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
+                    <Text style={[styles.tagPillText, { color: tag.color }]}>
+                      {tag.label}
+                    </Text>
+                  </View>
+                  <View style={styles.mobileActionDrawerWrap}>
+                    <Pressable
+                      ref={actionTriggerRef}
+                      testID={`entry-action-trigger-${entry.id}`}
+                      style={styles.mobileActionTrigger}
+                      onPressIn={(event) => {
+                        markIgnoreCardPress();
+                        event?.stopPropagation?.();
+                      }}
+                      onPress={(event) => {
+                        markIgnoreCardPress();
+                        event?.stopPropagation?.();
+                        if (isActionDrawerActive) {
+                          closeActionDrawer();
+                          return;
+                        }
+                        openActionDrawer();
+                      }}
+                      disabled={isBusy}
+                    >
+                      {isBusy ? (
+                        <Text style={styles.mobileActionTriggerText}>...</Text>
+                      ) : (
+                        <Feather
+                          name="more-horizontal"
+                          size={16}
+                          style={styles.mobileActionTriggerIcon}
+                        />
+                      )}
+                    </Pressable>
+                  </View>
                 </View>
               </View>
-            </View>
+            )
           ) : (
             <View style={styles.cardMetaRow}>
               <Feather
@@ -197,12 +336,18 @@ function SecondBrainEntryCard({
               >
                 P{priority}
               </Text>
-              <Text style={styles.cardTitle}>{entry.title || "Untitled"}</Text>
+              <View style={styles.cardTitleBlock}>
+                <TwoLineClampText
+                  style={styles.cardTitle}
+                  text={entry.title || "Untitled"}
+                />
+              </View>
             </View>
           )}
-          <Text style={styles.cardBody}>
-            {entry.summary || getEntryBody(entry)}
-          </Text>
+          <TwoLineClampText
+            style={styles.cardBody}
+            text={entry.summary || getEntryBody(entry)}
+          />
         </View>
         {!isSmallScreen ? (
           <View style={styles.cardActionCol}>
@@ -306,84 +451,6 @@ function SecondBrainEntryCard({
             </View>
           ))}
         </View>
-      ) : null}
-
-      {isSmallScreen ? (
-        <Modal
-          transparent
-          visible={isDrawerOpen}
-          animationType="none"
-          onRequestClose={closeActionDrawer}
-        >
-          <Pressable
-            style={styles.mobileActionDrawerBackdrop}
-            onPress={closeActionDrawer}
-          >
-            <View
-              style={[
-                styles.mobileActionDrawer,
-                styles.mobileActionDrawerPortal,
-                { top: drawerTop, left: drawerLeft },
-              ]}
-            >
-              <Pressable
-                style={styles.mobileActionDrawerItem}
-                onPress={(event) => {
-                  event?.stopPropagation?.();
-                  closeActionDrawer();
-                  onStartEdit(entry);
-                }}
-              >
-                <Text style={styles.mobileActionDrawerText}>Edit</Text>
-              </Pressable>
-              <Pressable
-                style={styles.mobileActionDrawerItem}
-                onPress={(event) => {
-                  event?.stopPropagation?.();
-                  closeActionDrawer();
-                  onToggleArchive(entry);
-                }}
-              >
-                <Text style={styles.mobileActionDrawerText}>
-                  {archiveLabel}
-                </Text>
-              </Pressable>
-              {entry.category === "reminder" && entry.remind_at ? (
-                <Pressable
-                  style={styles.mobileActionDrawerItem}
-                  onPress={(event) => {
-                    event?.stopPropagation?.();
-                    closeActionDrawer();
-                    onDownloadIcs(entry.id);
-                  }}
-                >
-                  <Text style={styles.mobileActionDrawerText}>
-                    Add to Calendar
-                  </Text>
-                </Pressable>
-              ) : null}
-              {isWeb ? (
-                <Pressable
-                  style={styles.mobileActionDrawerItem}
-                  onPress={(event) => {
-                    event?.stopPropagation?.();
-                    closeActionDrawer();
-                    onRequestDelete(entry.id);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.mobileActionDrawerText,
-                      styles.mobileActionDrawerDeleteText,
-                    ]}
-                  >
-                    {isDeleteConfirm ? "Confirm Delete" : "Delete"}
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </Pressable>
-        </Modal>
       ) : null}
     </Pressable>
   );

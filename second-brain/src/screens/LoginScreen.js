@@ -7,7 +7,6 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { login, setToken } from "../api";
 import { theme } from "../theme";
 import {
@@ -17,7 +16,6 @@ import {
 import styles from "./LoginScreenStyles";
 
 export default function LoginScreen({ onLoggedIn }) {
-  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const passwordInputRef = useRef(null);
@@ -41,7 +39,6 @@ export default function LoginScreen({ onLoggedIn }) {
       const data = await login(normalizedEmail, normalizedPassword);
       await setToken(data.token);
       onLoggedIn(data.token);
-      navigation.replace("Apps");
     } catch (err) {
       setError(err.message);
     } finally {

@@ -12,4 +12,14 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(smallCard.width).toBe("24%");
     expect(smallCard.minWidth).toBe(0);
   });
+
+  it("defines a full-width painted swipe delete background", () => {
+    const swipeActionWrap = StyleSheet.flatten(styles.swipeActionWrap);
+    const swipeDeleteAction = StyleSheet.flatten(styles.swipeDeleteAction);
+
+    expect(swipeActionWrap.left).toBe(0);
+    expect(swipeActionWrap.right).toBe(0);
+    expect(swipeActionWrap.backgroundColor).toBe("rgba(220,60,60,0.16)");
+    expect(swipeDeleteAction.backgroundColor).toBe("transparent");
+  });
 });

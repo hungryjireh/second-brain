@@ -48,24 +48,6 @@ function HeaderLiveStatus() {
   return <Text style={styles.headerLiveText}>{dateLabel}</Text>;
 }
 
-function HeaderLogout({ onLogout }) {
-  return (
-    <Pressable
-      onPress={onLogout}
-      accessibilityRole="button"
-      accessibilityLabel="Log out"
-      style={{
-        minWidth: 72,
-        paddingVertical: 6,
-        marginLeft: 12,
-        justifyContent: "center",
-      }}
-    >
-      <Feather name="log-out" size={20} color={theme.colors.textSecondary} />
-    </Pressable>
-  );
-}
-
 function HeaderSecondBrainBack({ navigation }) {
   return (
     <Pressable
@@ -182,11 +164,6 @@ export default function App() {
       }
     };
   }, []);
-
-  async function logout() {
-    await clearToken();
-    setToken(null);
-  }
 
   if (loading || !fontsLoaded) {
     return (

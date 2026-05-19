@@ -1,10 +1,7 @@
 import { View } from "react-native";
 import styles from "../screens/SecondBrainScreen.styles";
 
-export default function SecondBrainEntryPageLayout({
-  panelStyle,
-  children,
-}) {
+export default function SecondBrainEntryPageLayout({ panelStyle, children }) {
   return (
     <View style={styles.container}>
       <View

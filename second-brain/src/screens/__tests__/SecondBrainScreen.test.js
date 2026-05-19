@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import fs from "node:fs";
 import path from "node:path";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -87,7 +87,52 @@ describe("SecondBrainScreen", () => {
     expect(entryLoadCalls).toHaveLength(1);
   });
 
-  it("requires delete confirmation before deleting an entry", async () => {
+  it("reloads entries with cache bypass when screen regains focus", async () => {
+    const focusListeners = [];
+    const navigation = {
+      navigate: jest.fn(),
+      addListener: jest.fn((eventName, callback) => {
+        if (eventName === "focus") focusListeners.push(callback);
+        return jest.fn();
+      }),
+    };
+
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    render(<SecondBrainScreen token={token} navigation={navigation} />);
+
+    await waitFor(() => {
+      expect(navigation.addListener).toHaveBeenCalledWith(
+        "focus",
+        expect.any(Function),
+      );
+    });
+
+    expect(focusListeners).toHaveLength(1);
+    await act(async () => {
+      focusListeners[0]();
+    });
+
+    await waitFor(() => {
+      const entryLoadCalls = apiRequest.mock.calls.filter(
+        ([url]) => url === "/entries?limit=60",
+      );
+      expect(entryLoadCalls).toHaveLength(2);
+      expect(entryLoadCalls[1][1]).toEqual(
+        expect.objectContaining({
+          token,
+          cache: expect.objectContaining({ bypass: true }),
+        }),
+      );
+    });
+  });
+
+  it("deletes an entry on first swipe delete action", async () => {
     const entry = {
       id: 42,
       title: "Ship tests",
@@ -107,20 +152,13 @@ describe("SecondBrainScreen", () => {
 
     await waitFor(() => expect(getByText("Ship tests")).toBeTruthy());
     fireEvent.press(getByTestId("entry-swipe-delete-42"));
-    expect(queryByText("Confirm")).toBeTruthy();
-    expect(apiRequest).not.toHaveBeenCalledWith(
-      "/entries?id=42",
-      expect.objectContaining({ method: "DELETE" }),
-    );
-
-    fireEvent.press(getByTestId("entry-swipe-delete-42"));
-
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith(
         "/entries?id=42",
         expect.objectContaining({ method: "DELETE" }),
       );
     });
+    expect(queryByText("Confirm")).toBeNull();
   });
 
   it("navigates to entry edit screen on edit action", async () => {

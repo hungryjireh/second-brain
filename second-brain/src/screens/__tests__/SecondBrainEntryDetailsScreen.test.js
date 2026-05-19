@@ -117,6 +117,48 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it("shows Delete in the action drawer and switches to confirm state", () => {
+    const entry = { id: 11, title: "Entry 11", category: "note" };
+    const { getByLabelText, getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entry } }}
+        token="token"
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Open entry actions"));
+
+    expect(getByText("Edit")).toBeTruthy();
+    expect(getByText("Archive")).toBeTruthy();
+    expect(getByText("Delete")).toBeTruthy();
+    expect(queryByText("Confirm Delete")).toBeNull();
+
+    fireEvent.press(getByText("Delete"));
+    expect(getByText("Confirm Delete")).toBeTruthy();
+  });
+
+  it("closes inline actions when tapping outside the menu", async () => {
+    const entry = {
+      id: 15,
+      title: "Outside tap",
+      summary: "Tap this to dismiss",
+      raw_text: "Body",
+      category: "note",
+    };
+
+    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    fireEvent.press(getByLabelText("Open entry actions"));
+    expect(getByText("Edit")).toBeTruthy();
+
+    fireEvent.press(getByTestId("entry-actions-dismiss-overlay"));
+    await waitFor(() => {
+      expect(queryByTestId("entry-actions-dismiss-overlay")).toBeNull();
+    });
+  });
+
   it("loads entry by route entryId and renders fetched title", async () => {
     apiRequest.mockResolvedValueOnce({
       entries: [

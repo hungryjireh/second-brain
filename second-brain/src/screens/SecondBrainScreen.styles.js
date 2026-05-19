@@ -15,6 +15,39 @@ const uppercaseLabel = {
   fontWeight: "500",
 };
 
+const entryActionMenuStyles = {
+  mobileActionDrawerWrap: { position: "relative", alignItems: "flex-end" },
+  mobileInlineActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+    width: "100%",
+    marginBottom: 2,
+    minHeight: 30,
+    flexWrap: "wrap",
+  },
+  mobileActionTrigger: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    minWidth: 30,
+    minHeight: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  mobileActionTriggerText: {
+    color: theme.colors.textSecondary,
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  mobileActionTriggerIcon: { color: theme.colors.textSecondary },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -38,6 +71,17 @@ const styles = StyleSheet.create({
   },
   statsGridSmall: { flexWrap: "nowrap", gap: 4 },
   filterSection: { marginBottom: 10 },
+  filterSectionOpen: {
+    zIndex: 7,
+  },
+  filterDropdownDismissOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 6,
+  },
   offlineBanner: {
     borderWidth: 1,
     borderColor: theme.colors.brand,
@@ -229,6 +273,14 @@ const styles = StyleSheet.create({
     zIndex: 9,
     backgroundColor: "rgba(7, 11, 16, 0.18)",
     backdropFilter: "blur(4px)",
+  },
+  actionDrawerDismissOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 25,
   },
   listEmptyText: {
     color: theme.colors.textMuted,
@@ -554,19 +606,22 @@ const styles = StyleSheet.create({
   },
   swipeActionWrap: {
     position: "absolute",
+    left: 0,
     top: 0,
     right: 0,
     bottom: 0,
-    width: SWIPE_ACTION_WIDTH,
     justifyContent: "center",
-    alignItems: "stretch",
-  },
-  swipeDeleteAction: {
-    flex: 1,
+    alignItems: "flex-end",
+    overflow: "hidden",
     backgroundColor: "rgba(220,60,60,0.16)",
     borderColor: "rgba(220,60,60,0.32)",
     borderWidth: 1,
     borderRadius: 10,
+  },
+  swipeDeleteAction: {
+    height: "100%",
+    width: SWIPE_ACTION_WIDTH,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -646,10 +701,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   entryPanelTitleRow: {
+    position: "relative",
+    zIndex: 30,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  entryActionDismissOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 25,
   },
   entryPanelTitle: {
     color: theme.colors.textPrimary,
@@ -813,26 +878,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     minHeight: 30,
   },
-  mobileActionDrawerWrap: { position: "relative", alignItems: "flex-end" },
-  mobileActionTrigger: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    minWidth: 30,
-    minHeight: 30,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  mobileActionTriggerText: {
-    color: theme.colors.textSecondary,
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: "700",
-  },
-  mobileActionTriggerIcon: { color: theme.colors.textSecondary },
+  ...entryActionMenuStyles,
   mobileActionDrawer: {
     position: "absolute",
     zIndex: 3,
@@ -888,14 +934,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19,
   },
+  cardTitleBlock: {
+    flex: 1,
+    minHeight: 38,
+    justifyContent: "center",
+  },
   cardBody: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 20 },
   metaInfoRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 6,
-    marginBottom: 6,
+    marginTop: 10,
+    marginBottom: 0,
   },
   reminderMetaPill: {
     backgroundColor: theme.colors.brandDim,
@@ -915,6 +966,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexWrap: "wrap",
+    marginTop: 10,
   },
   itemTagPill: {
     backgroundColor: theme.colors.brandDim,
