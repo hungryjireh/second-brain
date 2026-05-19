@@ -83,6 +83,7 @@ const TYPEBAR_MIN_HEIGHT = 38;
 const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
 const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 const OFFLINE_QUEUE_VERSION = 1;
+const MAX_VOICE_NOTE_DURATION_SECONDS = 2 * 60;
 const VOICE_RECORDING_PRESET =
   RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
 
@@ -294,8 +295,12 @@ export default function SecondBrainScreen({ token, navigation }) {
     () => formatElapsedTime(voiceElapsedMs),
     [voiceElapsedMs],
   );
+  const voiceMaxDurationLabel = useMemo(
+    () => formatElapsedTime(MAX_VOICE_NOTE_DURATION_SECONDS * 1000),
+    [],
+  );
   const hideTypebarSideActions = typebarFocused && !recording;
-  const isVoiceCaptureActive = recording || voiceStarting || voiceBusy;
+  const isVoiceCaptureActive = recording || voiceStarting;
 
   function buildOfflineStorageKey() {
     return `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
@@ -636,7 +641,9 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   async function stopVoiceCaptureAndSubmit() {
     if (!recording || voiceBusy) return;
+    const creatingId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setVoiceBusy(true);
+    setCreatingEntries((prev) => [...prev, { id: creatingId, title: "" }]);
     try {
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
@@ -665,6 +672,9 @@ export default function SecondBrainScreen({ token, navigation }) {
       setError(err.message);
     } finally {
       setVoiceBusy(false);
+      setCreatingEntries((prev) =>
+        prev.filter((item) => item.id !== creatingId),
+      );
       try {
         await setAudioModeAsync({ allowsRecording: false });
         audioRecordingModeEnabledRef.current = false;
@@ -1758,21 +1768,22 @@ export default function SecondBrainScreen({ token, navigation }) {
         />
         {!hideTypebarSideActions ? (
           <View style={styles.typebarActionWrap}>
-            {actionTooltip === "mic" ? (
+            {actionTooltip === "mic" && !recording ? (
               <View style={styles.typebarTooltip}>
-                <Text style={styles.typebarTooltipText}>
-                  {recording ? "Stop & submit voice note" : "Record voice note"}
-                </Text>
+                <Text style={styles.typebarTooltipText}>Record voice note</Text>
               </View>
             ) : null}
             {recording ? (
               <View style={styles.typebarRecordingMeta}>
-                <Text
-                  style={styles.typebarRecordingTimer}
-                  accessibilityLabel={`Voice memo running time ${voiceElapsedLabel}`}
-                >
-                  {voiceElapsedLabel}
-                </Text>
+                <View style={styles.typebarRecordingTimerBadge}>
+                  <Text
+                    style={styles.typebarRecordingTimer}
+                    numberOfLines={1}
+                    accessibilityLabel={`Voice memo running time ${voiceElapsedLabel} out of ${voiceMaxDurationLabel}`}
+                  >
+                    {`${voiceElapsedLabel}/${voiceMaxDurationLabel}`}
+                  </Text>
+                </View>
                 <Pressable
                   style={[
                     styles.typebarCancelRecordingButton,

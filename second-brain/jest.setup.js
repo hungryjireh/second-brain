@@ -31,6 +31,29 @@ jest.mock("expo-clipboard", () => ({
   setStringAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("expo-file-system", () => {
+  class MockFile {
+    constructor(...args) {
+      this.args = args;
+      this.uri =
+        typeof args?.[0] === "string" ? args[0] : "file:///tmp/mock-file";
+    }
+
+    async base64() {
+      return "ZmFrZQ==";
+    }
+
+    write() {
+      return undefined;
+    }
+  }
+
+  return {
+    File: MockFile,
+    Paths: { cache: "/tmp" },
+  };
+});
+
 jest.mock("expo-audio", () => {
   const requestRecordingPermissionsAsync = jest
     .fn()

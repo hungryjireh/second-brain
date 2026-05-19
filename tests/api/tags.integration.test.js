@@ -208,6 +208,130 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
   }
 });
 
+test("insertEntry still succeeds with zero tags when user already has maximum tags", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+
+  const userId = "14111111-1111-4111-8111-111111111111";
+  const tagsTable = Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    user_id: userId,
+    name: `Tag ${i + 1}`,
+    normalized_name: `tag-${i + 1}`,
+  }));
+
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      async text() {
+        return body === null ? "" : JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input, options = {}) => {
+    const method = options.method || "GET";
+    const url = new URL(String(input));
+    const path = url.pathname;
+
+    if (path === "/rest/v1/entries" && method === "POST") {
+      return jsonResponse(201, [
+        {
+          id: 4242,
+          user_id: userId,
+          raw_text: "Pay electric bill",
+          category: "todo",
+          title: "Pay electric bill",
+          summary: "Pay utility bill",
+          remind_at: null,
+          priority: 0,
+          is_archived: false,
+          is_deleted: false,
+        },
+      ]);
+    }
+
+    if (path === "/rest/v1/entry_tags" && method === "DELETE") {
+      return jsonResponse(204, null);
+    }
+
+    if (path === "/rest/v1/tags" && method === "GET") {
+      const scopedUserId = (url.searchParams.get("user_id") || "").replace(
+        "eq.",
+        "",
+      );
+      const normalizedIn = url.searchParams.get("normalized_name") || "";
+      if (!normalizedIn) {
+        return jsonResponse(
+          200,
+          tagsTable.filter((t) => t.user_id === scopedUserId),
+        );
+      }
+      const values = normalizedIn
+        .replace(/^in\.\(/, "")
+        .replace(/\)$/, "")
+        .split(",")
+        .map((s) => s.trim().replace(/^"|"$/g, ""))
+        .filter(Boolean);
+      const rows = tagsTable.filter(
+        (t) => t.user_id === scopedUserId && values.includes(t.normalized_name),
+      );
+      return jsonResponse(200, rows);
+    }
+
+    if (path === "/rest/v1/entry_tags" && method === "GET") {
+      return jsonResponse(200, []);
+    }
+
+    if (path === "/rest/v1/tags" && method === "POST") {
+      return jsonResponse(201, null);
+    }
+
+    if (path === "/rest/v1/entry_tags" && method === "POST") {
+      return jsonResponse(201, null);
+    }
+
+    if (path === "/rest/v1/tags" && method === "DELETE") {
+      return jsonResponse(204, null);
+    }
+
+    throw new Error(`Unhandled fetch: ${method} ${path}`);
+  };
+
+  try {
+    const { insertEntry } = await importFresh(
+      "../../lib/db.js",
+      "insert-entry-max-tags-fallback",
+    );
+
+    const entry = await insertEntry({
+      userId,
+      raw_text: "Pay electric bill",
+      category: "todo",
+      title: "Pay electric bill",
+      summary: "Pay utility bill",
+      tags: ["new-tag"],
+      authToken: "token",
+    });
+
+    assert.equal(entry?.id, 4242);
+    assert.deepEqual(entry?.tags, []);
+  } finally {
+    global.fetch = originalFetch;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  }
+});
+
 test("replaceEntryTags deletes user tags that are no longer referenced", async () => {
   const originalFetch = global.fetch;
   const originalEnv = {

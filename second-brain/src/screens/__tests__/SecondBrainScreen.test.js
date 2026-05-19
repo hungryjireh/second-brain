@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import fs from "node:fs";
 import path from "node:path";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAudioRecorderState } from "expo-audio";
 import SecondBrainScreen from "../SecondBrainScreen";
 import { sortEntriesByUpdatedAt } from "../SecondBrainScreen";
 import { apiRequest, isLikelyOfflineError } from "../../api";
@@ -22,6 +23,7 @@ describe("SecondBrainScreen", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    useAudioRecorderState.mockReturnValue({ isRecording: false });
     apiRequest.mockImplementation(async () => ({}));
     isLikelyOfflineError.mockImplementation(() => false);
     if (typeof AsyncStorage?.clear === "function") {
@@ -175,6 +177,65 @@ describe("SecondBrainScreen", () => {
 
     await waitFor(() => {
       expect(queryByText("Loading thoughts...")).toBeNull();
+    });
+  });
+
+  it("renders recording timer as one-line elapsed/max label", async () => {
+    useAudioRecorderState.mockReturnValue({ isRecording: true });
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    const { getByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("0:00/2:00")).toBeTruthy();
+    });
+  });
+
+  it("uses shared creating status while submitting a voice recording", async () => {
+    useAudioRecorderState.mockReturnValue({ isRecording: true });
+    let resolveVoice;
+    const voicePromise = new Promise((resolve) => {
+      resolveVoice = resolve;
+    });
+
+    apiRequest.mockImplementation((url) => {
+      if (url === "/entries?limit=60") return Promise.resolve({ entries: [] });
+      if (url === "/tags") return Promise.resolve({ tags: [] });
+      if (url === "/settings") return Promise.resolve({});
+      if (url === "/voice") return voicePromise;
+      return Promise.resolve({});
+    });
+
+    const { getByLabelText, getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByLabelText("Stop and submit voice note")).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText("Stop and submit voice note"));
+
+    await waitFor(() => {
+      expect(getByText("Creating ...")).toBeTruthy();
+    });
+
+    await act(async () => {
+      resolveVoice({
+        entry: { id: 123, title: "Voice note", is_archived: false },
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(queryByText("Creating ...")).toBeNull();
     });
   });
 

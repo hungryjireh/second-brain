@@ -291,7 +291,7 @@ test("bot handler: method guard and no-message noop", async () => {
   assert.equal(noMessageRes.statusCode, 200);
 });
 
-test("bot handler enforces and communicates 30-second voice note limit", () => {
+test("bot handler enforces and communicates 120-second voice note limit", () => {
   const botSource = fs.readFileSync(
     new URL("../../api/bot.js", import.meta.url),
     "utf8",
@@ -307,7 +307,7 @@ test("bot handler enforces and communicates 30-second voice note limit", () => {
   );
   assert.match(
     voiceConstantsSource,
-    /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*30/,
+    /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*120/,
   );
   assert.match(
     botSource,

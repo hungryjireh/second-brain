@@ -27,4 +27,13 @@ describe("SecondBrainScreen responsive styles", () => {
     const titleRow = StyleSheet.flatten(styles.entryPanelTitleRow);
     expect(titleRow.alignItems).toBe("center");
   });
+
+  it("keeps typebar tooltips wide enough to avoid character-by-character wrapping", () => {
+    const tooltip = StyleSheet.flatten(styles.typebarTooltip);
+    const tooltipText = StyleSheet.flatten(styles.typebarTooltipText);
+
+    expect(tooltip.minWidth).toBe(96);
+    expect(tooltipText.lineHeight).toBe(14);
+    expect(tooltipText.textAlign).toBe("center");
+  });
 });
