@@ -1,98 +1,136 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View, Text, TextInput, Pressable, FlatList, ScrollView, Modal, Platform, Switch, Linking, Keyboard, useWindowDimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { File, Paths } from 'expo-file-system';
-import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiRequest, buildApiUrl, createAuthHeaders, isLikelyOfflineError } from '../api';
-import { CACHE_TTL_MS } from '../constants/cache';
-import { theme } from '../theme';
-import SecondBrainEntryCard from '../components/SecondBrainEntryCard';
-import SwipeToDeleteRow from '../components/SwipeToDeleteRow';
-import TimezoneDropdown from '../components/TimezoneDropdown';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  CATEGORIES,
-  GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
-  MAX_USER_TAGS,
-} from '../constants/tags';
-import styles, { SWIPE_ACTION_WIDTH } from './SecondBrainScreen.styles';
+  Alert,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  FlatList,
+  ScrollView,
+  Modal,
+  Platform,
+  Switch,
+  Linking,
+  Keyboard,
+  useWindowDimensions,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { File, Paths } from "expo-file-system";
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  apiRequest,
+  buildApiUrl,
+  createAuthHeaders,
+  isLikelyOfflineError,
+} from "../api";
+import { CACHE_TTL_MS } from "../constants/cache";
+import { theme } from "../theme";
+import SecondBrainEntryCard from "../components/SecondBrainEntryCard";
+import SwipeToDeleteRow from "../components/SwipeToDeleteRow";
+import TimezoneDropdown from "../components/TimezoneDropdown";
+import { MAX_USER_TAGS } from "../constants/tags";
+import styles, { SWIPE_ACTION_WIDTH } from "./SecondBrainScreen.styles";
 import {
   countBillableGlobalTags,
   normalizeTagValue,
-  parseTagInput,
-  tagsToInput,
-} from '../utils/secondBrainTagUtils';
-import { datetimeLocalToUnix, unixToDatetimeLocal } from '../utils/dateUtils';
+} from "../utils/secondBrainTagUtils";
 
 const PRIORITY_LEVELS = [
-  { key: 'high', label: 'High (8-10)' },
-  { key: 'medium', label: 'Medium (4-7)' },
-  { key: 'low', label: 'Low (0-3)' },
+  { key: "high", label: "High (8-10)" },
+  { key: "medium", label: "Medium (4-7)" },
+  { key: "low", label: "Low (0-3)" },
 ];
 
 const STATS = [
-  { key: 'reminder', label: 'Reminders', color: theme.colors.brand, dimColor: theme.colors.brandDim },
-  { key: 'todo', label: 'TODOs', color: theme.colors.todo, dimColor: theme.colors.todoDim },
-  { key: 'thought', label: 'Thoughts', color: theme.colors.thought, dimColor: theme.colors.thoughtDim },
-  { key: 'note', label: 'Notes', color: theme.colors.note, dimColor: theme.colors.noteDim },
+  {
+    key: "reminder",
+    label: "Reminders",
+    color: theme.colors.brand,
+    dimColor: theme.colors.brandDim,
+  },
+  {
+    key: "todo",
+    label: "TODOs",
+    color: theme.colors.todo,
+    dimColor: theme.colors.todoDim,
+  },
+  {
+    key: "thought",
+    label: "Thoughts",
+    color: theme.colors.thought,
+    dimColor: theme.colors.thoughtDim,
+  },
+  {
+    key: "note",
+    label: "Notes",
+    color: theme.colors.note,
+    dimColor: theme.colors.noteDim,
+  },
 ];
 
 const TYPEBAR_MIN_HEIGHT = 38;
 const SMALL_SCREEN_FILTER_BREAKPOINT = 640;
-const OFFLINE_STORAGE_PREFIX = 'secondBrainOffline:';
+const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 const OFFLINE_QUEUE_VERSION = 1;
-const VOICE_RECORDING_PRESET = RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
+const VOICE_RECORDING_PRESET =
+  RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
 
 function formatElapsedTime(elapsedMs) {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  const paddedSeconds = String(seconds).padStart(2, '0');
+  const paddedSeconds = String(seconds).padStart(2, "0");
   return `${minutes}:${paddedSeconds}`;
 }
-
 
 function sortTagsByUsage(tags, usageCounts) {
   return [...tags].sort((a, b) => {
     const aHasEntries = usageCounts.has(a);
     const bHasEntries = usageCounts.has(b);
     if (aHasEntries !== bHasEntries) return aHasEntries ? -1 : 1;
-    return a.localeCompare(b, 'en', { sensitivity: 'base' });
+    return a.localeCompare(b, "en", { sensitivity: "base" });
   });
 }
 
 function getPriorityLevel(priority) {
-  if (priority >= 8) return 'high';
-  if (priority >= 4) return 'medium';
-  return 'low';
+  if (priority >= 8) return "high";
+  if (priority >= 4) return "medium";
+  return "low";
 }
 
 function createDateFormatters(timezone) {
   return {
-    dayKeyFormatter: new Intl.DateTimeFormat('en-CA', {
+    dayKeyFormatter: new Intl.DateTimeFormat("en-CA", {
       timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     }),
-    timeFormatter: new Intl.DateTimeFormat('en-SG', {
+    timeFormatter: new Intl.DateTimeFormat("en-SG", {
       timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
+      hour: "2-digit",
+      minute: "2-digit",
     }),
-    shortDateFormatter: new Intl.DateTimeFormat('en-SG', {
+    shortDateFormatter: new Intl.DateTimeFormat("en-SG", {
       timeZone: timezone,
-      month: 'short',
-      day: 'numeric',
+      month: "short",
+      day: "numeric",
     }),
-    remindDateFormatter: new Intl.DateTimeFormat('en-SG', {
+    remindDateFormatter: new Intl.DateTimeFormat("en-SG", {
       timeZone: timezone,
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     }),
   };
 }
@@ -125,27 +163,31 @@ function formatRemindAtWithFormatters(unixTs, formatters) {
 }
 
 function formatCreatingTitle(description) {
-  const firstLine = String(description || '')
-    .split('\n')
-    .map(line => line.trim())
+  const firstLine = String(description || "")
+    .split("\n")
+    .map((line) => line.trim())
     .find(Boolean);
-  if (!firstLine) return 'entry';
+  if (!firstLine) return "entry";
   return firstLine.slice(0, 80);
 }
 
 function groupByDate(entries) {
   const groups = {};
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
   const weekStart = todayStart - 6 * 86400000;
 
   for (const entry of entries) {
     const ts = (entry.created_at ?? 0) * 1000;
     let group;
-    if (ts >= todayStart) group = 'Today';
-    else if (ts >= todayStart - 86400000) group = 'Yesterday';
-    else if (ts >= weekStart) group = 'Earlier this week';
-    else group = 'Older';
+    if (ts >= todayStart) group = "Today";
+    else if (ts >= todayStart - 86400000) group = "Yesterday";
+    else if (ts >= weekStart) group = "Earlier this week";
+    else group = "Older";
 
     if (!groups[group]) groups[group] = [];
     groups[group].push(entry);
@@ -161,41 +203,36 @@ export default function SecondBrainScreen({ token, navigation }) {
   const [entries, setEntries] = useState([]);
   const [userTags, setUserTags] = useState([]);
   const [userTagsLoaded, setUserTagsLoaded] = useState(false);
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState('');
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
-  const [editingEntry, setEditingEntry] = useState(null);
   const [openActionDrawerId, setOpenActionDrawerId] = useState(null);
-  const [editCategory, setEditCategory] = useState('note');
-  const [editTitle, setEditTitle] = useState('');
-  const [editSummary, setEditSummary] = useState('');
-  const [editText, setEditText] = useState('');
-  const [editRemindAt, setEditRemindAt] = useState('');
-  const [editPriority, setEditPriority] = useState('0');
-  const [editTags, setEditTags] = useState('');
-  const [editTagDraft, setEditTagDraft] = useState('');
-  const [editTagError, setEditTagError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('');
-  const [activePriorityLevel, setActivePriorityLevel] = useState('');
-  const [activeTag, setActiveTag] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState("");
+  const [activePriorityLevel, setActivePriorityLevel] = useState("");
+  const [activeTag, setActiveTag] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [creatingEntries, setCreatingEntries] = useState([]);
-  const [typebarInputHeight, setTypebarInputHeight] = useState(TYPEBAR_MIN_HEIGHT);
+  const [typebarInputHeight, setTypebarInputHeight] =
+    useState(TYPEBAR_MIN_HEIGHT);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [openSwipeId, setOpenSwipeId] = useState(null);
   const [importingConversations, setImportingConversations] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
-  const [timezoneDraft, setTimezoneDraft] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Singapore');
-  const [timezoneError, setTimezoneError] = useState('');
+  const [timezone, setTimezone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Singapore",
+  );
+  const [timezoneDraft, setTimezoneDraft] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Singapore",
+  );
+  const [timezoneError, setTimezoneError] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
-  const [telegramLinkKey, setTelegramLinkKey] = useState('');
+  const [telegramLinkKey, setTelegramLinkKey] = useState("");
   const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
-  const [telegramLinkError, setTelegramLinkError] = useState('');
-  const [telegramCopyStatus, setTelegramCopyStatus] = useState('');
-  const [actionTooltip, setActionTooltip] = useState('');
+  const [telegramLinkError, setTelegramLinkError] = useState("");
+  const [telegramCopyStatus, setTelegramCopyStatus] = useState("");
+  const [actionTooltip, setActionTooltip] = useState("");
   const [typebarFocused, setTypebarFocused] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceStarting, setVoiceStarting] = useState(false);
@@ -205,21 +242,26 @@ export default function SecondBrainScreen({ token, navigation }) {
   const recorderState = useAudioRecorderState(audioRecorder);
   const recording = recorderState?.isRecording;
   const [keyboardOffset, setKeyboardOffset] = useState(0);
-  const [offlineMode, setOfflineMode] = useState(false);
+  const [, setOfflineMode] = useState(false);
   const confirmDeleteTimeoutRef = useRef(null);
   const openActionDrawerIdRef = useRef(null);
   const hasMicrophonePermissionRef = useRef(false);
   const audioRecordingModeEnabledRef = useRef(false);
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
-  const isWeb = Platform.OS === 'web';
-  const typebarPlaceholder = isSmallScreen ? 'Type here' : 'Type a note, reminder or thought...';
-  const voiceElapsedLabel = useMemo(() => formatElapsedTime(voiceElapsedMs), [voiceElapsedMs]);
+  const isWeb = Platform.OS === "web";
+  const typebarPlaceholder = isSmallScreen
+    ? "Type here"
+    : "Type a note, reminder or thought...";
+  const voiceElapsedLabel = useMemo(
+    () => formatElapsedTime(voiceElapsedMs),
+    [voiceElapsedMs],
+  );
   const hideTypebarSideActions = typebarFocused && !recording;
   const isVoiceCaptureActive = recording || voiceStarting || voiceBusy;
 
   function buildOfflineStorageKey() {
-    return `${OFFLINE_STORAGE_PREFIX}${String(token || '').trim()}`;
+    return `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
   }
 
   async function readOfflineState() {
@@ -227,7 +269,7 @@ export default function SecondBrainScreen({ token, navigation }) {
       const raw = await AsyncStorage.getItem(buildOfflineStorageKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return null;
+      if (!parsed || typeof parsed !== "object") return null;
       return parsed;
     } catch {
       return null;
@@ -236,12 +278,15 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   async function writeOfflineState(nextState) {
     try {
-      await AsyncStorage.setItem(buildOfflineStorageKey(), JSON.stringify({
-        version: OFFLINE_QUEUE_VERSION,
-        entries: Array.isArray(nextState.entries) ? nextState.entries : [],
-        userTags: Array.isArray(nextState.userTags) ? nextState.userTags : [],
-        queue: Array.isArray(nextState.queue) ? nextState.queue : [],
-      }));
+      await AsyncStorage.setItem(
+        buildOfflineStorageKey(),
+        JSON.stringify({
+          version: OFFLINE_QUEUE_VERSION,
+          entries: Array.isArray(nextState.entries) ? nextState.entries : [],
+          userTags: Array.isArray(nextState.userTags) ? nextState.userTags : [],
+          queue: Array.isArray(nextState.queue) ? nextState.queue : [],
+        }),
+      );
     } catch {
       // Offline persistence is best-effort.
     }
@@ -274,25 +319,25 @@ export default function SecondBrainScreen({ token, navigation }) {
     const pending = [];
     for (const action of queue) {
       try {
-        if (action?.type === 'create') {
-          await apiRequest('/entries', {
-            method: 'POST',
+        if (action?.type === "create") {
+          await apiRequest("/entries", {
+            method: "POST",
             token,
             body: { description: action.description },
           });
           continue;
         }
-        if (action?.type === 'archive') {
+        if (action?.type === "archive") {
           await apiRequest(`/entries?id=${action.id}`, {
-            method: 'PATCH',
+            method: "PATCH",
             token,
             body: { is_archived: action.is_archived },
           });
           continue;
         }
-        if (action?.type === 'delete') {
+        if (action?.type === "delete") {
           await apiRequest(`/entries?id=${action.id}`, {
-            method: 'DELETE',
+            method: "DELETE",
             token,
           });
           continue;
@@ -314,20 +359,31 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   async function loadEntries() {
     try {
-      setError('');
+      setError("");
       setOfflineMode(false);
       await flushOfflineQueue();
       const [data, tagsData] = await Promise.all([
-        apiRequest('/entries?limit=60', { token, cache: { ttlMs: CACHE_TTL_MS.FEED } }),
-        apiRequest('/tags', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } }),
+        apiRequest("/entries?limit=60", {
+          token,
+          cache: { ttlMs: CACHE_TTL_MS.FEED },
+        }),
+        apiRequest("/tags", { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } }),
       ]);
-      const list = Array.isArray(data.entries) ? data.entries : Array.isArray(data) ? data : [];
+      const list = Array.isArray(data.entries)
+        ? data.entries
+        : Array.isArray(data)
+          ? data
+          : [];
       setEntries(list);
 
-      const normalizedUserTags = (Array.isArray(tagsData?.tags) ? tagsData.tags : [])
-        .map(tag => normalizeTagValue(tag))
+      const normalizedUserTags = (
+        Array.isArray(tagsData?.tags) ? tagsData.tags : []
+      )
+        .map((tag) => normalizeTagValue(tag))
         .filter(Boolean);
-      const nextUserTags = Array.from(new Set(normalizedUserTags)).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+      const nextUserTags = Array.from(new Set(normalizedUserTags)).sort(
+        (a, b) => a.localeCompare(b, "en", { sensitivity: "base" }),
+      );
       setUserTags(nextUserTags);
       setUserTagsLoaded(true);
       await persistCurrentOfflineState(list, nextUserTags);
@@ -336,10 +392,12 @@ export default function SecondBrainScreen({ token, navigation }) {
         const snapshot = await readOfflineState();
         if (Array.isArray(snapshot?.entries) && snapshot.entries.length > 0) {
           setEntries(snapshot.entries);
-          setUserTags(Array.isArray(snapshot.userTags) ? snapshot.userTags : []);
+          setUserTags(
+            Array.isArray(snapshot.userTags) ? snapshot.userTags : [],
+          );
           setUserTagsLoaded(true);
           setOfflineMode(true);
-          setError('Offline mode: showing saved entries.');
+          setError("Offline mode: showing saved entries.");
           return;
         }
       }
@@ -354,7 +412,10 @@ export default function SecondBrainScreen({ token, navigation }) {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const data = await apiRequest('/settings', { token, cache: { ttlMs: CACHE_TTL_MS.SETTINGS } });
+        const data = await apiRequest("/settings", {
+          token,
+          cache: { ttlMs: CACHE_TTL_MS.SETTINGS },
+        });
         if (data?.timezone) {
           setTimezone(data.timezone);
           setTimezoneDraft(data.timezone);
@@ -366,12 +427,15 @@ export default function SecondBrainScreen({ token, navigation }) {
     loadSettings();
   }, [token]);
 
-  useEffect(() => () => {
-    if (confirmDeleteTimeoutRef.current) {
-      clearTimeout(confirmDeleteTimeoutRef.current);
-      confirmDeleteTimeoutRef.current = null;
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (confirmDeleteTimeoutRef.current) {
+        clearTimeout(confirmDeleteTimeoutRef.current);
+        confirmDeleteTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     openActionDrawerIdRef.current = openActionDrawerId;
@@ -419,11 +483,16 @@ export default function SecondBrainScreen({ token, navigation }) {
   useEffect(() => {
     if (isWeb) return undefined;
 
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const handleKeyboardShow = event => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const handleKeyboardShow = (event) => {
       const keyboardHeight = event?.endCoordinates?.height ?? 0;
-      const nextOffset = Math.max(0, keyboardHeight - Math.max(insets.bottom, 0));
+      const nextOffset = Math.max(
+        0,
+        keyboardHeight - Math.max(insets.bottom, 0),
+      );
       setKeyboardOffset(nextOffset);
     };
     const handleKeyboardHide = () => {
@@ -443,12 +512,19 @@ export default function SecondBrainScreen({ token, navigation }) {
     if (!description) return;
     const creatingId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const creatingTitle = formatCreatingTitle(description);
-    setCreatingEntries(prev => [...prev, { id: creatingId, title: creatingTitle }]);
-    setDraft('');
+    setCreatingEntries((prev) => [
+      ...prev,
+      { id: creatingId, title: creatingTitle },
+    ]);
+    setDraft("");
     setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
     try {
       setOfflineMode(false);
-      await apiRequest('/entries', { method: 'POST', token, body: { description } });
+      await apiRequest("/entries", {
+        method: "POST",
+        token,
+        body: { description },
+      });
       await loadEntries();
     } catch (err) {
       if (isLikelyOfflineError(err)) {
@@ -456,40 +532,45 @@ export default function SecondBrainScreen({ token, navigation }) {
         const optimisticEntry = {
           id: localId,
           description,
-          category: 'note',
+          category: "note",
           is_archived: false,
           created_at: Math.floor(Date.now() / 1000),
         };
         const nextEntries = [optimisticEntry, ...entries];
         setEntries(nextEntries);
         setOfflineMode(true);
-        setError('Offline mode: changes will sync automatically.');
-        await enqueueOfflineAction({ type: 'create', description: optimisticEntry.description });
+        setError("Offline mode: changes will sync automatically.");
+        await enqueueOfflineAction({
+          type: "create",
+          description: optimisticEntry.description,
+        });
         await persistCurrentOfflineState(nextEntries, userTags);
         return;
       }
-      setDraft(prev => (prev.trim() ? prev : description));
+      setDraft((prev) => (prev.trim() ? prev : description));
       setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
       setError(err.message);
     } finally {
-      setCreatingEntries(prev => prev.filter(item => item.id !== creatingId));
+      setCreatingEntries((prev) =>
+        prev.filter((item) => item.id !== creatingId),
+      );
     }
   }
 
   async function startVoiceCapture() {
     if (voiceBusy || voiceStarting || recording) return;
-    if (Platform.OS === 'web') {
-      setError('Voice capture is available on native app only.');
+    if (Platform.OS === "web") {
+      setError("Voice capture is available on native app only.");
       setVoiceStarting(false);
       return;
     }
     setVoiceStarting(true);
     try {
-      setError('');
+      setError("");
       if (!hasMicrophonePermissionRef.current) {
         const permission = await requestRecordingPermissionsAsync();
         if (!permission.granted) {
-          setError('Microphone permission is required.');
+          setError("Microphone permission is required.");
           setVoiceStarting(false);
           return;
         }
@@ -516,24 +597,24 @@ export default function SecondBrainScreen({ token, navigation }) {
     try {
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
-      if (!uri) throw new Error('Failed to read recording');
+      if (!uri) throw new Error("Failed to read recording");
 
       const recordedAudio = new File(uri);
       const audioBase64 = await recordedAudio.base64();
       if (!audioBase64) {
-        throw new Error('Failed to encode recording');
+        throw new Error("Failed to encode recording");
       }
 
-      const response = await apiRequest('/voice', {
-        method: 'POST',
+      const response = await apiRequest("/voice", {
+        method: "POST",
         token,
         body: {
           audio_base64: audioBase64,
-          extension: 'm4a',
+          extension: "m4a",
         },
       });
       if (response?.entry) {
-        setEntries(prev => [response.entry, ...prev]);
+        setEntries((prev) => [response.entry, ...prev]);
       } else {
         await loadEntries();
       }
@@ -576,25 +657,34 @@ export default function SecondBrainScreen({ token, navigation }) {
       const raw = await file.text();
       const parsed = JSON.parse(raw);
       const conversations = Array.isArray(parsed) ? parsed : [parsed];
-      const response = await apiRequest('/entries', {
-        method: 'POST',
+      const response = await apiRequest("/entries", {
+        method: "POST",
         token,
         body: {
-          import_format: 'llm_conversations',
+          import_format: "llm_conversations",
           conversations,
         },
       });
 
       const created = Array.isArray(response?.created) ? response.created : [];
       if (created.length === 0) {
-        Alert.alert('Import LLM conversations', 'No valid conversations were found in the uploaded JSON.');
+        Alert.alert(
+          "Import LLM conversations",
+          "No valid conversations were found in the uploaded JSON.",
+        );
         return;
       }
 
-      setEntries(prev => [...created, ...prev]);
-      Alert.alert('Import LLM conversations', `Imported ${created.length} conversation${created.length === 1 ? '' : 's'}.`);
+      setEntries((prev) => [...created, ...prev]);
+      Alert.alert(
+        "Import LLM conversations",
+        `Imported ${created.length} conversation${created.length === 1 ? "" : "s"}.`,
+      );
     } catch (err) {
-      Alert.alert('Import LLM conversations', `Failed to import JSON: ${err.message}`);
+      Alert.alert(
+        "Import LLM conversations",
+        `Failed to import JSON: ${err.message}`,
+      );
     } finally {
       setImportingConversations(false);
     }
@@ -603,265 +693,319 @@ export default function SecondBrainScreen({ token, navigation }) {
   function handleOpenImportDialog() {
     if (importingConversations) return;
 
-    if (Platform.OS !== 'web') {
-      Alert.alert('Import LLM conversations', 'Uploading JSON is currently available on web.');
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        "Import LLM conversations",
+        "Uploading JSON is currently available on web.",
+      );
       return;
     }
 
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.onchange = async event => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = async (event) => {
       const file = event?.target?.files?.[0];
       if (!file) return;
       await handleImportConversationFile(file);
-      input.value = '';
+      input.value = "";
     };
     input.click();
   }
 
-  const toggleArchive = useCallback(async entry => {
-    setBusyId(entry.id);
-    try {
-      setOfflineMode(false);
-      const updated = await apiRequest(`/entries?id=${entry.id}`, {
-        method: 'PATCH',
-        token,
-        body: { is_archived: !entry.is_archived },
-      });
-      const nextEntries = entries.map(item => (item.id === entry.id ? updated : item));
-      setEntries(nextEntries);
-      await persistCurrentOfflineState(nextEntries, userTags);
-    } catch (err) {
-      if (isLikelyOfflineError(err)) {
-        const nextEntries = entries.map(item => (item.id === entry.id ? { ...item, is_archived: !item.is_archived } : item));
+  const toggleArchive = useCallback(
+    async (entry) => {
+      setBusyId(entry.id);
+      try {
+        setOfflineMode(false);
+        const updated = await apiRequest(`/entries?id=${entry.id}`, {
+          method: "PATCH",
+          token,
+          body: { is_archived: !entry.is_archived },
+        });
+        const nextEntries = entries.map((item) =>
+          item.id === entry.id ? updated : item,
+        );
         setEntries(nextEntries);
-        setOfflineMode(true);
-        setError('Offline mode: changes will sync automatically.');
-        await enqueueOfflineAction({ type: 'archive', id: entry.id, is_archived: !entry.is_archived });
         await persistCurrentOfflineState(nextEntries, userTags);
+      } catch (err) {
+        if (isLikelyOfflineError(err)) {
+          const nextEntries = entries.map((item) =>
+            item.id === entry.id
+              ? { ...item, is_archived: !item.is_archived }
+              : item,
+          );
+          setEntries(nextEntries);
+          setOfflineMode(true);
+          setError("Offline mode: changes will sync automatically.");
+          await enqueueOfflineAction({
+            type: "archive",
+            id: entry.id,
+            is_archived: !entry.is_archived,
+          });
+          await persistCurrentOfflineState(nextEntries, userTags);
+          setBusyId(null);
+          return;
+        }
+        setError(err.message);
+      } finally {
         setBusyId(null);
+      }
+    },
+    [entries, token, userTags],
+  );
+
+  const deleteEntry = useCallback(
+    async (entryId) => {
+      setBusyId(entryId);
+      try {
+        setOfflineMode(false);
+        await apiRequest(`/entries?id=${entryId}`, { method: "DELETE", token });
+        const nextEntries = entries.filter((item) => item.id !== entryId);
+        setEntries(nextEntries);
+        await persistCurrentOfflineState(nextEntries, userTags);
+      } catch (err) {
+        if (isLikelyOfflineError(err)) {
+          const nextEntries = entries.filter((item) => item.id !== entryId);
+          setEntries(nextEntries);
+          setOfflineMode(true);
+          setError("Offline mode: changes will sync automatically.");
+          await enqueueOfflineAction({ type: "delete", id: entryId });
+          await persistCurrentOfflineState(nextEntries, userTags);
+          setBusyId(null);
+          return;
+        }
+        setError(err.message);
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [entries, token, userTags],
+  );
+
+  const requestDelete = useCallback(
+    (entryId) => {
+      setOpenSwipeId(entryId);
+      if (confirmDeleteId !== entryId) {
+        setConfirmDeleteId(entryId);
+        if (confirmDeleteTimeoutRef.current)
+          clearTimeout(confirmDeleteTimeoutRef.current);
+        confirmDeleteTimeoutRef.current = setTimeout(() => {
+          setConfirmDeleteId(null);
+          confirmDeleteTimeoutRef.current = null;
+        }, 2500);
         return;
       }
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }, [entries, token, userTags]);
 
-  const deleteEntry = useCallback(async entryId => {
-    setBusyId(entryId);
-    try {
-      setOfflineMode(false);
-      await apiRequest(`/entries?id=${entryId}`, { method: 'DELETE', token });
-      const nextEntries = entries.filter(item => item.id !== entryId);
-      setEntries(nextEntries);
-      await persistCurrentOfflineState(nextEntries, userTags);
-    } catch (err) {
-      if (isLikelyOfflineError(err)) {
-        const nextEntries = entries.filter(item => item.id !== entryId);
-        setEntries(nextEntries);
-        setOfflineMode(true);
-        setError('Offline mode: changes will sync automatically.');
-        await enqueueOfflineAction({ type: 'delete', id: entryId });
-        await persistCurrentOfflineState(nextEntries, userTags);
-        setBusyId(null);
-        return;
-      }
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }, [entries, token, userTags]);
-
-  const requestDelete = useCallback(entryId => {
-    setOpenSwipeId(entryId);
-    if (confirmDeleteId !== entryId) {
-      setConfirmDeleteId(entryId);
-      if (confirmDeleteTimeoutRef.current) clearTimeout(confirmDeleteTimeoutRef.current);
-      confirmDeleteTimeoutRef.current = setTimeout(() => {
-        setConfirmDeleteId(null);
+      if (confirmDeleteTimeoutRef.current) {
+        clearTimeout(confirmDeleteTimeoutRef.current);
         confirmDeleteTimeoutRef.current = null;
-      }, 2500);
-      return;
-    }
+      }
+      setConfirmDeleteId(null);
+      deleteEntry(entryId);
+    },
+    [confirmDeleteId, deleteEntry],
+  );
 
-    if (confirmDeleteTimeoutRef.current) {
-      clearTimeout(confirmDeleteTimeoutRef.current);
-      confirmDeleteTimeoutRef.current = null;
-    }
-    setConfirmDeleteId(null);
-    deleteEntry(entryId);
-  }, [confirmDeleteId, deleteEntry]);
+  const downloadIcs = useCallback(
+    async (entryId) => {
+      try {
+        const response = await fetch(
+          `${buildApiUrl("/ics")}?id=${encodeURIComponent(entryId)}`,
+          {
+            headers: createAuthHeaders(token),
+          },
+        );
+        if (!response.ok) {
+          let serverMessage = "";
+          try {
+            const raw = await response.text();
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                serverMessage = String(
+                  parsed?.error || parsed?.message || "",
+                ).trim();
+              } catch {
+                serverMessage = raw.trim();
+              }
+            }
+          } catch {
+            // Ignore response body parsing errors and fall back to status code.
+          }
+          const normalizedMessage =
+            serverMessage || `Request failed (${response.status})`;
+          throw new Error(normalizedMessage);
+        }
 
-  const downloadIcs = useCallback(async entryId => {
-    try {
-      const response = await fetch(`${buildApiUrl('/ics')}?id=${encodeURIComponent(entryId)}`, {
-        headers: createAuthHeaders(token),
-      });
-      if (!response.ok) {
-        let serverMessage = '';
-        try {
-          const raw = await response.text();
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              serverMessage = String(parsed?.error || parsed?.message || '').trim();
-            } catch {
-              serverMessage = raw.trim();
+        const fileName = `second-brain-reminder-${entryId}.ics`;
+        if (Platform.OS === "web") {
+          const blob = await response.blob();
+          const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(
+            navigator.userAgent || "",
+          );
+          const shareFn = navigator.share?.bind(navigator);
+          const canShareFn = navigator.canShare?.bind(navigator);
+
+          if (isMobileBrowser && shareFn && typeof File !== "undefined") {
+            const file = new File([blob], fileName, {
+              type: "text/calendar;charset=utf-8",
+            });
+            if (!canShareFn || canShareFn({ files: [file] })) {
+              await shareFn({
+                title: "Reminder",
+                files: [file],
+              });
+              return;
             }
           }
-        } catch {
-          // Ignore response body parsing errors and fall back to status code.
-        }
-        const normalizedMessage = serverMessage || `Request failed (${response.status})`;
-        throw new Error(normalizedMessage);
-      }
 
-      const fileName = `second-brain-reminder-${entryId}.ics`;
-      if (Platform.OS === 'web') {
-        const blob = await response.blob();
-        const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-        const shareFn = navigator.share?.bind(navigator);
-        const canShareFn = navigator.canShare?.bind(navigator);
-
-        if (isMobileBrowser && shareFn && typeof File !== 'undefined') {
-          const file = new File([blob], fileName, { type: 'text/calendar;charset=utf-8' });
-          if (!canShareFn || canShareFn({ files: [file] })) {
-            await shareFn({
-              title: 'Reminder',
-              files: [file],
-            });
-            return;
-          }
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+          return;
         }
 
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-        return;
+        const icsContent = await response.text();
+        const file = new File(Paths.cache, fileName);
+        file.write(icsContent);
+        const canShare = await Sharing.isAvailableAsync();
+        if (!canShare) {
+          throw new Error("Sharing is not available on this device");
+        }
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "text/calendar",
+          dialogTitle: "Share reminder",
+          UTI: "public.calendar-event",
+        });
+      } catch (err) {
+        setError(err.message);
       }
+    },
+    [token],
+  );
 
-      const icsContent = await response.text();
-      const file = new File(Paths.cache, fileName);
-      file.write(icsContent);
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        throw new Error('Sharing is not available on this device');
-      }
-      await Sharing.shareAsync(file.uri, {
-        mimeType: 'text/calendar',
-        dialogTitle: 'Share reminder',
-        UTI: 'public.calendar-event',
+  const startEdit = useCallback(
+    (entry) => {
+      navigation.navigate("SecondBrainEditEntry", {
+        entryId: entry?.id,
+        entry,
       });
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [token]);
+    },
+    [navigation],
+  );
 
-  const startEdit = useCallback(entry => {
-    navigation.navigate('SecondBrainEditEntry', {
-      entryId: entry?.id,
-      entry,
-    });
-  }, [navigation]);
-
-  const closeEdit = useCallback(() => {
-    setEditingEntry(null);
-    setEditCategory('note');
-    setEditTitle('');
-    setEditSummary('');
-    setEditText('');
-    setEditRemindAt('');
-    setEditPriority('0');
-    setEditTags('');
-    setEditTagDraft('');
-    setEditTagError('');
-  }, []);
-
-  const openEntry = useCallback(entry => {
-    navigation.navigate('SecondBrainEntryDetails', {
-      entryId: entry?.id,
-      entry,
-    });
-  }, [navigation]);
+  const openEntry = useCallback(
+    (entry) => {
+      navigation.navigate("SecondBrainEntryDetails", {
+        entryId: entry?.id,
+        entry,
+      });
+    },
+    [navigation],
+  );
 
   const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
   const handleActionDrawerChange = useCallback((entryId, isOpen) => {
-    setOpenActionDrawerId(current => {
+    setOpenActionDrawerId((current) => {
       if (isOpen) return entryId;
       if (current === entryId) return null;
       return current;
     });
   }, []);
-  const keyExtractor = useCallback(item => item.key, []);
+  const keyExtractor = useCallback((item) => item.key, []);
   const renderCell = useCallback(({ item, children, style, ...rest }) => {
     const isRaised = item?.entry?.id === openActionDrawerIdRef.current;
     return (
       <View
         {...rest}
-        style={[style, styles.listCell, isRaised ? styles.listCellRaised : null]}
+        style={[
+          style,
+          styles.listCell,
+          isRaised ? styles.listCellRaised : null,
+        ]}
       >
         {children}
       </View>
     );
   }, []);
-  const renderListItem = useCallback(({ item }) => {
-    if (item.type === 'header') {
-      return <Text style={styles.sectionHeaderText}>{`${item.group} · ${item.count}`}</Text>;
-    }
+  const renderListItem = useCallback(
+    ({ item }) => {
+      if (item.type === "header") {
+        return (
+          <Text
+            style={styles.sectionHeaderText}
+          >{`${item.group} · ${item.count}`}</Text>
+        );
+      }
 
-    const entry = item.entry;
-    if (!entry) return null;
-    const isBusy = busyId === entry.id;
-    const isWeb = Platform.OS === 'web';
-    const cardContent = (
-      <SecondBrainEntryCard
-        entry={entry}
-        styles={styles}
-        theme={theme}
-        isBusy={isBusy}
-        isSwipeOpen={openSwipeId === entry.id}
-        isDeleteConfirm={confirmDeleteId === entry.id}
-        displayDate={item.displayDate}
-        displayRemindAt={item.displayRemindAt}
-        onOpenEntry={openEntry}
-        onCloseSwipe={closeSwipe}
-        onStartEdit={startEdit}
-        onToggleArchive={toggleArchive}
-        onDownloadIcs={downloadIcs}
-        onRequestDelete={requestDelete}
-        onActionDrawerChange={handleActionDrawerChange}
-      />
-    );
-    if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
-    return (
-      <SwipeToDeleteRow
-        id={entry.id}
-        isOpen={openSwipeId === entry.id}
-        isRaised={openActionDrawerId === entry.id}
-        onOpen={setOpenSwipeId}
-        actionLabel={isBusy ? '...' : (confirmDeleteId === entry.id ? 'Confirm' : 'Delete')}
-        onActionPress={() => requestDelete(entry.id)}
-        actionWidth={SWIPE_ACTION_WIDTH}
-        styles={styles}
-      >
-        {cardContent}
-      </SwipeToDeleteRow>
-    );
-  }, [busyId, closeSwipe, confirmDeleteId, downloadIcs, handleActionDrawerChange, openActionDrawerId, openEntry, openSwipeId, requestDelete, startEdit, toggleArchive]);
+      const entry = item.entry;
+      if (!entry) return null;
+      const isBusy = busyId === entry.id;
+      const isWeb = Platform.OS === "web";
+      const cardContent = (
+        <SecondBrainEntryCard
+          entry={entry}
+          styles={styles}
+          theme={theme}
+          isBusy={isBusy}
+          isSwipeOpen={openSwipeId === entry.id}
+          isDeleteConfirm={confirmDeleteId === entry.id}
+          displayDate={item.displayDate}
+          displayRemindAt={item.displayRemindAt}
+          onOpenEntry={openEntry}
+          onCloseSwipe={closeSwipe}
+          onStartEdit={startEdit}
+          onToggleArchive={toggleArchive}
+          onDownloadIcs={downloadIcs}
+          onRequestDelete={requestDelete}
+          onActionDrawerChange={handleActionDrawerChange}
+        />
+      );
+      if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
+      return (
+        <SwipeToDeleteRow
+          id={entry.id}
+          isOpen={openSwipeId === entry.id}
+          isRaised={openActionDrawerId === entry.id}
+          onOpen={setOpenSwipeId}
+          actionLabel={
+            isBusy ? "..." : confirmDeleteId === entry.id ? "Confirm" : "Delete"
+          }
+          onActionPress={() => requestDelete(entry.id)}
+          actionWidth={SWIPE_ACTION_WIDTH}
+          styles={styles}
+        >
+          {cardContent}
+        </SwipeToDeleteRow>
+      );
+    },
+    [
+      busyId,
+      closeSwipe,
+      confirmDeleteId,
+      downloadIcs,
+      handleActionDrawerChange,
+      openActionDrawerId,
+      openEntry,
+      openSwipeId,
+      requestDelete,
+      startEdit,
+      toggleArchive,
+    ],
+  );
 
   function openSettings() {
     setTimezoneDraft(timezone);
-    setTimezoneError('');
-    setTelegramLinkKey('');
-    setTelegramLinkError('');
-    setTelegramCopyStatus('');
+    setTimezoneError("");
+    setTelegramLinkKey("");
+    setTelegramLinkError("");
+    setTelegramCopyStatus("");
     setSettingsOpen(true);
   }
 
@@ -872,16 +1016,16 @@ export default function SecondBrainScreen({ token, navigation }) {
 
   async function saveSettings() {
     if (savingSettings) return;
-    const timezoneToSave = String(timezoneDraft || '').trim();
+    const timezoneToSave = String(timezoneDraft || "").trim();
     if (!timezoneToSave) {
-      setTimezoneError('Timezone is required.');
+      setTimezoneError("Timezone is required.");
       return;
     }
     setSavingSettings(true);
-    setTimezoneError('');
+    setTimezoneError("");
     try {
-      const updated = await apiRequest('/settings', {
-        method: 'PATCH',
+      const updated = await apiRequest("/settings", {
+        method: "PATCH",
         token,
         body: { timezone: timezoneToSave },
       });
@@ -900,11 +1044,11 @@ export default function SecondBrainScreen({ token, navigation }) {
   async function generateTelegramLinkKey() {
     if (loadingTelegramLinkKey) return;
     setLoadingTelegramLinkKey(true);
-    setTelegramLinkError('');
-    setTelegramCopyStatus('');
+    setTelegramLinkError("");
+    setTelegramCopyStatus("");
     try {
-      const data = await apiRequest('/telegram/link-key', { token });
-      setTelegramLinkKey(data?.key || '');
+      const data = await apiRequest("/telegram/link-key", { token });
+      setTelegramLinkKey(data?.key || "");
     } catch (err) {
       setTelegramLinkError(err.message);
     } finally {
@@ -916,35 +1060,37 @@ export default function SecondBrainScreen({ token, navigation }) {
     if (!telegramLinkKey) return;
     try {
       await Clipboard.setStringAsync(telegramLinkKey);
-      setTelegramCopyStatus('Copied');
+      setTelegramCopyStatus("Copied");
     } catch {
-      setTelegramCopyStatus('Copy failed');
+      setTelegramCopyStatus("Copy failed");
     }
   }
 
-  const preparedEntries = useMemo(() => (
-    entries.map(entry => {
-      const normalizedTags = Array.isArray(entry.tags)
-        ? entry.tags.map(tag => String(tag).trim()).filter(Boolean)
-        : [];
-      const searchBlob = [
-        entry.title,
-        entry.summary,
-        entry.raw_text,
-        entry.content,
-        normalizedTags.join(' '),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return {
-        entry,
-        normalizedTags,
-        normalizedTagsLower: normalizedTags.map(tag => tag.toLowerCase()),
-        searchBlob,
-      };
-    })
-  ), [entries]);
+  const preparedEntries = useMemo(
+    () =>
+      entries.map((entry) => {
+        const normalizedTags = Array.isArray(entry.tags)
+          ? entry.tags.map((tag) => String(tag).trim()).filter(Boolean)
+          : [];
+        const searchBlob = [
+          entry.title,
+          entry.summary,
+          entry.raw_text,
+          entry.content,
+          normalizedTags.join(" "),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return {
+          entry,
+          normalizedTags,
+          normalizedTagsLower: normalizedTags.map((tag) => tag.toLowerCase()),
+          searchBlob,
+        };
+      }),
+    [entries],
+  );
 
   const derivedData = useMemo(() => {
     const categoryCounts = { reminder: 0, todo: 0, thought: 0, note: 0 };
@@ -953,12 +1099,18 @@ export default function SecondBrainScreen({ token, navigation }) {
     const selectedTag = activeTag.toLowerCase();
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    for (const { entry, normalizedTags, normalizedTagsLower, searchBlob } of preparedEntries) {
+    for (const {
+      entry,
+      normalizedTags,
+      normalizedTagsLower,
+      searchBlob,
+    } of preparedEntries) {
       const isArchived = Boolean(entry.is_archived);
 
       if (!isArchived) {
         const key = entry.category;
-        if (Object.prototype.hasOwnProperty.call(categoryCounts, key)) categoryCounts[key] += 1;
+        if (Object.prototype.hasOwnProperty.call(categoryCounts, key))
+          categoryCounts[key] += 1;
       }
 
       for (const tag of normalizedTags) {
@@ -967,7 +1119,11 @@ export default function SecondBrainScreen({ token, navigation }) {
 
       if (showArchived ? !isArchived : isArchived) continue;
       if (activeCategory && entry.category !== activeCategory) continue;
-      if (activePriorityLevel && getPriorityLevel(entry.priority ?? 0) !== activePriorityLevel) continue;
+      if (
+        activePriorityLevel &&
+        getPriorityLevel(entry.priority ?? 0) !== activePriorityLevel
+      )
+        continue;
       if (selectedTag && !normalizedTagsLower.includes(selectedTag)) continue;
       if (normalizedSearchQuery) {
         if (!searchBlob.includes(normalizedSearchQuery)) continue;
@@ -981,7 +1137,14 @@ export default function SecondBrainScreen({ token, navigation }) {
       visibleEntries: filteredEntries,
       tagUsageCounts: usageCounts,
     };
-  }, [preparedEntries, showArchived, activeCategory, activePriorityLevel, activeTag, searchQuery]);
+  }, [
+    preparedEntries,
+    showArchived,
+    activeCategory,
+    activePriorityLevel,
+    activeTag,
+    searchQuery,
+  ]);
 
   const { counts, visibleEntries, tagUsageCounts } = derivedData;
 
@@ -994,129 +1157,113 @@ export default function SecondBrainScreen({ token, navigation }) {
     return sortedUserTags.length > 0 ? sortedUserTags : availableTags;
   }, [userTagsLoaded, userTags, availableTags, tagUsageCounts]);
 
-  const parsedEditTags = useMemo(() => parseTagInput(editTags), [editTags]);
-
-  const addEditTag = useCallback(() => {
-    const nextTag = normalizeTagValue(editTagDraft);
-    if (!nextTag) return;
-    setEditTagError('');
-    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
-    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
-    const isNewBillableTag = isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
-    if (isNewBillableTag && countBillableGlobalTags(globalTags) >= MAX_USER_TAGS) {
-      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
-      return;
-    }
-    const merged = parseTagInput([...parsedEditTags, nextTag].join(','));
-    setEditTags(merged.join(','));
-    setEditTagDraft('');
-  }, [editTagDraft, globalTags, parsedEditTags]);
-
-  const removeEditTag = useCallback(tagToRemove => {
-    setEditTags(parsedEditTags.filter(tag => tag !== tagToRemove).join(','));
-    setEditTagError('');
-  }, [parsedEditTags]);
-
-  function validateGlobalTagLimit(nextTags) {
-    const existingGlobalTags = new Set(globalTags.map(tag => normalizeTagValue(tag)));
-    const newBillableGlobalTags = nextTags.filter(tag => (
-      !existingGlobalTags.has(tag) && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag)
-    ));
-    if (newBillableGlobalTags.length === 0) return true;
-    if (countBillableGlobalTags(globalTags) + newBillableGlobalTags.length > MAX_USER_TAGS) {
-      setEditTagError(`A maximum of ${MAX_USER_TAGS} tags is allowed per user.`);
-      return false;
-    }
-    return true;
-  }
-
-  async function saveEdit() {
-    if (!editingEntry || !editText.trim()) return;
-    const priority = Number(editPriority);
-    const tags = parseTagInput(editTags);
-    if (!Number.isInteger(priority) || priority < 0 || priority > 10) {
-      setError('Priority must be an integer from 0 to 10.');
-      return;
-    }
-    if (!validateGlobalTagLimit(tags)) return;
-    setBusyId(editingEntry.id);
-    try {
-      const updated = await apiRequest(`/entries?id=${editingEntry.id}`, {
-        method: 'PATCH',
-        token,
-        body: {
-          category: editCategory,
-          title: editTitle.trim(),
-          summary: editSummary.trim(),
-          description: editText.trim(),
-          remind_at: editCategory === 'reminder' ? datetimeLocalToUnix(editRemindAt) : null,
-          priority,
-          tags,
-        },
-      });
-      setEntries(prev => prev.map(item => (item.id === editingEntry.id ? updated : item)));
-      closeEdit();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  const groupedEntries = useMemo(() => groupByDate(visibleEntries), [visibleEntries]);
-  const dateFormatters = useMemo(() => createDateFormatters(timezone), [timezone]);
+  const groupedEntries = useMemo(
+    () => groupByDate(visibleEntries),
+    [visibleEntries],
+  );
+  const dateFormatters = useMemo(
+    () => createDateFormatters(timezone),
+    [timezone],
+  );
   const groupedRows = useMemo(() => {
-    const groupOrder = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
+    const groupOrder = ["Today", "Yesterday", "Earlier this week", "Older"];
     const rows = [];
     for (const group of groupOrder) {
       const items = groupedEntries[group];
       if (!items || items.length === 0) continue;
-      rows.push({ type: 'header', key: `header-${group}`, group, count: items.length });
+      rows.push({
+        type: "header",
+        key: `header-${group}`,
+        group,
+        count: items.length,
+      });
       for (const entry of items) {
         rows.push({
-          type: 'entry',
+          type: "entry",
           key: `entry-${entry.id}`,
           entry,
-          displayDate: formatDateWithFormatters(entry.created_at, dateFormatters),
-          displayRemindAt: formatRemindAtWithFormatters(entry.remind_at, dateFormatters),
+          displayDate: formatDateWithFormatters(
+            entry.created_at,
+            dateFormatters,
+          ),
+          displayRemindAt: formatRemindAtWithFormatters(
+            entry.remind_at,
+            dateFormatters,
+          ),
         });
       }
     }
     return rows;
   }, [dateFormatters, groupedEntries]);
-  const hasActiveFilters = useMemo(() => (
-    Boolean(activeCategory || activePriorityLevel || activeTag || searchQuery.trim() || showArchived)
-  ), [activeCategory, activePriorityLevel, activeTag, searchQuery, showArchived]);
+  const hasActiveFilters = useMemo(
+    () =>
+      Boolean(
+        activeCategory ||
+        activePriorityLevel ||
+        activeTag ||
+        searchQuery.trim() ||
+        showArchived,
+      ),
+    [activeCategory, activePriorityLevel, activeTag, searchQuery, showArchived],
+  );
   const clearFilters = useCallback(() => {
-    setActiveCategory('');
-    setActivePriorityLevel('');
-    setActiveTag('');
-    setSearchQuery('');
+    setActiveCategory("");
+    setActivePriorityLevel("");
+    setActiveTag("");
+    setSearchQuery("");
     setShowArchived(false);
   }, []);
 
   return (
     <View style={styles.container}>
       <View
-        style={[styles.contentArea, isVoiceCaptureActive && styles.contentAreaBlurred]}
-        pointerEvents={isVoiceCaptureActive ? 'none' : 'auto'}
+        style={[
+          styles.contentArea,
+          isVoiceCaptureActive && styles.contentAreaBlurred,
+        ]}
+        pointerEvents={isVoiceCaptureActive ? "none" : "auto"}
       >
-        <View testID="stats-grid" style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}>
-          {STATS.map(stat => {
+        <View
+          testID="stats-grid"
+          style={[styles.statsGrid, isSmallScreen && styles.statsGridSmall]}
+        >
+          {STATS.map((stat) => {
             const isActive = activeCategory === stat.key;
             return (
               <Pressable
                 key={stat.key}
                 testID={`stat-card-${stat.key}`}
-                style={[styles.statCard, isSmallScreen && styles.statCardSmall, isActive && styles.statCardActive]}
-                onPress={() => setActiveCategory(prev => (prev === stat.key ? '' : stat.key))}
+                style={[
+                  styles.statCard,
+                  isSmallScreen && styles.statCardSmall,
+                  isActive && styles.statCardActive,
+                ]}
+                onPress={() =>
+                  setActiveCategory((prev) =>
+                    prev === stat.key ? "" : stat.key,
+                  )
+                }
               >
-                <View style={[styles.statGlow, { backgroundColor: theme.colors.bgBase }]} />
-                <Text style={[styles.statCount, { color: isActive ? theme.colors.brandText : stat.color }]}>
+                <View
+                  style={[
+                    styles.statGlow,
+                    { backgroundColor: theme.colors.bgBase },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statCount,
+                    { color: isActive ? theme.colors.brandText : stat.color },
+                  ]}
+                >
                   {counts[stat.key] ?? 0}
                 </Text>
                 <Text
-                  style={[styles.statLabel, isSmallScreen && styles.statLabelSmall, isActive && styles.statLabelActive]}
+                  style={[
+                    styles.statLabel,
+                    isSmallScreen && styles.statLabelSmall,
+                    isActive && styles.statLabelActive,
+                  ]}
                   numberOfLines={1}
                 >
                   {stat.label}
@@ -1127,114 +1274,178 @@ export default function SecondBrainScreen({ token, navigation }) {
         </View>
 
         <View style={styles.filterSection}>
-        <View style={[styles.filterHeaderRow, !isSmallScreen && styles.filterHeaderRowWithSpacing]}>
-          {isSmallScreen ? (
-            <Pressable
-              testID="filter-dropdown-toggle"
-              style={[styles.filterDropdownToggle, isFilterDropdownOpen && styles.filterDropdownToggleOpen]}
-              onPress={() => setIsFilterDropdownOpen(prev => !prev)}
-            >
-              <Text style={styles.filterLabel}>FILTER</Text>
-              <Feather
-                name={isFilterDropdownOpen ? 'chevron-up' : 'chevron-down'}
-                size={12}
-                style={styles.filterDropdownChevronIcon}
-              />
-            </Pressable>
-          ) : (
-            <>
-              <Text style={styles.filterLabel}>FILTER</Text>
-              <View style={styles.archivedToggle}>
-                <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
-                <Switch
-                  value={showArchived}
-                  onValueChange={setShowArchived}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
-                  thumbColor={theme.colors.bg}
-                  ios_backgroundColor={theme.colors.border}
-                />
-              </View>
-            </>
-          )}
-        </View>
-
-        {isFilterDropdownOpen ? (
-          <View style={[styles.filterDropdownContent, styles.filterDropdownContentOpen]}>
-            <Pressable
-              style={[styles.clearFiltersButton, !hasActiveFilters && styles.clearFiltersButtonDisabled]}
-              onPress={clearFilters}
-              disabled={!hasActiveFilters}
-            >
-              <Text style={[styles.clearFiltersButtonText, !hasActiveFilters && styles.clearFiltersButtonTextDisabled]}>
-                Clear filters
-              </Text>
-            </Pressable>
+          <View
+            style={[
+              styles.filterHeaderRow,
+              !isSmallScreen && styles.filterHeaderRowWithSpacing,
+            ]}
+          >
             {isSmallScreen ? (
-              <View style={[styles.archivedToggle, styles.archivedToggleDropdown]}>
-                <Text style={styles.archivedToggleText}>Show Archived/Done</Text>
-                <Switch
-                  value={showArchived}
-                  onValueChange={setShowArchived}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.brand }}
-                  thumbColor={theme.colors.bg}
-                  ios_backgroundColor={theme.colors.border}
+              <Pressable
+                testID="filter-dropdown-toggle"
+                style={[
+                  styles.filterDropdownToggle,
+                  isFilterDropdownOpen && styles.filterDropdownToggleOpen,
+                ]}
+                onPress={() => setIsFilterDropdownOpen((prev) => !prev)}
+              >
+                <Text style={styles.filterLabel}>FILTER</Text>
+                <Feather
+                  name={isFilterDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={12}
+                  style={styles.filterDropdownChevronIcon}
                 />
-              </View>
-            ) : null}
-            <View style={styles.filterRow}>
-              <Text style={styles.filterRowLabel}>PRIORITY</Text>
-              {PRIORITY_LEVELS.map(level => {
-                const isActive = activePriorityLevel === level.key;
-                return (
-                  <Pressable
-                    key={level.key}
-                    style={[styles.pill, isActive && styles.pillActive]}
-                    onPress={() => setActivePriorityLevel(prev => (prev === level.key ? '' : level.key))}
-                  >
-                    <Text style={[styles.pillText, isActive && styles.pillTextActive]}>{level.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+              </Pressable>
+            ) : (
+              <>
+                <Text style={styles.filterLabel}>FILTER</Text>
+                <View style={styles.archivedToggle}>
+                  <Text style={styles.archivedToggleText}>
+                    Show Archived/Done
+                  </Text>
+                  <Switch
+                    value={showArchived}
+                    onValueChange={setShowArchived}
+                    trackColor={{
+                      false: theme.colors.border,
+                      true: theme.colors.brand,
+                    }}
+                    thumbColor={theme.colors.bg}
+                    ios_backgroundColor={theme.colors.border}
+                  />
+                </View>
+              </>
+            )}
+          </View>
 
-            <View style={styles.filterRow}>
-              <Text style={styles.filterRowLabel}>{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
-              {globalTags.map(tag => {
-                const isActive = activeTag.toLowerCase() === tag.toLowerCase();
-                const isDisabled = !tagUsageCounts.has(tag);
-                return (
-                  <Pressable
-                    key={tag}
-                    testID={`tag-filter-${tag.toLowerCase()}`}
-                    style={[styles.pill, isActive && styles.pillActive, isDisabled && styles.pillDisabled]}
-                    disabled={isDisabled}
-                    onPress={() => setActiveTag(prev => (prev.toLowerCase() === tag.toLowerCase() ? '' : tag))}
-                  >
-                    <Text style={[styles.pillText, isActive && styles.pillTextActive, isDisabled && styles.pillTextDisabled]}>{`#${tag}`}</Text>
-                  </Pressable>
-                );
-              })}
+          {isFilterDropdownOpen ? (
+            <View
+              style={[
+                styles.filterDropdownContent,
+                styles.filterDropdownContentOpen,
+              ]}
+            >
+              <Pressable
+                style={[
+                  styles.clearFiltersButton,
+                  !hasActiveFilters && styles.clearFiltersButtonDisabled,
+                ]}
+                onPress={clearFilters}
+                disabled={!hasActiveFilters}
+              >
+                <Text
+                  style={[
+                    styles.clearFiltersButtonText,
+                    !hasActiveFilters && styles.clearFiltersButtonTextDisabled,
+                  ]}
+                >
+                  Clear filters
+                </Text>
+              </Pressable>
+              {isSmallScreen ? (
+                <View
+                  style={[styles.archivedToggle, styles.archivedToggleDropdown]}
+                >
+                  <Text style={styles.archivedToggleText}>
+                    Show Archived/Done
+                  </Text>
+                  <Switch
+                    value={showArchived}
+                    onValueChange={setShowArchived}
+                    trackColor={{
+                      false: theme.colors.border,
+                      true: theme.colors.brand,
+                    }}
+                    thumbColor={theme.colors.bg}
+                    ios_backgroundColor={theme.colors.border}
+                  />
+                </View>
+              ) : null}
+              <View style={styles.filterRow}>
+                <Text style={styles.filterRowLabel}>PRIORITY</Text>
+                {PRIORITY_LEVELS.map((level) => {
+                  const isActive = activePriorityLevel === level.key;
+                  return (
+                    <Pressable
+                      key={level.key}
+                      style={[styles.pill, isActive && styles.pillActive]}
+                      onPress={() =>
+                        setActivePriorityLevel((prev) =>
+                          prev === level.key ? "" : level.key,
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          isActive && styles.pillTextActive,
+                        ]}
+                      >
+                        {level.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={styles.filterRow}>
+                <Text
+                  style={styles.filterRowLabel}
+                >{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
+                {globalTags.map((tag) => {
+                  const isActive =
+                    activeTag.toLowerCase() === tag.toLowerCase();
+                  const isDisabled = !tagUsageCounts.has(tag);
+                  return (
+                    <Pressable
+                      key={tag}
+                      testID={`tag-filter-${tag.toLowerCase()}`}
+                      style={[
+                        styles.pill,
+                        isActive && styles.pillActive,
+                        isDisabled && styles.pillDisabled,
+                      ]}
+                      disabled={isDisabled}
+                      onPress={() =>
+                        setActiveTag((prev) =>
+                          prev.toLowerCase() === tag.toLowerCase() ? "" : tag,
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          isActive && styles.pillTextActive,
+                          isDisabled && styles.pillTextDisabled,
+                        ]}
+                      >{`#${tag}`}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-          </View>
-        ) : null}
-        <TextInput
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search entries..."
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.filterSearchInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="search"
-          clearButtonMode="while-editing"
-        />
-        {creatingEntries.length ? (
-          <View style={styles.creatingStatusList}>
-            {creatingEntries.map(item => (
-              <Text key={item.id} style={styles.creatingStatusText}>{`Creating ${item.title}...`}</Text>
-            ))}
-          </View>
-        ) : null}
+          ) : null}
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search entries..."
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.filterSearchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {creatingEntries.length ? (
+            <View style={styles.creatingStatusList}>
+              {creatingEntries.map((item) => (
+                <Text
+                  key={item.id}
+                  style={styles.creatingStatusText}
+                >{`Creating ${item.title}...`}</Text>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -1242,11 +1453,18 @@ export default function SecondBrainScreen({ token, navigation }) {
         <FlatList
           data={groupedRows}
           style={styles.list}
-          contentContainerStyle={[styles.listContent, { paddingBottom: listBottomPadding }]}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: listBottomPadding },
+          ]}
           keyExtractor={keyExtractor}
           CellRendererComponent={renderCell}
           renderItem={renderListItem}
-          ListEmptyComponent={hasActiveFilters ? <Text style={styles.listEmptyText}>No matching entries</Text> : null}
+          ListEmptyComponent={
+            hasActiveFilters ? (
+              <Text style={styles.listEmptyText}>No matching entries</Text>
+            ) : null
+          }
           initialNumToRender={10}
           maxToRenderPerBatch={8}
           updateCellsBatchingPeriod={50}
@@ -1262,16 +1480,22 @@ export default function SecondBrainScreen({ token, navigation }) {
         onRequestClose={closeSettings}
       >
         <Pressable style={styles.editOverlay} onPress={closeSettings}>
-          <Pressable style={styles.settingsPanel} onPress={event => event.stopPropagation()}>
-            <ScrollView style={styles.settingsScroll} contentContainerStyle={styles.settingsScrollContent}>
+          <Pressable
+            style={styles.settingsPanel}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <ScrollView
+              style={styles.settingsScroll}
+              contentContainerStyle={styles.settingsScrollContent}
+            >
               <Text style={styles.settingsTitle}>Settings</Text>
               <Text style={styles.settingsLabel}>Timezone</Text>
               <View style={styles.settingsDropdownWrapper}>
                 <TimezoneDropdown
                   value={timezoneDraft}
-                  onChange={option => {
+                  onChange={(option) => {
                     setTimezoneDraft(option);
-                    setTimezoneError('');
+                    setTimezoneError("");
                   }}
                   placeholderTextColor={theme.colors.textMuted}
                   styles={{
@@ -1282,38 +1506,58 @@ export default function SecondBrainScreen({ token, navigation }) {
                     dropdownListContent: styles.settingsDropdownListContent,
                     searchInput: styles.settingsDropdownSearchInput,
                     dropdownOption: styles.settingsDropdownOption,
-                    dropdownOptionSelected: styles.settingsDropdownOptionSelected,
+                    dropdownOptionSelected:
+                      styles.settingsDropdownOptionSelected,
                     dropdownOptionText: styles.settingsDropdownOptionText,
-                    dropdownOptionTextSelected: styles.settingsDropdownOptionTextSelected,
+                    dropdownOptionTextSelected:
+                      styles.settingsDropdownOptionTextSelected,
                     noResults: styles.settingsNoResults,
                   }}
                 />
               </View>
-              {!!timezoneError && <Text style={styles.error}>{timezoneError}</Text>}
+              {!!timezoneError && (
+                <Text style={styles.error}>{timezoneError}</Text>
+              )}
               <View style={styles.settingsCard}>
-                <Text style={styles.settingsCardLabel}>Telegram account linking</Text>
+                <Text style={styles.settingsCardLabel}>
+                  Telegram account linking
+                </Text>
                 <Pressable
-                  style={[styles.settingsActionButton, loadingTelegramLinkKey && styles.typebarButtonDisabled]}
+                  style={[
+                    styles.settingsActionButton,
+                    loadingTelegramLinkKey && styles.typebarButtonDisabled,
+                  ]}
                   onPress={generateTelegramLinkKey}
                   disabled={loadingTelegramLinkKey}
                 >
                   <Text style={styles.settingsActionButtonText}>
-                    {loadingTelegramLinkKey ? 'Generating…' : 'Generate Telegram link key'}
+                    {loadingTelegramLinkKey
+                      ? "Generating…"
+                      : "Generate Telegram link key"}
                   </Text>
                 </Pressable>
                 {!!telegramLinkKey && (
                   <>
-                    <Text style={styles.settingsKeyText} selectable>{telegramLinkKey}</Text>
-                    <Pressable style={styles.settingsCopyButton} onPress={copyTelegramLinkKey}>
+                    <Text style={styles.settingsKeyText} selectable>
+                      {telegramLinkKey}
+                    </Text>
+                    <Pressable
+                      style={styles.settingsCopyButton}
+                      onPress={copyTelegramLinkKey}
+                    >
                       <Text style={styles.settingsCopyButtonText}>
-                        {telegramCopyStatus === 'Copied' ? '✓ Copied' : (telegramCopyStatus || 'Copy key')}
+                        {telegramCopyStatus === "Copied"
+                          ? "✓ Copied"
+                          : telegramCopyStatus || "Copy key"}
                       </Text>
                     </Pressable>
                     <Text style={styles.settingsHintText}>
-                      Send this in{' '}
+                      Send this in{" "}
                       <Text
                         style={styles.settingsHintLink}
-                        onPress={() => Linking.openURL('https://t.me/AccessiBrainBot')}
+                        onPress={() =>
+                          Linking.openURL("https://t.me/AccessiBrainBot")
+                        }
                       >
                         Telegram
                       </Text>
@@ -1321,26 +1565,46 @@ export default function SecondBrainScreen({ token, navigation }) {
                     </Text>
                   </>
                 )}
-                {!!telegramLinkError && <Text style={styles.error}>{telegramLinkError}</Text>}
+                {!!telegramLinkError && (
+                  <Text style={styles.error}>{telegramLinkError}</Text>
+                )}
               </View>
               <View style={styles.settingsCard}>
                 <Text style={styles.settingsCardLabel}>Imports</Text>
                 <Pressable
-                  style={[styles.settingsActionButton, importingConversations && styles.typebarButtonDisabled]}
+                  style={[
+                    styles.settingsActionButton,
+                    importingConversations && styles.typebarButtonDisabled,
+                  ]}
                   onPress={handleOpenImportDialog}
                   disabled={importingConversations}
                 >
                   <Text style={styles.settingsActionButtonText}>
-                    {importingConversations ? 'Importing…' : 'Import LLM conversations'}
+                    {importingConversations
+                      ? "Importing…"
+                      : "Import LLM conversations"}
                   </Text>
                 </Pressable>
               </View>
               <View style={styles.settingsActionsRow}>
-                <Pressable style={styles.settingsSecondaryButton} onPress={closeSettings} disabled={savingSettings}>
+                <Pressable
+                  style={styles.settingsSecondaryButton}
+                  onPress={closeSettings}
+                  disabled={savingSettings}
+                >
                   <Text style={styles.settingsSecondaryButtonText}>Cancel</Text>
                 </Pressable>
-                <Pressable style={[styles.editSaveButton, savingSettings && styles.typebarButtonDisabled]} onPress={saveSettings} disabled={savingSettings}>
-                  <Text style={styles.buttonText}>{savingSettings ? 'Saving…' : 'Save'}</Text>
+                <Pressable
+                  style={[
+                    styles.editSaveButton,
+                    savingSettings && styles.typebarButtonDisabled,
+                  ]}
+                  onPress={saveSettings}
+                  disabled={savingSettings}
+                >
+                  <Text style={styles.buttonText}>
+                    {savingSettings ? "Saving…" : "Save"}
+                  </Text>
                 </Pressable>
               </View>
             </ScrollView>
@@ -1348,7 +1612,9 @@ export default function SecondBrainScreen({ token, navigation }) {
         </Pressable>
       </Modal>
 
-      {isVoiceCaptureActive ? <View style={styles.voiceCaptureOverlay} pointerEvents="auto" /> : null}
+      {isVoiceCaptureActive ? (
+        <View style={styles.voiceCaptureOverlay} pointerEvents="auto" />
+      ) : null}
 
       <View style={[styles.typebarRow, { bottom: typebarBottom }]}>
         <TextInput
@@ -1359,32 +1625,50 @@ export default function SecondBrainScreen({ token, navigation }) {
           onBlur={() => setTypebarFocused(false)}
           placeholder={typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
-          style={[styles.typebarInput, isSmallScreen && styles.typebarInputSmall, { height: typebarInputHeight }]}
+          style={[
+            styles.typebarInput,
+            isSmallScreen && styles.typebarInputSmall,
+            { height: typebarInputHeight },
+          ]}
           multiline
           returnKeyType="send"
           enablesReturnKeyAutomatically
           scrollEnabled={false}
           textAlignVertical="top"
-          onContentSizeChange={event => {
-            const contentHeight = event?.nativeEvent?.contentSize?.height ?? TYPEBAR_MIN_HEIGHT;
-            const nextHeight = Math.max(TYPEBAR_MIN_HEIGHT, Math.ceil(contentHeight));
-            setTypebarInputHeight(prev => (prev === nextHeight ? prev : nextHeight));
+          onContentSizeChange={(event) => {
+            const contentHeight =
+              event?.nativeEvent?.contentSize?.height ?? TYPEBAR_MIN_HEIGHT;
+            const nextHeight = Math.max(
+              TYPEBAR_MIN_HEIGHT,
+              Math.ceil(contentHeight),
+            );
+            setTypebarInputHeight((prev) =>
+              prev === nextHeight ? prev : nextHeight,
+            );
           }}
         />
         {!hideTypebarSideActions ? (
           <View style={styles.typebarActionWrap}>
-            {actionTooltip === 'mic' ? (
+            {actionTooltip === "mic" ? (
               <View style={styles.typebarTooltip}>
-                <Text style={styles.typebarTooltipText}>{recording ? 'Stop & submit voice note' : 'Record voice note'}</Text>
+                <Text style={styles.typebarTooltipText}>
+                  {recording ? "Stop & submit voice note" : "Record voice note"}
+                </Text>
               </View>
             ) : null}
             {recording ? (
               <View style={styles.typebarRecordingMeta}>
-                <Text style={styles.typebarRecordingTimer} accessibilityLabel={`Voice memo running time ${voiceElapsedLabel}`}>
+                <Text
+                  style={styles.typebarRecordingTimer}
+                  accessibilityLabel={`Voice memo running time ${voiceElapsedLabel}`}
+                >
                   {voiceElapsedLabel}
                 </Text>
                 <Pressable
-                  style={[styles.typebarCancelRecordingButton, voiceBusy && styles.typebarButtonDisabled]}
+                  style={[
+                    styles.typebarCancelRecordingButton,
+                    voiceBusy && styles.typebarButtonDisabled,
+                  ]}
                   onPress={cancelVoiceCapture}
                   disabled={voiceBusy}
                   accessibilityRole="button"
@@ -1393,61 +1677,86 @@ export default function SecondBrainScreen({ token, navigation }) {
                   <Feather
                     name="trash-2"
                     size={13}
-                    style={[styles.typebarCancelRecordingIcon, voiceBusy && styles.typebarButtonIconDisabled]}
+                    style={[
+                      styles.typebarCancelRecordingIcon,
+                      voiceBusy && styles.typebarButtonIconDisabled,
+                    ]}
                   />
                 </Pressable>
               </View>
             ) : null}
             <Pressable
-              style={[styles.typebarButton, (voiceBusy || voiceStarting || loadingTelegramLinkKey) && styles.typebarButtonDisabled]}
-              onPress={recording ? stopVoiceCaptureAndSubmit : startVoiceCapture}
+              style={[
+                styles.typebarButton,
+                (voiceBusy || voiceStarting || loadingTelegramLinkKey) &&
+                  styles.typebarButtonDisabled,
+              ]}
+              onPress={
+                recording ? stopVoiceCaptureAndSubmit : startVoiceCapture
+              }
               disabled={voiceBusy || voiceStarting}
               accessibilityRole="button"
-              accessibilityLabel={recording ? 'Stop and submit voice note' : voiceStarting ? 'Preparing voice recorder' : 'Record voice note'}
-              onHoverIn={() => setActionTooltip('mic')}
-              onHoverOut={() => setActionTooltip('')}
-              onLongPress={() => setActionTooltip('mic')}
+              accessibilityLabel={
+                recording
+                  ? "Stop and submit voice note"
+                  : voiceStarting
+                    ? "Preparing voice recorder"
+                    : "Record voice note"
+              }
+              onHoverIn={() => setActionTooltip("mic")}
+              onHoverOut={() => setActionTooltip("")}
+              onLongPress={() => setActionTooltip("mic")}
               onPressOut={() => {
-                if (!isWeb) setActionTooltip('');
+                if (!isWeb) setActionTooltip("");
               }}
             >
               <Feather
-                name={voiceStarting ? 'loader' : recording ? 'square' : 'mic'}
+                name={voiceStarting ? "loader" : recording ? "square" : "mic"}
                 size={15}
-                style={[styles.typebarButtonIcon, (voiceBusy || voiceStarting) && styles.typebarButtonIconDisabled]}
+                style={[
+                  styles.typebarButtonIcon,
+                  (voiceBusy || voiceStarting) &&
+                    styles.typebarButtonIconDisabled,
+                ]}
               />
             </Pressable>
           </View>
         ) : null}
         <View style={styles.typebarActionWrap}>
-          {actionTooltip === 'enter' ? (
+          {actionTooltip === "enter" ? (
             <View style={styles.typebarTooltip}>
               <Text style={styles.typebarTooltipText}>Enter note</Text>
             </View>
           ) : null}
           <Pressable
-            style={[styles.typebarButton, !draft.trim() && styles.typebarButtonDisabled]}
+            style={[
+              styles.typebarButton,
+              !draft.trim() && styles.typebarButtonDisabled,
+            ]}
             onPress={createEntry}
             disabled={!draft.trim()}
             accessibilityRole="button"
             accessibilityLabel="Enter note"
-            onHoverIn={() => setActionTooltip('enter')}
-            onHoverOut={() => setActionTooltip('')}
-            onLongPress={() => setActionTooltip('enter')}
+            onHoverIn={() => setActionTooltip("enter")}
+            onHoverOut={() => setActionTooltip("")}
+            onLongPress={() => setActionTooltip("enter")}
             onPressOut={() => {
-              if (!isWeb) setActionTooltip('');
+              if (!isWeb) setActionTooltip("");
             }}
           >
             <Feather
               name="arrow-up-right"
               size={15}
-              style={[styles.typebarButtonIcon, !draft.trim() && styles.typebarButtonIconDisabled]}
+              style={[
+                styles.typebarButtonIcon,
+                !draft.trim() && styles.typebarButtonIconDisabled,
+              ]}
             />
           </Pressable>
         </View>
         {!hideTypebarSideActions ? (
           <View style={styles.typebarActionWrap}>
-            {actionTooltip === 'settings' ? (
+            {actionTooltip === "settings" ? (
               <View style={styles.typebarTooltip}>
                 <Text style={styles.typebarTooltipText}>Open settings</Text>
               </View>
@@ -1457,14 +1766,18 @@ export default function SecondBrainScreen({ token, navigation }) {
               onPress={openSettings}
               accessibilityRole="button"
               accessibilityLabel="Open settings"
-              onHoverIn={() => setActionTooltip('settings')}
-              onHoverOut={() => setActionTooltip('')}
-              onLongPress={() => setActionTooltip('settings')}
+              onHoverIn={() => setActionTooltip("settings")}
+              onHoverOut={() => setActionTooltip("")}
+              onLongPress={() => setActionTooltip("settings")}
               onPressOut={() => {
-                if (!isWeb) setActionTooltip('');
+                if (!isWeb) setActionTooltip("");
               }}
             >
-              <Feather name="settings" style={styles.typebarUploadButtonIcon} size={15} />
+              <Feather
+                name="settings"
+                style={styles.typebarUploadButtonIcon}
+                size={15}
+              />
             </Pressable>
           </View>
         ) : null}

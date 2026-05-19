@@ -1,10 +1,17 @@
-import { memo, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { theme } from '../theme';
+import { memo, useRef, useState } from "react";
+import {
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { theme } from "../theme";
 
 function getEntryBody(entry) {
-  return entry.raw_text || entry.summary || '';
+  return entry.raw_text || entry.summary || "";
 }
 
 function getPriorityColor(priority, theme) {
@@ -14,17 +21,33 @@ function getPriorityColor(priority, theme) {
 }
 
 const TAG_STYLES = {
-  reminder: { bg: theme.colors.reminderTagBg, color: theme.colors.reminderTagText, label: 'Reminder' },
-  todo: { bg: theme.colors.todoDim, color: theme.colors.todoTagText, label: 'TODO' },
-  thought: { bg: theme.colors.thoughtDim, color: theme.colors.thoughtTagText, label: 'Thought' },
-  note: { bg: theme.colors.noteDim, color: theme.colors.noteTagText, label: 'Note' },
+  reminder: {
+    bg: theme.colors.reminderTagBg,
+    color: theme.colors.reminderTagText,
+    label: "Reminder",
+  },
+  todo: {
+    bg: theme.colors.todoDim,
+    color: theme.colors.todoTagText,
+    label: "TODO",
+  },
+  thought: {
+    bg: theme.colors.thoughtDim,
+    color: theme.colors.thoughtTagText,
+    label: "Thought",
+  },
+  note: {
+    bg: theme.colors.noteDim,
+    color: theme.colors.noteTagText,
+    label: "Note",
+  },
 };
 
 const CATEGORY_ICONS = {
-  reminder: 'clock',
-  todo: 'check-square',
-  thought: 'zap',
-  note: 'edit-3',
+  reminder: "clock",
+  todo: "check-square",
+  thought: "zap",
+  note: "edit-3",
 };
 
 function SecondBrainEntryCard({
@@ -49,12 +72,17 @@ function SecondBrainEntryCard({
   const actionTriggerRef = useRef(null);
   const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
-  const icon = CATEGORY_ICONS[entry.category] ?? 'edit-3';
+  const icon = CATEGORY_ICONS[entry.category] ?? "edit-3";
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
-  const archiveLabel = entry.category === 'reminder'
-    ? (entry.is_archived ? 'Undo Done' : 'Mark Done')
-    : (entry.is_archived ? 'Unarchive' : 'Archive');
-  const isWeb = Platform.OS === 'web';
+  const archiveLabel =
+    entry.category === "reminder"
+      ? entry.is_archived
+        ? "Undo Done"
+        : "Mark Done"
+      : entry.is_archived
+        ? "Unarchive"
+        : "Archive";
+  const isWeb = Platform.OS === "web";
   const isSmallScreen = width < 720;
   const isDrawerOpen = isActionDrawerOpen === true;
 
@@ -78,7 +106,10 @@ function SecondBrainEntryCard({
   }
 
   const drawerLeft = drawerAnchor
-    ? Math.max(8, Math.min(width - 8 - 132, drawerAnchor.x + drawerAnchor.w - 132))
+    ? Math.max(
+        8,
+        Math.min(width - 8 - 132, drawerAnchor.x + drawerAnchor.w - 132),
+      )
     : 8;
   const drawerTop = drawerAnchor ? drawerAnchor.y + drawerAnchor.h + 6 : 0;
 
@@ -99,19 +130,35 @@ function SecondBrainEntryCard({
           {isSmallScreen ? (
             <View style={styles.cardMetaRowMobile}>
               <View style={styles.cardMetaLead}>
-                <Feather name={icon} size={14} style={styles.cardIcon} color={theme.colors.brand} />
-                <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
-                <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
+                <Feather
+                  name={icon}
+                  size={14}
+                  style={styles.cardIcon}
+                  color={theme.colors.brand}
+                />
+                <Text
+                  style={[
+                    styles.priorityText,
+                    { color: getPriorityColor(priority, theme) },
+                  ]}
+                >
+                  P{priority}
+                </Text>
+                <Text style={styles.cardTitle}>
+                  {entry.title || "Untitled"}
+                </Text>
               </View>
               <View style={styles.mobileTitleActionRow}>
                 <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-                  <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
+                  <Text style={[styles.tagPillText, { color: tag.color }]}>
+                    {tag.label}
+                  </Text>
                 </View>
                 <View style={styles.mobileActionDrawerWrap}>
                   <Pressable
                     ref={actionTriggerRef}
                     style={styles.mobileActionTrigger}
-                    onPress={event => {
+                    onPress={(event) => {
                       event?.stopPropagation?.();
                       if (isDrawerOpen) {
                         closeActionDrawer();
@@ -124,7 +171,11 @@ function SecondBrainEntryCard({
                     {isBusy ? (
                       <Text style={styles.mobileActionTriggerText}>...</Text>
                     ) : (
-                      <Feather name="more-horizontal" size={16} style={styles.mobileActionTriggerIcon} />
+                      <Feather
+                        name="more-horizontal"
+                        size={16}
+                        style={styles.mobileActionTriggerIcon}
+                      />
                     )}
                   </Pressable>
                 </View>
@@ -132,19 +183,33 @@ function SecondBrainEntryCard({
             </View>
           ) : (
             <View style={styles.cardMetaRow}>
-              <Feather name={icon} size={14} style={styles.cardIcon} color={theme.colors.brand} />
-              <Text style={[styles.priorityText, { color: getPriorityColor(priority, theme) }]}>P{priority}</Text>
-              <Text style={styles.cardTitle}>{entry.title || 'Untitled'}</Text>
+              <Feather
+                name={icon}
+                size={14}
+                style={styles.cardIcon}
+                color={theme.colors.brand}
+              />
+              <Text
+                style={[
+                  styles.priorityText,
+                  { color: getPriorityColor(priority, theme) },
+                ]}
+              >
+                P{priority}
+              </Text>
+              <Text style={styles.cardTitle}>{entry.title || "Untitled"}</Text>
             </View>
           )}
-          <Text style={styles.cardBody}>{entry.summary || getEntryBody(entry)}</Text>
+          <Text style={styles.cardBody}>
+            {entry.summary || getEntryBody(entry)}
+          </Text>
         </View>
         {!isSmallScreen ? (
           <View style={styles.cardActionCol}>
             <View style={styles.cardActionRow}>
               <Pressable
                 style={styles.secondaryButton}
-                onPress={event => {
+                onPress={(event) => {
                   event?.stopPropagation?.();
                   onStartEdit(entry);
                 }}
@@ -154,7 +219,7 @@ function SecondBrainEntryCard({
               </Pressable>
               <Pressable
                 style={styles.secondaryButton}
-                onPress={event => {
+                onPress={(event) => {
                   event?.stopPropagation?.();
                   onToggleArchive(entry);
                 }}
@@ -162,34 +227,50 @@ function SecondBrainEntryCard({
               >
                 <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
               </Pressable>
-              {entry.category === 'reminder' && entry.remind_at ? (
+              {entry.category === "reminder" && entry.remind_at ? (
                 <Pressable
                   style={styles.secondaryButton}
-                  onPress={event => {
+                  onPress={(event) => {
                     event?.stopPropagation?.();
                     onDownloadIcs(entry.id);
                   }}
                   disabled={isBusy}
                 >
-                  <Text style={styles.secondaryButtonText}>Add to Calendar</Text>
+                  <Text style={styles.secondaryButtonText}>
+                    Add to Calendar
+                  </Text>
                 </Pressable>
               ) : null}
               <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-                <Text style={[styles.tagPillText, { color: tag.color }]}>{tag.label}</Text>
+                <Text style={[styles.tagPillText, { color: tag.color }]}>
+                  {tag.label}
+                </Text>
               </View>
               {isWeb ? (
                 <Pressable
-                  style={[styles.deleteButton, isDeleteConfirm && styles.deleteButtonConfirm]}
-                  onPress={event => {
+                  style={[
+                    styles.deleteButton,
+                    isDeleteConfirm && styles.deleteButtonConfirm,
+                  ]}
+                  onPress={(event) => {
                     event?.stopPropagation?.();
                     onRequestDelete(entry.id);
                   }}
                   disabled={isBusy}
                 >
                   {isBusy ? (
-                    <Text style={[styles.deleteText, isDeleteConfirm && styles.deleteTextConfirm]}>...</Text>
+                    <Text
+                      style={[
+                        styles.deleteText,
+                        isDeleteConfirm && styles.deleteTextConfirm,
+                      ]}
+                    >
+                      ...
+                    </Text>
                   ) : isDeleteConfirm ? (
-                    <Text style={[styles.deleteText, styles.deleteTextConfirm]}>!</Text>
+                    <Text style={[styles.deleteText, styles.deleteTextConfirm]}>
+                      !
+                    </Text>
                   ) : (
                     <Feather name="x" size={14} style={styles.deleteIcon} />
                   )}
@@ -203,20 +284,23 @@ function SecondBrainEntryCard({
         {entry.remind_at ? (
           <>
             <View style={styles.reminderMetaPill}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Feather name="clock" size={12} color={theme.colors.brand} />
-                <Text style={styles.reminderMetaText}> {displayRemindAt || ''}</Text>
+                <Text style={styles.reminderMetaText}>
+                  {" "}
+                  {displayRemindAt || ""}
+                </Text>
               </View>
             </View>
             <Text style={styles.metaDot}>•</Text>
           </>
         ) : null}
-        <Text style={styles.metaText}>{displayDate || ''}</Text>
+        <Text style={styles.metaText}>{displayDate || ""}</Text>
       </View>
 
       {Array.isArray(entry.tags) && entry.tags.length > 0 ? (
         <View style={styles.tagsRow}>
-          {entry.tags.map(tagName => (
+          {entry.tags.map((tagName) => (
             <View key={tagName} style={styles.itemTagPill}>
               <Text style={styles.itemTagText}>#{tagName}</Text>
             </View>
@@ -225,12 +309,26 @@ function SecondBrainEntryCard({
       ) : null}
 
       {isSmallScreen ? (
-        <Modal transparent visible={isDrawerOpen} animationType="none" onRequestClose={closeActionDrawer}>
-          <Pressable style={styles.mobileActionDrawerBackdrop} onPress={closeActionDrawer}>
-            <View style={[styles.mobileActionDrawer, styles.mobileActionDrawerPortal, { top: drawerTop, left: drawerLeft }]}>
+        <Modal
+          transparent
+          visible={isDrawerOpen}
+          animationType="none"
+          onRequestClose={closeActionDrawer}
+        >
+          <Pressable
+            style={styles.mobileActionDrawerBackdrop}
+            onPress={closeActionDrawer}
+          >
+            <View
+              style={[
+                styles.mobileActionDrawer,
+                styles.mobileActionDrawerPortal,
+                { top: drawerTop, left: drawerLeft },
+              ]}
+            >
               <Pressable
                 style={styles.mobileActionDrawerItem}
-                onPress={event => {
+                onPress={(event) => {
                   event?.stopPropagation?.();
                   closeActionDrawer();
                   onStartEdit(entry);
@@ -240,37 +338,46 @@ function SecondBrainEntryCard({
               </Pressable>
               <Pressable
                 style={styles.mobileActionDrawerItem}
-                onPress={event => {
+                onPress={(event) => {
                   event?.stopPropagation?.();
                   closeActionDrawer();
                   onToggleArchive(entry);
                 }}
               >
-                <Text style={styles.mobileActionDrawerText}>{archiveLabel}</Text>
+                <Text style={styles.mobileActionDrawerText}>
+                  {archiveLabel}
+                </Text>
               </Pressable>
-              {entry.category === 'reminder' && entry.remind_at ? (
+              {entry.category === "reminder" && entry.remind_at ? (
                 <Pressable
                   style={styles.mobileActionDrawerItem}
-                  onPress={event => {
+                  onPress={(event) => {
                     event?.stopPropagation?.();
                     closeActionDrawer();
                     onDownloadIcs(entry.id);
                   }}
                 >
-                  <Text style={styles.mobileActionDrawerText}>Add to Calendar</Text>
+                  <Text style={styles.mobileActionDrawerText}>
+                    Add to Calendar
+                  </Text>
                 </Pressable>
               ) : null}
               {isWeb ? (
                 <Pressable
                   style={styles.mobileActionDrawerItem}
-                  onPress={event => {
+                  onPress={(event) => {
                     event?.stopPropagation?.();
                     closeActionDrawer();
                     onRequestDelete(entry.id);
                   }}
                 >
-                  <Text style={[styles.mobileActionDrawerText, styles.mobileActionDrawerDeleteText]}>
-                    {isDeleteConfirm ? 'Confirm Delete' : 'Delete'}
+                  <Text
+                    style={[
+                      styles.mobileActionDrawerText,
+                      styles.mobileActionDrawerDeleteText,
+                    ]}
+                  >
+                    {isDeleteConfirm ? "Confirm Delete" : "Delete"}
                   </Text>
                 </Pressable>
               ) : null}

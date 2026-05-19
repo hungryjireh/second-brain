@@ -1,22 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import {
   NavigationContainer,
   DefaultTheme,
   getStateFromPath as getStateFromPathDefault,
-} from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { useFonts } from 'expo-font';
-import { Feather } from '@expo/vector-icons';
-import LoginScreen from './src/screens/LoginScreen';
-import SecondBrainScreen from './src/screens/SecondBrainScreen';
-import SecondBrainEntryDetailsScreen from './src/screens/SecondBrainEntryDetailsScreen';
-import SecondBrainEditEntryScreen from './src/screens/SecondBrainEditEntryScreen';
-import { clearToken, getToken, setAuthExpiredHandler } from './src/api';
-import { theme } from './src/theme';
-import { shouldApplyIOSInputZoomFix, shouldShowSecondBrainHeaderDate } from './src/utils/responsive';
-import styles from './App.styles';
+} from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts } from "expo-font";
+import { Feather } from "@expo/vector-icons";
+import LoginScreen from "./src/screens/LoginScreen";
+import SecondBrainScreen from "./src/screens/SecondBrainScreen";
+import SecondBrainEntryDetailsScreen from "./src/screens/SecondBrainEntryDetailsScreen";
+import SecondBrainEditEntryScreen from "./src/screens/SecondBrainEditEntryScreen";
+import { clearToken, getToken, setAuthExpiredHandler } from "./src/api";
+import { theme } from "./src/theme";
+import {
+  shouldApplyIOSInputZoomFix,
+  shouldShowSecondBrainHeaderDate,
+} from "./src/utils/responsive";
+import styles from "./App.styles";
 
 const Stack = createNativeStackNavigator();
 
@@ -29,10 +39,10 @@ function HeaderBrand() {
 }
 
 function HeaderLiveStatus() {
-  const dateLabel = new Date().toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  const dateLabel = new Date().toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 
   return <Text style={styles.headerLiveText}>{dateLabel}</Text>;
@@ -44,7 +54,12 @@ function HeaderLogout({ onLogout }) {
       onPress={onLogout}
       accessibilityRole="button"
       accessibilityLabel="Log out"
-      style={{ minWidth: 72, paddingVertical: 6, marginLeft: 12, justifyContent: 'center' }}
+      style={{
+        minWidth: 72,
+        paddingVertical: 6,
+        marginLeft: 12,
+        justifyContent: "center",
+      }}
     >
       <Feather name="log-out" size={20} color={theme.colors.textSecondary} />
     </Pressable>
@@ -70,27 +85,36 @@ export default function App() {
   const [fontsLoaded] = useFonts(theme.fonts.loadMap);
   const isAuthenticated = Boolean(token);
 
-  const linking = useMemo(() => ({
-    config: {
-      screens: {
-        Login: 'login',
-        SecondBrain: 'second-brain',
-        SecondBrainEntryDetails: 'second-brain/entry/:entryId',
-        SecondBrainEditEntry: 'second-brain/edit/:entryId',
+  const linking = useMemo(
+    () => ({
+      config: {
+        screens: {
+          Login: "login",
+          SecondBrain: "second-brain",
+          SecondBrainEntryDetails: "second-brain/entry/:entryId",
+          SecondBrainEditEntry: "second-brain/edit/:entryId",
+        },
       },
-    },
-    getStateFromPath(path, options) {
-      const rawPath = String(path || '');
-      const defaultPath = isAuthenticated ? '/second-brain' : '/login';
-      const normalizedPath = (
-        rawPath === '' || rawPath === '/' ? defaultPath : rawPath
-      )
-        .replace(/^\/apps(?:\/|$)/, isAuthenticated ? '/second-brain' : '/login')
-        .replace(/^\/?secondbrain\/microphone-flow(?:\/|$)/, '/second-brain')
-        .replace(/^\/?second-brain\/microphone-flow(?:\/|$)/, '/second-brain');
-      return getStateFromPathDefault(normalizedPath, options);
-    },
-  }), [isAuthenticated]);
+      getStateFromPath(path, options) {
+        const rawPath = String(path || "");
+        const defaultPath = isAuthenticated ? "/second-brain" : "/login";
+        const normalizedPath = (
+          rawPath === "" || rawPath === "/" ? defaultPath : rawPath
+        )
+          .replace(
+            /^\/apps(?:\/|$)/,
+            isAuthenticated ? "/second-brain" : "/login",
+          )
+          .replace(/^\/?secondbrain\/microphone-flow(?:\/|$)/, "/second-brain")
+          .replace(
+            /^\/?second-brain\/microphone-flow(?:\/|$)/,
+            "/second-brain",
+          );
+        return getStateFromPathDefault(normalizedPath, options);
+      },
+    }),
+    [isAuthenticated],
+  );
 
   useEffect(() => {
     (async () => {
@@ -110,7 +134,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined' || typeof navigator === 'undefined') {
+    if (typeof document === "undefined" || typeof navigator === "undefined") {
       return undefined;
     }
 
@@ -118,12 +142,13 @@ export default function App() {
       return undefined;
     }
 
-    const styleId = 'ios-input-zoom-fix';
+    const styleId = "ios-input-zoom-fix";
     let styleTag = document.getElementById(styleId);
     if (!styleTag) {
-      styleTag = document.createElement('style');
+      styleTag = document.createElement("style");
       styleTag.id = styleId;
-      styleTag.textContent = 'input, textarea, select { font-size: 16px !important; }';
+      styleTag.textContent =
+        "input, textarea, select { font-size: 16px !important; }";
       document.head.appendChild(styleTag);
     }
 
@@ -140,10 +165,15 @@ export default function App() {
   }
 
   if (loading || !fontsLoaded) {
-    return <ActivityIndicator style={styles.loadingIndicator} color={theme.colors.brand} />;
+    return (
+      <ActivityIndicator
+        style={styles.loadingIndicator}
+        color={theme.colors.brand}
+      />
+    );
   }
 
-  const initialRouteName = isAuthenticated ? 'SecondBrain' : 'Login';
+  const initialRouteName = isAuthenticated ? "SecondBrain" : "Login";
 
   return (
     <SafeAreaProvider>
@@ -151,7 +181,9 @@ export default function App() {
         <NavigationContainer theme={navTheme} linking={linking}>
           <Stack.Navigator
             initialRouteName={initialRouteName}
-            screenOptions={{ contentStyle: { backgroundColor: theme.colors.bgBase } }}
+            screenOptions={{
+              contentStyle: { backgroundColor: theme.colors.bgBase },
+            }}
           >
             {!isAuthenticated ? (
               <Stack.Screen name="Login" options={{ headerShown: false }}>
@@ -163,40 +195,50 @@ export default function App() {
                   name="SecondBrain"
                   options={{
                     headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: 'center',
+                    headerTitleAlign: "center",
                     headerLeft: () => <HeaderLogout onLogout={logout} />,
-                    headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
+                    headerRight: hideSecondBrainHeaderDate
+                      ? undefined
+                      : () => <HeaderLiveStatus />,
                     headerStyle: { backgroundColor: theme.colors.bgBase },
                     headerShadowVisible: false,
                   }}
                 >
-                  {props => <SecondBrainScreen {...props} token={token} />}
+                  {(props) => <SecondBrainScreen {...props} token={token} />}
                 </Stack.Screen>
 
                 <Stack.Screen
                   name="SecondBrainEntryDetails"
                   options={{
                     headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: 'center',
-                    headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
+                    headerTitleAlign: "center",
+                    headerRight: hideSecondBrainHeaderDate
+                      ? undefined
+                      : () => <HeaderLiveStatus />,
                     headerStyle: { backgroundColor: theme.colors.bgBase },
                     headerShadowVisible: false,
                   }}
                 >
-                  {props => <SecondBrainEntryDetailsScreen {...props} token={token} />}
+                  {(props) => (
+                    <SecondBrainEntryDetailsScreen {...props} token={token} />
+                  )}
                 </Stack.Screen>
 
                 <Stack.Screen
                   name="SecondBrainEditEntry"
                   options={{
                     headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: 'center',
-                    headerRight: hideSecondBrainHeaderDate ? undefined : () => <HeaderLiveStatus />,
+                    headerTitleAlign: "center",
+                    headerRight: hideSecondBrainHeaderDate
+                      ? undefined
+                      : () => <HeaderLiveStatus />,
                     headerStyle: { backgroundColor: theme.colors.bgBase },
                     headerShadowVisible: false,
                   }}
                 >
-                  {props => <SecondBrainEditEntryScreen {...props} token={token} />}
+                  {(props) => (
+                    <SecondBrainEditEntryScreen {...props} token={token} />
+                  )}
                 </Stack.Screen>
               </>
             )}
