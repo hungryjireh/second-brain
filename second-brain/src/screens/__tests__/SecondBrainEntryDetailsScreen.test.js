@@ -30,42 +30,14 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("#work")).toBeTruthy();
   });
 
-  it("goes back when navigation can go back", () => {
-    const canGoBack = jest.fn(() => true);
-    const goBack = jest.fn();
-    const navigate = jest.fn();
-
-    const { getByLabelText } = render(
+  it("does not render the in-page back button", () => {
+    const { queryByLabelText } = render(
       <SecondBrainEntryDetailsScreen
         route={{ params: { entry: { title: "Entry" } } }}
-        navigation={{ canGoBack, goBack, navigate }}
       />,
     );
 
-    fireEvent.press(getByLabelText("Back to Second Brain"));
-
-    expect(canGoBack).toHaveBeenCalled();
-    expect(goBack).toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
-  it("navigates to SecondBrain when navigation cannot go back", () => {
-    const canGoBack = jest.fn(() => false);
-    const goBack = jest.fn();
-    const navigate = jest.fn();
-
-    const { getByLabelText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry: { title: "Entry" } } }}
-        navigation={{ canGoBack, goBack, navigate }}
-      />,
-    );
-
-    fireEvent.press(getByLabelText("Back to Second Brain"));
-
-    expect(canGoBack).toHaveBeenCalled();
-    expect(goBack).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith("SecondBrain");
+    expect(queryByLabelText("Back to Second Brain")).toBeNull();
   });
 
   it("renders imported conversation messages when entry is a chat conversation payload", () => {

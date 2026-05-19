@@ -41,4 +41,20 @@ describe("OpenBrainTopMenu safe area", () => {
       expect.arrayContaining([expect.objectContaining({ paddingTop: 24 })]),
     );
   });
+
+  it("defaults outer container background to bgBase", () => {
+    const screen = render(
+      <OpenBrainTopMenu
+        token={null}
+        navigation={{ replace: jest.fn(), navigate: jest.fn() }}
+      />,
+    );
+
+    const tree = screen.toJSON();
+    expect(tree.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ backgroundColor: "#F3EEE4" }),
+      ]),
+    );
+  });
 });

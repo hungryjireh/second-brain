@@ -5,21 +5,31 @@ import { commonFollowStyles, commonSearchStyles } from "../styles/commonStyles";
 const styles = StyleSheet.create({
   outer: {
     zIndex: 20,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   wrap: {
+    position: "relative",
+    overflow: "visible",
     height: 62,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.bgBase,
   },
+  logoCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   backButton: {
     width: 64,
     height: 48,
+    marginRight: "auto",
     borderRadius: 24,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -52,6 +62,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 12,
+    overflow: "visible",
   },
   notificationButton: {
     minWidth: 36,
@@ -61,6 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    overflow: "visible",
   },
   notificationBadge: {
     position: "absolute",
@@ -73,6 +85,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 2,
+    elevation: 2,
   },
   notificationBadgeText: {
     color: theme.colors.textLight,

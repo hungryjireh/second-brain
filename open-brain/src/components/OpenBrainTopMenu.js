@@ -104,7 +104,13 @@ export const __testables = {
   notificationPayload,
 };
 
-export default function OpenBrainTopMenu({ navigation, token }) {
+export default function OpenBrainTopMenu({
+  navigation,
+  token,
+  showBackButton = true,
+  backRoute = "OpenBrainFeed",
+  outerBackgroundColor = theme.colors.bgBase,
+}) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isSmallScreen = width <= 420;
@@ -359,30 +365,39 @@ export default function OpenBrainTopMenu({ navigation, token }) {
   );
 
   return (
-    <View style={[styles.outer, { paddingTop: insets.top }]}>
+    <View
+      style={[
+        styles.outer,
+        { paddingTop: insets.top, backgroundColor: outerBackgroundColor },
+      ]}
+    >
       <View style={styles.wrap}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => navigation.replace("OpenBrainFeed")}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Feed"
-        >
-          <Feather
-            name="arrow-left"
-            size={20}
-            color={theme.colors.textSecondary}
-          />
-        </Pressable>
-        <Pressable
-          style={styles.logoButton}
-          onPress={() => navigation.navigate("OpenBrainFeed")}
-          accessibilityRole="button"
-          accessibilityLabel="Go to feed"
-        >
-          <Text style={styles.logoText}>
-            open<Text style={styles.logoAccent}>brain</Text>
-          </Text>
-        </Pressable>
+        {showBackButton ? (
+          <Pressable
+            style={styles.backButton}
+            onPress={() => navigation.replace(backRoute)}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Feather
+              name="arrow-left"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+          </Pressable>
+        ) : null}
+        <View style={styles.logoCenter} pointerEvents="box-none">
+          <Pressable
+            style={styles.logoButton}
+            onPress={() => navigation.navigate("OpenBrainFeed")}
+            accessibilityRole="button"
+            accessibilityLabel="Go to feed"
+          >
+            <Text style={styles.logoText}>
+              open<Text style={styles.logoAccent}>brain</Text>
+            </Text>
+          </Pressable>
+        </View>
         <View style={styles.rightActions}>
           <Pressable
             style={styles.notificationButton}

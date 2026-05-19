@@ -128,6 +128,7 @@ export default function SharedThoughtScreen({ navigation, route, token }) {
       <OpenBrainBottomNav
         navigation={navigation}
         currentRoute="SharedThought"
+        token={token}
       />
     </View>
   );

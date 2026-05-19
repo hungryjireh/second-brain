@@ -98,7 +98,11 @@ export default function OpenBrainScreen({ token, navigation }) {
           <Text style={styles.error}>{error}</Text>
         </View>
       ) : null}
-      <OpenBrainBottomNav navigation={navigation} currentRoute="OpenBrain" />
+      <OpenBrainBottomNav
+        navigation={navigation}
+        currentRoute="OpenBrain"
+        token={token}
+      />
     </View>
   );
 }

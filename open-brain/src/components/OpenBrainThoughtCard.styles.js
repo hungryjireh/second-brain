@@ -38,7 +38,7 @@ const hoverTooltip = {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.bgRaised,
+    backgroundColor: theme.colors.bgBase,
     borderColor: theme.colors.white03,
     borderWidth: 1,
     borderRadius: 24,

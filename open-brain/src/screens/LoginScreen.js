@@ -7,7 +7,6 @@ import {
   TextInput,
   Pressable,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { login, setToken } from "../api";
 import { theme } from "../theme";
 import {
@@ -17,7 +16,6 @@ import {
 import styles from "./LoginScreenStyles";
 
 export default function LoginScreen({ onLoggedIn }) {
-  const navigation = useNavigation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const passwordInputRef = useRef(null);
@@ -41,7 +39,6 @@ export default function LoginScreen({ onLoggedIn }) {
       const data = await login(normalizedEmail, normalizedPassword);
       await setToken(data.token);
       onLoggedIn(data.token);
-      navigation.replace("OpenBrainFeed");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,7 +55,7 @@ export default function LoginScreen({ onLoggedIn }) {
       <View style={styles.card}>
         <Text style={styles.eyebrow}>Welcome back</Text>
         <Text style={styles.title}>
-          Sign in to second<Text style={styles.titleAccent}>brain</Text>
+          Sign in to open<Text style={styles.titleAccent}>brain</Text>
         </Text>
         <Text style={styles.subtitle}>
           Use your account credentials to continue.

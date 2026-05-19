@@ -191,10 +191,7 @@ export default function SecondBrainEntryDetailsScreen({
   }
 
   return (
-    <SecondBrainEntryPageLayout
-      navigation={navigation}
-      submenuLabel="Entry details"
-    >
+    <SecondBrainEntryPageLayout>
       <View style={styles.entryPanelTitleRow}>
         <Text style={styles.entryPanelTitle}>{title}</Text>
         <View style={styles.mobileActionDrawerWrap}>

@@ -5,21 +5,21 @@ import { commonFollowStyles } from "../styles/commonStyles";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   list: {
     flex: 1,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   fixedHeader: {
     paddingHorizontal: 16,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   listContent: {
     flexGrow: 1,
     padding: 16,
     paddingBottom: 32,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   headerCard: {
     backgroundColor: "transparent",

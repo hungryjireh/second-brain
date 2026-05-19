@@ -87,6 +87,11 @@ export default function App() {
     })();
   }, []);
 
+  async function logout() {
+    await clearToken();
+    setToken(null);
+  }
+
   useEffect(() => {
     setAuthExpiredHandler(async () => {
       await clearToken();
@@ -126,26 +131,23 @@ export default function App() {
     return (
       <ActivityIndicator
         style={styles.loadingIndicator}
-        color={theme.colors.brand}
+        color={theme.colors.accent}
       />
     );
 
-  const initialRouteName =
-    Platform.OS === "web" ? "Login" : token ? "OpenBrainFeed" : "Login";
+  const initialRouteName = token ? "OpenBrainFeed" : "Login";
 
   return (
     <SafeAreaProvider>
       <View style={styles.appRoot}>
         <NavigationContainer theme={navTheme} linking={linking}>
           <Stack.Navigator
+            key={token ? "auth" : "guest"}
             initialRouteName={initialRouteName}
             screenOptions={{
               contentStyle: { backgroundColor: theme.colors.bgBase },
             }}
           >
-            <Stack.Screen name="Login" options={{ headerShown: false }}>
-              {() => <LoginScreen onLoggedIn={setToken} />}
-            </Stack.Screen>
             {token ? (
               <>
                 <Stack.Screen
@@ -185,7 +187,11 @@ export default function App() {
                   options={{ headerShown: false, animation: "none" }}
                 >
                   {(props) => (
-                    <OpenBrainSettingsScreen {...props} token={token} />
+                    <OpenBrainSettingsScreen
+                      {...props}
+                      token={token}
+                      onLogout={logout}
+                    />
                   )}
                 </Stack.Screen>
                 <Stack.Screen
@@ -211,7 +217,11 @@ export default function App() {
                   )}
                 </Stack.Screen>
               </>
-            ) : null}
+            ) : (
+              <Stack.Screen name="Login" options={{ headerShown: false }}>
+                {() => <LoginScreen onLoggedIn={setToken} />}
+              </Stack.Screen>
+            )}
             <Stack.Screen name="SharedThought" options={{ headerShown: false }}>
               {(props) => <SharedThoughtScreen {...props} token={token} />}
             </Stack.Screen>

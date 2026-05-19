@@ -66,6 +66,30 @@ function HeaderLogout({ onLogout }) {
   );
 }
 
+function HeaderSecondBrainBack({ navigation }) {
+  return (
+    <Pressable
+      onPress={() => {
+        if (navigation?.canGoBack?.()) {
+          navigation.goBack();
+          return;
+        }
+        navigation?.navigate?.("SecondBrain");
+      }}
+      accessibilityRole="button"
+      accessibilityLabel="Back to Second Brain"
+      style={{
+        minWidth: 72,
+        paddingVertical: 6,
+        paddingLeft: 12,
+        justifyContent: "center",
+      }}
+    >
+      <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
+    </Pressable>
+  );
+}
+
 const navTheme = {
   ...DefaultTheme,
   colors: {
@@ -196,7 +220,8 @@ export default function App() {
                   options={{
                     headerTitle: () => <HeaderBrand />,
                     headerTitleAlign: "center",
-                    headerLeft: () => <HeaderLogout onLogout={logout} />,
+                    headerBackVisible: false,
+                    headerLeft: () => null,
                     headerRight: hideSecondBrainHeaderDate
                       ? undefined
                       : () => <HeaderLiveStatus />,
@@ -209,15 +234,18 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainEntryDetails"
-                  options={{
+                  options={({ navigation }) => ({
                     headerTitle: () => <HeaderBrand />,
                     headerTitleAlign: "center",
+                    headerLeft: () => (
+                      <HeaderSecondBrainBack navigation={navigation} />
+                    ),
                     headerRight: hideSecondBrainHeaderDate
                       ? undefined
                       : () => <HeaderLiveStatus />,
                     headerStyle: { backgroundColor: theme.colors.bgBase },
                     headerShadowVisible: false,
-                  }}
+                  })}
                 >
                   {(props) => (
                     <SecondBrainEntryDetailsScreen {...props} token={token} />
@@ -226,15 +254,18 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainEditEntry"
-                  options={{
+                  options={({ navigation }) => ({
                     headerTitle: () => <HeaderBrand />,
                     headerTitleAlign: "center",
+                    headerLeft: () => (
+                      <HeaderSecondBrainBack navigation={navigation} />
+                    ),
                     headerRight: hideSecondBrainHeaderDate
                       ? undefined
                       : () => <HeaderLiveStatus />,
                     headerStyle: { backgroundColor: theme.colors.bgBase },
                     headerShadowVisible: false,
-                  }}
+                  })}
                 >
                   {(props) => (
                     <SecondBrainEditEntryScreen {...props} token={token} />

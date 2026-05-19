@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   sectionCard: {
-    backgroundColor: theme.colors.bgSurface,
+    backgroundColor: theme.colors.bgBase,
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 16,

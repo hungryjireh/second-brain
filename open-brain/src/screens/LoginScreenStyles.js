@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serif,
   },
   titleAccent: {
-    color: theme.colors.brand,
+    color: theme.colors.accent,
   },
   subtitle: {
     marginTop: 0,
@@ -66,11 +66,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 0.5,
     borderColor: "transparent",
-    backgroundColor: theme.colors.brand,
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
   },
   buttonDisabled: {
-    backgroundColor: theme.colors.brand,
+    backgroundColor: theme.colors.accent,
     opacity: 0.55,
   },
   buttonText: {

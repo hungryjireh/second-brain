@@ -4,55 +4,12 @@ import { theme } from "../theme";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bgSurface,
+    backgroundColor: theme.colors.bgRaised,
   },
   content: {
     flex: 1,
     paddingTop: 16,
     paddingHorizontal: 12,
-  },
-  floatingDraftButton: {
-    position: "absolute",
-    right: 16,
-    bottom: 84,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    borderColor: theme.colors.border,
-    borderWidth: 1,
-    backgroundColor: theme.colors.bgBase,
-    zIndex: 10,
-  },
-  floatingDraftButtonActive: {
-    borderColor: theme.colors.accentStrong,
-    backgroundColor: theme.colors.accentDim,
-  },
-  draftIcon: {
-    color: theme.colors.textPrimary,
-    fontFamily: theme.fonts.semibold,
-    fontSize: 22,
-    lineHeight: 22,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBlur: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalCardWrap: {
-    width: "100%",
-    maxWidth: 560,
-    height: "82%",
-    maxHeight: 760,
-    paddingHorizontal: 12,
-    alignSelf: "center",
   },
   tabs: {
     flexDirection: "row",

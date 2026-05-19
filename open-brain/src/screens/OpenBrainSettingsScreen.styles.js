@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
   },
   navButton: {
     alignItems: "center",
-    backgroundColor: theme.colors.bgSurface,
+    backgroundColor: theme.colors.bgBase,
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 14,
@@ -35,6 +35,13 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
     fontSize: 18,
     lineHeight: 18,
+  },
+  logoutButton: {
+    backgroundColor: "transparent",
+    justifyContent: "center",
+  },
+  logoutButtonText: {
+    color: theme.colors.textSecondary,
   },
 });
 

@@ -17,7 +17,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.semibold,
   },
   headerBrandAccent: {
-    color: theme.colors.brand,
+    color: theme.colors.accent,
   },
   headerLiveText: {
     color: theme.colors.textSecondary,
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   headerLiveDot: {
-    color: theme.colors.brand,
+    color: theme.colors.accent,
     fontSize: 12,
   },
 });

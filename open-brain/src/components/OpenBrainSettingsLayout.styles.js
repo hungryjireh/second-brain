@@ -5,6 +5,7 @@ import { commonLayoutStyles } from "../styles/commonStyles";
 const styles = StyleSheet.create({
   container: {
     ...commonLayoutStyles.screenBase,
+    backgroundColor: theme.colors.bgRaised,
   },
   content: {
     flex: 1,

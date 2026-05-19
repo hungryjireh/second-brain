@@ -2,17 +2,9 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import LoginScreen from "../LoginScreen";
 import { login, setToken } from "../../api";
 
-const mockReplace = jest.fn();
-
 jest.mock("../../api", () => ({
   login: jest.fn(),
   setToken: jest.fn(),
-}));
-
-jest.mock("@react-navigation/native", () => ({
-  useNavigation: () => ({
-    replace: mockReplace,
-  }),
 }));
 
 describe("LoginScreen", () => {
@@ -37,7 +29,6 @@ describe("LoginScreen", () => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
       expect(setToken).toHaveBeenCalledWith("token-123");
       expect(onLoggedIn).toHaveBeenCalledWith("token-123");
-      expect(mockReplace).toHaveBeenCalledWith("OpenBrainFeed");
     });
   });
 
@@ -96,7 +87,6 @@ describe("LoginScreen", () => {
       expect(login).toHaveBeenCalledWith("jireh@example.com", "password123");
       expect(setToken).toHaveBeenCalledWith("token-enter");
       expect(onLoggedIn).toHaveBeenCalledWith("token-enter");
-      expect(mockReplace).toHaveBeenCalledWith("OpenBrainFeed");
     });
   });
 

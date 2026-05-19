@@ -8,6 +8,7 @@ import OpenBrainSectionedThoughtList from "../components/OpenBrainSectionedThoug
 import OpenBrainTopMenu from "../components/OpenBrainTopMenu";
 import styles from "./OpenBrainProfileScreen.styles";
 import ProfileAvatar from "../components/ProfileAvatar";
+import { theme } from "../theme";
 import {
   addThoughtToSecondBrainWithAlert,
   buildThoughtSectionRows,
@@ -144,7 +145,6 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
           text={item.thought.text}
           date={item.dateLabel}
           feedBody
-          transparentCard
           inlineActionWithDate
           addToSecondBrainPayload={item.thought}
           onShare={() => shareThought(item.thought)}
@@ -157,7 +157,12 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} token={token} />
+      <OpenBrainTopMenu
+        navigation={navigation}
+        token={token}
+        showBackButton={false}
+        outerBackgroundColor={theme.colors.bgBase}
+      />
       <View style={styles.fixedHeader}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!error && profile ? (
@@ -253,6 +258,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       <OpenBrainBottomNav
         navigation={navigation}
         currentRoute="OpenBrainProfile"
+        token={token}
       />
     </View>
   );

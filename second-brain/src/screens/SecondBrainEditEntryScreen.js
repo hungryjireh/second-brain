@@ -256,10 +256,7 @@ export default function SecondBrainEditEntryScreen({
   }
 
   return (
-    <SecondBrainEntryPageLayout
-      navigation={navigation}
-      submenuLabel="Edit entry"
-    >
+    <SecondBrainEntryPageLayout>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <ScrollView
           style={styles.editScroll}

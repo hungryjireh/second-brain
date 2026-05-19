@@ -2,6 +2,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import OpenBrainBottomNav from "./OpenBrainBottomNav";
 import OpenBrainTopMenu from "./OpenBrainTopMenu";
 import styles from "./OpenBrainSettingsLayout.styles";
+import { theme } from "../theme";
 
 export default function OpenBrainSettingsLayout({
   token,
@@ -14,6 +15,8 @@ export default function OpenBrainSettingsLayout({
   scroll = false,
   scrollStyle,
   scrollContentContainerStyle,
+  showTopMenuBackButton = true,
+  topMenuBackRoute = "OpenBrainFeed",
   backLabel,
   onBackPress,
   children,
@@ -21,7 +24,13 @@ export default function OpenBrainSettingsLayout({
   const isScroll = scroll === true;
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} token={token} />
+      <OpenBrainTopMenu
+        navigation={navigation}
+        token={token}
+        showBackButton={showTopMenuBackButton}
+        backRoute={topMenuBackRoute}
+        outerBackgroundColor={theme.colors.bgBase}
+      />
       <View style={[styles.content, contentStyle]}>
         {(title || copy) && (
           <View style={[styles.header, headerStyle]}>
@@ -54,7 +63,11 @@ export default function OpenBrainSettingsLayout({
           children
         )}
       </View>
-      <OpenBrainBottomNav navigation={navigation} currentRoute={currentRoute} />
+      <OpenBrainBottomNav
+        navigation={navigation}
+        currentRoute={currentRoute}
+        token={token}
+      />
     </View>
   );
 }

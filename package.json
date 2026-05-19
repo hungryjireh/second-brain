@@ -21,8 +21,7 @@
     "webhook:set": "node scripts/set-webhook.js",
     "webhook:del": "node scripts/del-webhook.js",
     "start:api": "node --watch --watch-path=api --watch-path=lib scripts/local-api.js",
-    "test": "node --test tests/api/*.test.js && npm --prefix second-brain run test && npm --prefix open-brain run test",
-    "lint": "eslint ."
+    "test": "node --test tests/api/*.test.js && npm --prefix second-brain run test && npm --prefix open-brain run test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -43,7 +42,6 @@
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "globals": "^17.6.0",
     "prettier": "^3.8.3"
   }
 }

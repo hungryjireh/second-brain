@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
-import { BlurView } from "expo-blur";
+import { Pressable, Text, View } from "react-native";
 import { apiRequest, readCachedApiData, sendFollowNotification } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import {
@@ -14,13 +13,6 @@ import OpenBrainBottomNav from "../components/OpenBrainBottomNav";
 import OpenBrainSectionedThoughtList from "../components/OpenBrainSectionedThoughtList";
 import OpenBrainTopMenu from "../components/OpenBrainTopMenu";
 import OpenBrainThoughtCard from "../components/OpenBrainThoughtCard";
-import OpenBrainThoughtComposer from "../components/OpenBrainThoughtComposer";
-import { useOpenBrainComposer } from "../hooks/useOpenBrainComposer";
-import {
-  OPEN_BRAIN_MAX_CHARS,
-  randomFrom,
-  THOUGHT_FALLBACK_PROMPTS,
-} from "../utils/openBrainComposer";
 import { executeOpenBrainFollowToggle } from "../utils/openBrainFollow";
 import styles from "./OpenBrainFeedScreenStyles";
 
@@ -62,48 +54,9 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const [error, setError] = useState("");
   const [reactingKey, setReactingKey] = useState("");
   const [followBusyUserId, setFollowBusyUserId] = useState("");
-  const [isDraftOpen, setIsDraftOpen] = useState(false);
   const feedRef = useRef(feed);
   const reactingKeyRef = useRef(reactingKey);
   const followBusyUserIdRef = useRef(followBusyUserId);
-
-  const {
-    draft,
-    setDraft,
-    visibility,
-    setVisibility,
-    hasPostedToday,
-    postedHeading,
-    streakCount,
-    saveCount,
-    prompt,
-    setPrompt,
-    saving,
-    error: composerError,
-    setError: setComposerError,
-    todayLabel,
-    timeLabel,
-    loadComposerState: loadComposerData,
-    postThought,
-  } = useOpenBrainComposer({
-    token,
-    apiRequest,
-    cacheProfileTtlMs: CACHE_TTL_MS.PROFILE,
-    cacheThoughtsTtlMs: CACHE_TTL_MS.FEED,
-    fallbackSaveErrorMessage: "Unable to save thought.",
-    onPostSuccess: async (data) => {
-      const createdThought = data?.thought;
-      if (createdThought && typeof createdThought === "object") {
-        setFeed((current) => ({
-          ...current,
-          following: [createdThought, ...(current.following || [])],
-          everyone: [createdThought, ...(current.everyone || [])],
-        }));
-      } else {
-        await loadFeed();
-      }
-    },
-  });
 
   useEffect(() => {
     feedRef.current = feed;
@@ -172,25 +125,6 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
-
-  useEffect(() => {
-    if (!isDraftOpen) return;
-    let cancelled = false;
-    loadComposerData().catch((err) => {
-      if (cancelled) return;
-      if (
-        String(err.message).toLowerCase().includes("404") ||
-        String(err.message).toLowerCase().includes("not found")
-      ) {
-        navigation.replace("CreateOpenBrainProfile");
-        return;
-      }
-      setComposerError(err.message || "Unable to load draft card.");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isDraftOpen, loadComposerData, navigation]);
 
   const handleReact = useCallback(
     async (thoughtId, type, active) => {
@@ -336,9 +270,26 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     ],
   );
 
+  const handleDraftPostSuccess = useCallback(async (data) => {
+    const createdThought = data?.thought;
+    if (createdThought && typeof createdThought === "object") {
+      setFeed((current) => ({
+        ...current,
+        following: [createdThought, ...(current.following || [])],
+        everyone: [createdThought, ...(current.everyone || [])],
+      }));
+      return;
+    }
+    await loadFeed();
+  }, [loadFeed]);
+
   return (
     <View style={styles.container}>
-      <OpenBrainTopMenu navigation={navigation} token={token} />
+      <OpenBrainTopMenu
+        navigation={navigation}
+        token={token}
+        showBackButton={false}
+      />
       <View style={styles.content}>
         <View style={styles.tabs}>
           <Pressable
@@ -387,75 +338,11 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
           }
         />
       </View>
-      <Pressable
-        style={[
-          styles.floatingDraftButton,
-          isDraftOpen && styles.floatingDraftButtonActive,
-        ]}
-        onPress={() => setIsDraftOpen((current) => !current)}
-        accessibilityRole="button"
-        accessibilityLabel={
-          isDraftOpen ? "Close draft popup" : "Open draft popup"
-        }
-      >
-        <Text style={styles.draftIcon}>✎</Text>
-      </Pressable>
-      <Modal
-        visible={isDraftOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setIsDraftOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <BlurView intensity={30} tint="dark" style={styles.modalBlur} />
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setIsDraftOpen(false)}
-          />
-          <View style={styles.modalCardWrap}>
-            <OpenBrainThoughtComposer
-              value={draft}
-              onChangeText={(text) =>
-                setDraft(text.slice(0, OPEN_BRAIN_MAX_CHARS))
-              }
-              placeholder="Write your thought for today..."
-              buttonLabel={saving ? "Saving..." : hasPostedToday ? "✓" : "Done"}
-              onSubmit={postThought}
-              disabled={saving || !draft.trim()}
-              multiline
-              maxLength={OPEN_BRAIN_MAX_CHARS}
-              showRemaining={false}
-              dateLabel={todayLabel}
-              timeLabel={timeLabel}
-              streakCount={streakCount}
-              saveCount={saveCount}
-              heading={
-                hasPostedToday
-                  ? postedHeading || "What's on your mind?"
-                  : "What's on your mind?"
-              }
-              prompt={prompt}
-              onRefreshPrompt={() =>
-                setPrompt((current) =>
-                  randomFrom(THOUGHT_FALLBACK_PROMPTS, current),
-                )
-              }
-              canRefreshPrompt={THOUGHT_FALLBACK_PROMPTS.length > 1}
-              visibility={visibility}
-              onToggleVisibility={() =>
-                setVisibility((current) =>
-                  current === "public" ? "private" : "public",
-                )
-              }
-              isPosted={hasPostedToday}
-              error={composerError}
-            />
-          </View>
-        </View>
-      </Modal>
       <OpenBrainBottomNav
         navigation={navigation}
         currentRoute="OpenBrainFeed"
+        token={token}
+        onDraftPostSuccess={handleDraftPostSuccess}
       />
     </View>
   );
