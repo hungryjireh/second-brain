@@ -5,7 +5,10 @@ import {
   resolveAuthUserId,
 } from "../lib/auth.js";
 import { classifyAndInsertEntry } from "../lib/entry-processing.js";
-import { MAX_VOICE_NOTE_DURATION_SECONDS } from "../lib/constants/voice.js";
+import {
+  MAX_VOICE_NOTE_DURATION_SECONDS,
+  MIN_VOICE_NOTE_DURATION_SECONDS,
+} from "../lib/constants/voice.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -38,6 +41,14 @@ export default async function handler(req, res) {
         error: `Voice notes must be ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds or less`,
       });
     }
+    if (
+      Number.isFinite(durationSeconds) &&
+      durationSeconds < MIN_VOICE_NOTE_DURATION_SECONDS
+    ) {
+      return res.status(400).json({
+        error: `Voice notes must be at least ${MIN_VOICE_NOTE_DURATION_SECONDS} seconds long. Please try recording again.`,
+      });
+    }
 
     const audioBuffer = Buffer.from(audioBase64, "base64");
     if (!audioBuffer.length) {
@@ -47,6 +58,16 @@ export default async function handler(req, res) {
     const rawText = await transcribeFromBuffer(audioBuffer, extension);
     if (!rawText) {
       return res.status(422).json({ error: "Couldn't transcribe audio" });
+    }
+    const transcribedWordCount = rawText
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter(Boolean).length;
+    if (transcribedWordCount <= 1) {
+      return res.status(422).json({
+        error:
+          "Voice note was too short to understand. Please record a longer note.",
+      });
     }
 
     const { entry: created } = await classifyAndInsertEntry({

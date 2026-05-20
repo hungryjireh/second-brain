@@ -9,7 +9,10 @@ import {
 import { transcribeFromUrl } from "../lib/whisper.js";
 import { sendMessage } from "../lib/notify.js";
 import { classifyAndInsertEntry } from "../lib/entry-processing.js";
-import { MAX_VOICE_NOTE_DURATION_SECONDS } from "../lib/constants/voice.js";
+import {
+  MAX_VOICE_NOTE_DURATION_SECONDS,
+  MIN_VOICE_NOTE_DURATION_SECONDS,
+} from "../lib/constants/voice.js";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const DEFAULT_TIMEZONE = "Asia/Singapore";
@@ -128,6 +131,13 @@ export default async function handler(req, res) {
       await notifyTyping(chatId);
       await processText(text, chatId, linkedUser.userId, linkedUser.authToken);
     } else if (msg.voice) {
+      if ((msg.voice.duration || 0) < MIN_VOICE_NOTE_DURATION_SECONDS) {
+        await sendMessage(
+          `⏱️ Voice notes must be at least ${MIN_VOICE_NOTE_DURATION_SECONDS} seconds long. Please try recording again.`,
+          chatId,
+        );
+        return res.status(200).end();
+      }
       if ((msg.voice.duration || 0) > MAX_VOICE_NOTE_DURATION_SECONDS) {
         await sendMessage(
           `⏱️ Voice notes must be ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds or less. Please send a shorter voice note.`,

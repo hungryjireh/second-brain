@@ -306,8 +306,24 @@ test("bot handler enforces and communicates 120-second voice note limit", () => 
     /MAX_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
   );
   assert.match(
+    botSource,
+    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
+  );
+  assert.match(
     voiceConstantsSource,
     /MAX_VOICE_NOTE_DURATION_SECONDS\s*=\s*120/,
+  );
+  assert.match(
+    voiceConstantsSource,
+    /MIN_VOICE_NOTE_DURATION_SECONDS\s*=\s*0\.5/,
+  );
+  assert.match(
+    botSource,
+    /msg\.voice\.duration[\s\S]*<\s*MIN_VOICE_NOTE_DURATION_SECONDS/,
+  );
+  assert.match(
+    botSource,
+    /at least \$\{MIN_VOICE_NOTE_DURATION_SECONDS\} seconds long/,
   );
   assert.match(
     botSource,
@@ -318,6 +334,36 @@ test("bot handler enforces and communicates 120-second voice note limit", () => 
     botSource,
     /voice note \(max \$\{MAX_VOICE_NOTE_DURATION_SECONDS\} seconds\) or text/,
   );
+});
+
+test("voice handler rejects too-short audio and one-word transcripts before creating entries", () => {
+  const voiceSource = fs.readFileSync(
+    new URL("../../api/voice.js", import.meta.url),
+    "utf8",
+  );
+  const voiceConstantsSource = fs.readFileSync(
+    new URL("../../lib/constants/voice.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    voiceSource,
+    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
+  );
+  assert.match(
+    voiceConstantsSource,
+    /MIN_VOICE_NOTE_DURATION_SECONDS\s*=\s*0\.5/,
+  );
+  assert.match(
+    voiceSource,
+    /durationSeconds[\s\S]*<\s*MIN_VOICE_NOTE_DURATION_SECONDS/,
+  );
+  assert.match(
+    voiceSource,
+    /at least \$\{MIN_VOICE_NOTE_DURATION_SECONDS\} seconds long/,
+  );
+  assert.match(voiceSource, /transcribedWordCount[\s\S]*<=\s*1/);
+  assert.match(voiceSource, /too short to understand/);
 });
 
 test("open-brain shared-thought handler: OPTIONS, method guard, and missing slug", async () => {
