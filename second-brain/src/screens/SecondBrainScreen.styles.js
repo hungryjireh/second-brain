@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 6,
+    zIndex: 1,
   },
   offlineBanner: {
     borderWidth: 1,
@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+    zIndex: 2,
   },
   filterHeaderRowWithSpacing: { marginBottom: 8 },
   filterDropdownContent: {
@@ -142,6 +143,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
+    zIndex: 2,
   },
   filterDropdownToggle: {
     width: "100%",
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: theme.colors.textPrimary,
     fontSize: 13,
+    zIndex: 2,
   },
   creatingStatusList: {
     marginTop: 6,

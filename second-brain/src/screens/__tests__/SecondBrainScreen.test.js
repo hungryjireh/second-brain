@@ -659,6 +659,42 @@ describe("SecondBrainScreen", () => {
     expect(source).not.toContain("writeAsStringAsync");
   });
 
+  it("groups typebar props into a named object and spreads it", () => {
+    const screenPath = path.resolve(__dirname, "../SecondBrainScreen.js");
+    const source = fs.readFileSync(screenPath, "utf8");
+
+    expect(source).toContain("const typebarProps = {");
+    expect(source).toContain("<SecondBrainTypebar {...typebarProps}>");
+    expect(source).toContain("onSubmitDraft: createEntry,");
+    expect(source).toContain("startVoiceCapture,");
+    expect(source).toContain("saveSettings,");
+  });
+
+  it("groups filter dropdown props into a named object and spreads it", () => {
+    const screenPath = path.resolve(__dirname, "../SecondBrainScreen.js");
+    const source = fs.readFileSync(screenPath, "utf8");
+
+    expect(source).toContain("const filterDropdownProps = {");
+    expect(source).toContain(
+      "<SecondBrainFilterDropdown {...filterDropdownProps} />",
+    );
+    expect(source).toContain("setFilterDropdownOpenedAtMs,");
+    expect(source).toContain("clearFilters,");
+    expect(source).toContain("creatingEntries,");
+  });
+
+  it("delegates list row rendering to SecondBrainFlatList", () => {
+    const screenPath = path.resolve(__dirname, "../SecondBrainScreen.js");
+    const source = fs.readFileSync(screenPath, "utf8");
+
+    expect(source).not.toContain("const renderListItem = useCallback(");
+    expect(source).toContain("busyId={busyId}");
+    expect(source).toContain("openSwipeId={openSwipeId}");
+    expect(source).toContain(
+      "toggleArchiveWithConfirmation={toggleArchiveWithConfirmation}",
+    );
+  });
+
   it("shows native offline banner and queued sync count when loading saved entries offline", async () => {
     const nowTs = Math.floor(Date.now() / 1000);
     const savedSnapshot = {

@@ -36,4 +36,18 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(tooltipText.lineHeight).toBe(14);
     expect(tooltipText.textAlign).toBe("center");
   });
+
+  it("keeps mobile filter controls above dismiss overlay for touch handling", () => {
+    const overlay = StyleSheet.flatten(styles.filterDropdownDismissOverlay);
+    const headerRow = StyleSheet.flatten(styles.filterHeaderRow);
+    const dropdownContentOpen = StyleSheet.flatten(
+      styles.filterDropdownContentOpen,
+    );
+    const searchInput = StyleSheet.flatten(styles.filterSearchInput);
+
+    expect(overlay.zIndex).toBe(1);
+    expect(headerRow.zIndex).toBeGreaterThan(overlay.zIndex);
+    expect(dropdownContentOpen.zIndex).toBeGreaterThan(overlay.zIndex);
+    expect(searchInput.zIndex).toBeGreaterThan(overlay.zIndex);
+  });
 });

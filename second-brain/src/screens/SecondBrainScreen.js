@@ -15,10 +15,7 @@ import {
   createAuthHeaders,
   isLikelyOfflineError,
 } from "../api";
-import { theme } from "../theme";
-import SecondBrainEntryCard from "../components/SecondBrainEntryCard";
 import SecondBrainFlatList from "../components/SecondBrainFlatList";
-import SwipeToDeleteRow from "../components/SwipeToDeleteRow";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import SecondBrainFilterDropdown from "../components/SecondBrainFilterDropdown";
 import SecondBrainStatsGrid from "../components/SecondBrainStatsGrid";
@@ -366,7 +363,6 @@ export default function SecondBrainScreen({ token, navigation }) {
     [navigation],
   );
 
-  const closeSwipe = useCallback(() => setOpenSwipeId(null), []);
   const handleActionDrawerChange = useCallback((entryId, isOpen) => {
     setOpenActionDrawerId((current) => {
       if (isOpen) return entryId;
@@ -393,72 +389,6 @@ export default function SecondBrainScreen({ token, navigation }) {
     },
     [openActionDrawerId],
   );
-  const renderListItem = useCallback(
-    ({ item }) => {
-      if (item.type === "header") {
-        return (
-          <Text
-            style={styles.sectionHeaderText}
-          >{`${item.group} · ${item.count}`}</Text>
-        );
-      }
-
-      const entry = item.entry;
-      if (!entry) return null;
-      const isBusy = busyId === entry.id;
-      const isWeb = Platform.OS === "web";
-      const cardContent = (
-        <SecondBrainEntryCard
-          entry={entry}
-          styles={styles}
-          theme={theme}
-          isBusy={isBusy}
-          isSwipeOpen={openSwipeId === entry.id}
-          isDeleteConfirm={false}
-          displayDate={item.displayDate}
-          displayRemindAt={item.displayRemindAt}
-          onOpenEntry={openEntry}
-          onCloseSwipe={closeSwipe}
-          onStartEdit={startEdit}
-          onToggleArchive={toggleArchiveWithConfirmation}
-          onDownloadIcs={downloadIcs}
-          onRequestDelete={requestDelete}
-          onActionDrawerChange={handleActionDrawerChange}
-          isActionDrawerActive={openActionDrawerId === entry.id}
-          hasOpenActionDrawer={openActionDrawerId !== null}
-          onCloseAnyActionDrawer={() => setOpenActionDrawerId(null)}
-        />
-      );
-      if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
-      return (
-        <SwipeToDeleteRow
-          id={entry.id}
-          isOpen={openSwipeId === entry.id}
-          isRaised={openActionDrawerId === entry.id}
-          onOpen={setOpenSwipeId}
-          actionLabel={isBusy ? "..." : "Delete"}
-          onActionPress={() => requestDelete(entry.id)}
-          actionWidth={SWIPE_ACTION_WIDTH}
-          styles={styles}
-        >
-          {cardContent}
-        </SwipeToDeleteRow>
-      );
-    },
-    [
-      busyId,
-      closeSwipe,
-      downloadIcs,
-      handleActionDrawerChange,
-      openActionDrawerId,
-      openEntry,
-      openSwipeId,
-      requestDelete,
-      startEdit,
-      toggleArchiveWithConfirmation,
-    ],
-  );
-
   const {
     counts,
     visibleEntries,
@@ -489,49 +419,75 @@ export default function SecondBrainScreen({ token, navigation }) {
   const closeOpenActionDrawer = useCallback(() => {
     setOpenActionDrawerId(null);
   }, []);
+  const setFilterDropdownOpenedAtMs = useCallback((value) => {
+    filterDropdownOpenedAtMsRef.current = value;
+  }, []);
+  const typebarProps = {
+    styles,
+    bottom: typebarBottom,
+    draft,
+    onChangeDraft: setDraft,
+    onSubmitDraft: createEntry,
+    closeOpenActionDrawer,
+    setTypebarFocused,
+    isSmallScreen,
+    inputHeight: typebarInputHeight,
+    setInputHeight: setTypebarInputHeight,
+    hideTypebarSideActions,
+    actionTooltip,
+    setActionTooltip,
+    recording,
+    isVoiceCaptureActive,
+    voiceBusy,
+    voiceStarting,
+    loadingTelegramLinkKey,
+    startVoiceCapture,
+    stopVoiceCaptureAndSubmit,
+    cancelVoiceCapture,
+    voiceElapsedMs,
+    voiceMaxDurationMs,
+    openSettings,
+    settingsOpen,
+    closeSettings,
+    timezoneDraft,
+    handleTimezoneChange,
+    timezoneError,
+    generateTelegramLinkKey,
+    telegramLinkKey,
+    copyTelegramLinkKey,
+    telegramCopyStatus,
+    telegramLinkError,
+    importingConversations,
+    handleOpenImportDialog,
+    savingSettings,
+    saveSettings,
+  };
+  const filterDropdownProps = {
+    styles,
+    isSmallScreen,
+    isFilterDropdownOpen,
+    setIsFilterDropdownOpen,
+    filterDropdownOpenedAtMs: filterDropdownOpenedAtMsRef.current,
+    setFilterDropdownOpenedAtMs,
+    closeOpenActionDrawer,
+    showArchived,
+    setShowArchived,
+    hasActiveFilters,
+    clearFilters,
+    activePriorityLevel,
+    setActivePriorityLevel,
+    activeTag,
+    setActiveTag,
+    globalTags,
+    tagUsageCounts,
+    searchQuery,
+    setSearchQuery,
+    creatingEntries,
+  };
 
   return (
     <View style={styles.container}>
-      <SecondBrainTypebar
-        styles={styles}
-        bottom={typebarBottom}
-        draft={draft}
-        onChangeDraft={setDraft}
-        onSubmitDraft={createEntry}
-        closeOpenActionDrawer={closeOpenActionDrawer}
-        setTypebarFocused={setTypebarFocused}
-        isSmallScreen={isSmallScreen}
-        inputHeight={typebarInputHeight}
-        setInputHeight={setTypebarInputHeight}
-        hideTypebarSideActions={hideTypebarSideActions}
-        actionTooltip={actionTooltip}
-        setActionTooltip={setActionTooltip}
-        recording={recording}
-        isVoiceCaptureActive={isVoiceCaptureActive}
-        voiceBusy={voiceBusy}
-        voiceStarting={voiceStarting}
-        loadingTelegramLinkKey={loadingTelegramLinkKey}
-        startVoiceCapture={startVoiceCapture}
-        stopVoiceCaptureAndSubmit={stopVoiceCaptureAndSubmit}
-        cancelVoiceCapture={cancelVoiceCapture}
-        voiceElapsedMs={voiceElapsedMs}
-        voiceMaxDurationMs={voiceMaxDurationMs}
-        openSettings={openSettings}
-        settingsOpen={settingsOpen}
-        closeSettings={closeSettings}
-        timezoneDraft={timezoneDraft}
-        handleTimezoneChange={handleTimezoneChange}
-        timezoneError={timezoneError}
-        generateTelegramLinkKey={generateTelegramLinkKey}
-        telegramLinkKey={telegramLinkKey}
-        copyTelegramLinkKey={copyTelegramLinkKey}
-        telegramCopyStatus={telegramCopyStatus}
-        telegramLinkError={telegramLinkError}
-        importingConversations={importingConversations}
-        handleOpenImportDialog={handleOpenImportDialog}
-        savingSettings={savingSettings}
-        saveSettings={saveSettings}
-      >
+      <SecondBrainTypebar {...typebarProps}>
         <SecondBrainStatsGrid
           styles={styles}
           isSmallScreen={isSmallScreen}
@@ -548,30 +504,7 @@ export default function SecondBrainScreen({ token, navigation }) {
               offlineQueueSize={offlineQueueSize}
             />
           ) : null}
-          <SecondBrainFilterDropdown
-            styles={styles}
-            isSmallScreen={isSmallScreen}
-            isFilterDropdownOpen={isFilterDropdownOpen}
-            setIsFilterDropdownOpen={setIsFilterDropdownOpen}
-            filterDropdownOpenedAtMs={filterDropdownOpenedAtMsRef.current}
-            setFilterDropdownOpenedAtMs={(value) => {
-              filterDropdownOpenedAtMsRef.current = value;
-            }}
-            closeOpenActionDrawer={closeOpenActionDrawer}
-            showArchived={showArchived}
-            setShowArchived={setShowArchived}
-            hasActiveFilters={hasActiveFilters}
-            clearFilters={clearFilters}
-            activePriorityLevel={activePriorityLevel}
-            setActivePriorityLevel={setActivePriorityLevel}
-            activeTag={activeTag}
-            setActiveTag={setActiveTag}
-            globalTags={globalTags}
-            tagUsageCounts={tagUsageCounts}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            creatingEntries={creatingEntries}
-          />
+          <SecondBrainFilterDropdown {...filterDropdownProps} />
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
@@ -584,9 +517,19 @@ export default function SecondBrainScreen({ token, navigation }) {
           listBottomPadding={listBottomPadding}
           keyExtractor={keyExtractor}
           renderCell={renderCell}
-          renderListItem={renderListItem}
           hasActiveFilters={hasActiveFilters}
           closeOpenActionDrawer={closeOpenActionDrawer}
+          busyId={busyId}
+          openSwipeId={openSwipeId}
+          setOpenSwipeId={setOpenSwipeId}
+          requestDelete={requestDelete}
+          openEntry={openEntry}
+          startEdit={startEdit}
+          toggleArchiveWithConfirmation={toggleArchiveWithConfirmation}
+          downloadIcs={downloadIcs}
+          handleActionDrawerChange={handleActionDrawerChange}
+          swipeActionWidth={SWIPE_ACTION_WIDTH}
+          closeAnyActionDrawer={closeOpenActionDrawer}
         />
       </SecondBrainTypebar>
     </View>
