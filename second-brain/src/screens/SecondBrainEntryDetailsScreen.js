@@ -14,7 +14,7 @@ import MarkdownBody from "../components/MarkdownBody";
 import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import { apiRequest } from "../api";
 import { confirmAction } from "../utils/confirmAction";
-import { formatPublishedDateTime } from "../utils/dateUtils";
+import { formatPublishedDateTime } from "../utils/dateTimeUtils";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
 

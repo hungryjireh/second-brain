@@ -26,7 +26,10 @@ import {
   parseTagInput,
   tagsToInput,
 } from "../utils/secondBrainTagUtils";
-import { datetimeLocalToUnix, unixToDatetimeLocal } from "../utils/dateUtils";
+import {
+  datetimeLocalToUnix,
+  unixToDatetimeLocal,
+} from "../utils/dateTimeUtils";
 import styles from "./SecondBrainScreen.styles";
 
 const TITLE_MIN_INPUT_HEIGHT = 60;

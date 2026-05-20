@@ -792,12 +792,12 @@ const styles = StyleSheet.create({
   markdownItalic: { color: theme.colors.textPrimary, fontStyle: "italic" },
   markdownCode: {
     color: theme.colors.textPrimary,
-    backgroundColor: "rgba(255,255,255,0.07)",
+    backgroundColor: theme.colors.bgBase,
   },
   markdownLink: { color: "#86b7ff", textDecorationLine: "underline" },
   markdownCodeBlock: {
     borderRadius: 8,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: theme.colors.bgBase,
     padding: 10,
     minWidth: 0,
   },

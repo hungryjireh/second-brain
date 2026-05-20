@@ -224,6 +224,21 @@ describe("SecondBrainScreen", () => {
     fireEvent.press(getByLabelText("Stop and submit voice note"));
 
     await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/voice",
+        expect.objectContaining({
+          method: "POST",
+          token,
+          body: expect.objectContaining({
+            audio_base64: expect.any(String),
+            extension: "m4a",
+            duration_seconds: expect.any(Number),
+          }),
+        }),
+      );
+    });
+
+    await waitFor(() => {
       expect(getByText("Creating ...")).toBeTruthy();
     });
 
@@ -460,6 +475,56 @@ describe("SecondBrainScreen", () => {
       });
       expect(getByText("created from composer")).toBeTruthy();
     });
+  });
+
+  it("bypasses cache when reloading entries after creating a new entry", async () => {
+    const created = {
+      id: 101,
+      title: "Fresh note",
+      summary: "shows immediately",
+      is_archived: false,
+      category: "note",
+      created_at: Math.floor(Date.now() / 1000),
+    };
+    let createCompleted = false;
+
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/entries?limit=60") {
+        return { entries: createCompleted ? [created] : [] };
+      }
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      if (url === "/entries" && options.method === "POST") {
+        createCompleted = true;
+        return {};
+      }
+      return {};
+    });
+
+    const { getByPlaceholderText, getByLabelText, getByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/entries?limit=60",
+        expect.objectContaining({ token }),
+      ),
+    );
+
+    fireEvent.changeText(
+      getByPlaceholderText("Type a note, reminder or thought..."),
+      "shows immediately",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith("/entries?limit=60", {
+        token,
+        cache: expect.objectContaining({ bypass: true }),
+      }),
+    );
+    expect(getByText("shows immediately")).toBeTruthy();
   });
 
   it("filters entries by selected tag and toggles off on second press", async () => {
