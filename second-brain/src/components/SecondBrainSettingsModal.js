@@ -24,6 +24,7 @@ export default function SecondBrainSettingsModal({
   telegramLinkError,
   importingConversations,
   onOpenImportDialog,
+  onImportChatGptShareUrl,
   savingSettings,
   onSave,
 }) {
@@ -134,6 +135,20 @@ export default function SecondBrainSettingsModal({
                   {importingConversations
                     ? "Importing…"
                     : "Import LLM conversations"}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.settingsActionButton,
+                  importingConversations && styles.typebarButtonDisabled,
+                ]}
+                onPress={onImportChatGptShareUrl}
+                disabled={importingConversations}
+              >
+                <Text style={styles.settingsActionButtonText}>
+                  {importingConversations
+                    ? "Importing…"
+                    : "Import ChatGPT share URL"}
                 </Text>
               </Pressable>
             </View>

@@ -19,6 +19,7 @@ describe("useSecondBrainSettings", () => {
   const setEntries = jest.fn();
   const originalDocument = global.document;
   const originalPlatformOs = Platform.OS;
+  const originalPrompt = global.prompt;
 
   function Harness() {
     const value = useSecondBrainSettings({ token, setEntries });
@@ -37,6 +38,8 @@ describe("useSecondBrainSettings", () => {
   afterEach(() => {
     if (originalDocument === undefined) delete global.document;
     else global.document = originalDocument;
+    if (originalPrompt === undefined) delete global.prompt;
+    else global.prompt = originalPrompt;
     Object.defineProperty(Platform, "OS", {
       value: originalPlatformOs,
       configurable: true,
@@ -240,6 +243,68 @@ describe("useSecondBrainSettings", () => {
       "Imported 1 conversation.",
     );
     expect(input.value).toBe("");
+    alertSpy.mockRestore();
+  });
+
+  it("imports ChatGPT share URL on web and updates entries", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    global.prompt = jest.fn(() => "https://chatgpt.com/share/abc");
+    Object.defineProperty(Platform, "OS", {
+      value: "web",
+      configurable: true,
+    });
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/settings" && !options.method) return {};
+      if (url === "/import-chatgpt-share" && options.method === "POST") {
+        return {
+          created: [{ id: 77, created_at: 300, updated_at: 300 }],
+        };
+      }
+      return {};
+    });
+
+    render(<Harness />);
+
+    await act(async () => {
+      await latestValue.handleImportChatGptShareUrl();
+    });
+
+    expect(global.prompt).toHaveBeenCalledWith(
+      "Paste a ChatGPT public share URL",
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/import-chatgpt-share",
+      expect.objectContaining({
+        method: "POST",
+        token,
+        body: { chat_url: "https://chatgpt.com/share/abc" },
+      }),
+    );
+    expect(setEntries).toHaveBeenCalledWith(expect.any(Function));
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Import ChatGPT share URL",
+      "Imported 1 conversation.",
+    );
+    alertSpy.mockRestore();
+  });
+
+  it("shows non-web ChatGPT share URL import alert outside web platform", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    Object.defineProperty(Platform, "OS", {
+      value: "android",
+      configurable: true,
+    });
+
+    render(<Harness />);
+
+    await act(async () => {
+      await latestValue.handleImportChatGptShareUrl();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Import ChatGPT share URL",
+      "Importing via URL is currently available on web.",
+    );
     alertSpy.mockRestore();
   });
 });

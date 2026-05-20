@@ -50,4 +50,15 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(dropdownContentOpen.zIndex).toBeGreaterThan(overlay.zIndex);
     expect(searchInput.zIndex).toBeGreaterThan(overlay.zIndex);
   });
+
+  it("uses consistent, wider markdown table cell sizing", () => {
+    const cell = StyleSheet.flatten(styles.markdownTableCell);
+
+    expect(cell.paddingHorizontal).toBe(12);
+    expect(cell.paddingVertical).toBe(10);
+    expect(cell.minWidth).toBe(160);
+    expect(cell.flexGrow).toBe(1);
+    expect(cell.flexShrink).toBe(0);
+    expect(cell.flexBasis).toBe(0);
+  });
 });

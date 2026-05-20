@@ -1,0 +1,94 @@
+[
+  {
+    "uuid": "6a0d4e8c-5ce0-83ec-baae-fac16aeb19db",
+    "name": "Boeing 777-300 vs A350-900",
+    "summary": "",
+    "created_at": "2026-05-20T08:09:39.410Z",
+    "updated_at": "2026-05-20T08:09:39.410Z",
+    "account": {
+      "uuid": "[REDACTED]"
+    },
+    "chat_messages": [
+      {
+        "uuid": "fbed30a5-6e30-496d-90dd-cf5b4722f523",
+        "text": "boeing 777-300 vs a350-900 premium economy seat\n#### ChatGPT said:",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "boeing 777-300 vs a350-900 premium economy seat\n#### ChatGPT said:",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2026-05-20T08:09:39.410Z",
+        "updated_at": "2026-05-20T08:09:39.410Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "f4847d4e-20df-49c2-86c6-93e5e9d0a2cb",
+        "text": "If you’re comparing premium economy specifically, the answer is usually:\n- **A350-900 = better overall comfort**\n- **777-300/777-300ER = sometimes slightly wider seat**\nThe biggest difference is that the aircraft itself affects how you feel after a long flight.\n## Quick comparison\n| Feature | Boeing 777-300ER | Airbus A350-900 |\n| --- | --- | --- |\n| Cabin quietness | Louder | Much quieter |\n| Cabin pressure | Usually ~8,000 ft equivalent | ~6,000 ft equivalent |\n| Humidity | Drier air | Higher humidity |\n| Jet lag / fatigue | More noticeable | Less noticeable |\n| Premium economy seat width | Often slightly wider | Slightly narrower |\n| Ride feel | More “classic widebody” | Smoother and more modern |\n| Window size & lighting | Older design | Better lighting + larger windows |\n| Overall long-haul comfort | Good | Usually better |\nThe A350’s lower cabin altitude and higher humidity are the biggest reasons frequent flyers prefer it for long-haul trips. People often report arriving less dehydrated and less exhausted. [Reddit +3 HappyFares +3 Reddit +3](https://www.happyfares.in/blog/airbus-a350-vs-boeing-777-comparison/?utm_source=chatgpt.com)\n## Premium economy seat differences\nThis depends heavily on airline configuration.\nFor example, on Singapore Airlines:\n- 777-300ER premium economy seats are about **19.5 inches wide**\n- A350-900 premium economy seats are about **19 inches wide** [Guided](https://www.go-guided.ca/blog/bkfBzzxRzDSDFmO0R2f5-sq-a350-vs-777-300er-which-premium-economy-seat-is-actually-better/?utm_source=chatgpt.com)\nSo:\n- If you care most about **shoulder room**, the 777 may feel better.\n- If you care most about **sleep quality, noise, and overall freshness after landing**, the A350 wins.\n## What frequent flyers usually prefer\nReddit and aviation communities overwhelmingly lean toward the A350 for passenger comfort:\n> “A350. All day, every day.” Reddit\nCommon reasons mentioned:\n- quieter cabin\n- less dry air\n- less fatigue\n- smoother-feeling cabin environment [Reddit +2 Reddit +2](https://www.reddit.com/r/CathayPacific/comments/1rfz2ci/refitted_777300_vs_a350_economy_hkg_to_lhr/?utm_source=chatgpt.com)\n## My practical recommendation\n### Choose the A350-900 if:\n- the flight is overnight\n- it’s longer than ~6 hours\n- you’re sensitive to noise\n- you want to sleep better\n- you usually feel dehydrated after flights\n### Choose the 777-300/300ER if:\n- the airline offers a noticeably wider premium economy seat\n- you value elbow/shoulder room most\n- you get a better seat map on that flight\nOne important caveat: **airline seat design matters almost as much as the aircraft.** A great premium economy seat on a 777 can absolutely beat an average one on an A350.\nSources\n#### You said:",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "If you’re comparing premium economy specifically, the answer is usually:\n- **A350-900 = better overall comfort**\n- **777-300/777-300ER = sometimes slightly wider seat**\nThe biggest difference is that the aircraft itself affects how you feel after a long flight.\n## Quick comparison\n| Feature | Boeing 777-300ER | Airbus A350-900 |\n| --- | --- | --- |\n| Cabin quietness | Louder | Much quieter |\n| Cabin pressure | Usually ~8,000 ft equivalent | ~6,000 ft equivalent |\n| Humidity | Drier air | Higher humidity |\n| Jet lag / fatigue | More noticeable | Less noticeable |\n| Premium economy seat width | Often slightly wider | Slightly narrower |\n| Ride feel | More “classic widebody” | Smoother and more modern |\n| Window size & lighting | Older design | Better lighting + larger windows |\n| Overall long-haul comfort | Good | Usually better |\nThe A350’s lower cabin altitude and higher humidity are the biggest reasons frequent flyers prefer it for long-haul trips. People often report arriving less dehydrated and less exhausted. [Reddit +3 HappyFares +3 Reddit +3](https://www.happyfares.in/blog/airbus-a350-vs-boeing-777-comparison/?utm_source=chatgpt.com)\n## Premium economy seat differences\nThis depends heavily on airline configuration.\nFor example, on Singapore Airlines:\n- 777-300ER premium economy seats are about **19.5 inches wide**\n- A350-900 premium economy seats are about **19 inches wide** [Guided](https://www.go-guided.ca/blog/bkfBzzxRzDSDFmO0R2f5-sq-a350-vs-777-300er-which-premium-economy-seat-is-actually-better/?utm_source=chatgpt.com)\nSo:\n- If you care most about **shoulder room**, the 777 may feel better.\n- If you care most about **sleep quality, noise, and overall freshness after landing**, the A350 wins.\n## What frequent flyers usually prefer\nReddit and aviation communities overwhelmingly lean toward the A350 for passenger comfort:\n> “A350. All day, every day.” Reddit\nCommon reasons mentioned:\n- quieter cabin\n- less dry air\n- less fatigue\n- smoother-feeling cabin environment [Reddit +2 Reddit +2](https://www.reddit.com/r/CathayPacific/comments/1rfz2ci/refitted_777300_vs_a350_economy_hkg_to_lhr/?utm_source=chatgpt.com)\n## My practical recommendation\n### Choose the A350-900 if:\n- the flight is overnight\n- it’s longer than ~6 hours\n- you’re sensitive to noise\n- you want to sleep better\n- you usually feel dehydrated after flights\n### Choose the 777-300/300ER if:\n- the airline offers a noticeably wider premium economy seat\n- you value elbow/shoulder room most\n- you get a better seat map on that flight\nOne important caveat: **airline seat design matters almost as much as the aircraft.** A great premium economy seat on a 777 can absolutely beat an average one on an A350.\nSources\n#### You said:",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2026-05-20T08:09:39.410Z",
+        "updated_at": "2026-05-20T08:09:39.410Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "f553b6f1-235e-45f5-bad0-423efa50b606",
+        "text": "singapore airlines\n#### ChatGPT said:",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "singapore airlines\n#### ChatGPT said:",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2026-05-20T08:09:39.410Z",
+        "updated_at": "2026-05-20T08:09:39.410Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "d49b06a0-37d5-4dd2-b665-5091f4e79d5a",
+        "text": "For Singapore Airlines specifically, I’d pick the **A350-900 Premium Economy** most of the time — especially for overnight or ultra long-haul flights.\nHere’s the actual difference on SIA:\n| Feature | Boeing 777-300ER | Airbus A350-900 |\n| --- | --- | --- |\n| Seat width | ~19.5 in | ~19 in |\n| Seat pitch | 38 in | 38 in |\n| Recline | 8 in | 8 in |\n| Cabin layout | 2-4-2 | 2-4-2 |\n| Cabin feel | Slightly roomier seat | Quieter + more modern |\n| Best advantage | More shoulder room | Less fatigue on long flights |\nThe 777-300ER’s Premium Economy seat is measurably wider. [Mainly Miles +2 Guided +2](https://mainlymiles.com/fleet-a350-900/?utm_source=chatgpt.com)\nBut the A350 has:\n- quieter cabin\n- better humidity\n- lower cabin altitude\n- smoother-feeling ride\n- newer lighting/environment systems\nThat combination matters a lot on flights like:\n- Singapore ↔ Europe\n- Singapore ↔ US\n- Australia overnight sectors\n## What I’d choose by flight type\n### Day flight (Go for the **777-300ER** if:\n- you’re broad-shouldered\n- you care about elbow room\n- you sit upright most of the flight\nThat extra half inch per seat is noticeable. [Guided +1](https://www.go-guided.ca/blog/bkfBzzxRzDSDFmO0R2f5-sq-a350-vs-777-300er-which-premium-economy-seat-is-actually-better/?utm_source=chatgpt.com)\n### Overnight or ultra long-haul\nGo for the **A350-900**.\nMost people sleep better on the A350 because the cabin is substantially quieter and less dry. [HappyFares +1](https://www.happyfares.in/blog/airbus-a350-vs-boeing-777-comparison/?utm_source=chatgpt.com)\n## One important exception: A350-900ULR\nIf you’re flying routes like:\n- Singapore–New York\n- Singapore–San Francisco\nyou may get the **A350-900ULR** version.\nThat aircraft has a unique Premium Economy cabin, including some highly sought-after “solo” window seats. [The Australian +1](https://www.theaustralian.com.au/travel/could-you-survive-the-worlds-longest-flight-in-premium-economy/news-story/3ab326426477e9bde857f6678e0d9371?utm_source=chatgpt.com)\nThose are arguably the best SIA Premium Economy seats overall for solo travelers.\n## Best seat tips on Singapore Airlines Premium Economy\n### Best regular seats\n- Bulkhead rows for maximum legroom\n- Window seats in the 2-seat sections if traveling as a pair\n### Avoid\n- Last row near lavatories\n- Middle 4-seat block unless traveling together\nIf you want, I can also help with:\n- best exact seat numbers on SIA A350/777\n- which aircraft operates your route\n- A350 regional vs long-haul differences\n- whether Premium Economy is worth upgrading from Economy on your route\nSources\n# We use cookies",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "For Singapore Airlines specifically, I’d pick the **A350-900 Premium Economy** most of the time — especially for overnight or ultra long-haul flights.\nHere’s the actual difference on SIA:\n| Feature | Boeing 777-300ER | Airbus A350-900 |\n| --- | --- | --- |\n| Seat width | ~19.5 in | ~19 in |\n| Seat pitch | 38 in | 38 in |\n| Recline | 8 in | 8 in |\n| Cabin layout | 2-4-2 | 2-4-2 |\n| Cabin feel | Slightly roomier seat | Quieter + more modern |\n| Best advantage | More shoulder room | Less fatigue on long flights |\nThe 777-300ER’s Premium Economy seat is measurably wider. [Mainly Miles +2 Guided +2](https://mainlymiles.com/fleet-a350-900/?utm_source=chatgpt.com)\nBut the A350 has:\n- quieter cabin\n- better humidity\n- lower cabin altitude\n- smoother-feeling ride\n- newer lighting/environment systems\nThat combination matters a lot on flights like:\n- Singapore ↔ Europe\n- Singapore ↔ US\n- Australia overnight sectors\n## What I’d choose by flight type\n### Day flight (Go for the **777-300ER** if:\n- you’re broad-shouldered\n- you care about elbow room\n- you sit upright most of the flight\nThat extra half inch per seat is noticeable. [Guided +1](https://www.go-guided.ca/blog/bkfBzzxRzDSDFmO0R2f5-sq-a350-vs-777-300er-which-premium-economy-seat-is-actually-better/?utm_source=chatgpt.com)\n### Overnight or ultra long-haul\nGo for the **A350-900**.\nMost people sleep better on the A350 because the cabin is substantially quieter and less dry. [HappyFares +1](https://www.happyfares.in/blog/airbus-a350-vs-boeing-777-comparison/?utm_source=chatgpt.com)\n## One important exception: A350-900ULR\nIf you’re flying routes like:\n- Singapore–New York\n- Singapore–San Francisco\nyou may get the **A350-900ULR** version.\nThat aircraft has a unique Premium Economy cabin, including some highly sought-after “solo” window seats. [The Australian +1](https://www.theaustralian.com.au/travel/could-you-survive-the-worlds-longest-flight-in-premium-economy/news-story/3ab326426477e9bde857f6678e0d9371?utm_source=chatgpt.com)\nThose are arguably the best SIA Premium Economy seats overall for solo travelers.\n## Best seat tips on Singapore Airlines Premium Economy\n### Best regular seats\n- Bulkhead rows for maximum legroom\n- Window seats in the 2-seat sections if traveling as a pair\n### Avoid\n- Last row near lavatories\n- Middle 4-seat block unless traveling together\nIf you want, I can also help with:\n- best exact seat numbers on SIA A350/777\n- which aircraft operates your route\n- A350 regional vs long-haul differences\n- whether Premium Economy is worth upgrading from Economy on your route\nSources\n# We use cookies",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2026-05-20T08:09:39.410Z",
+        "updated_at": "2026-05-20T08:09:39.410Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      }
+    ]
+  }
+]

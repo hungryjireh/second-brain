@@ -3,6 +3,7 @@ import * as ReactNative from "react-native";
 import { Alert } from "react-native";
 import SecondBrainEntryDetailsScreen from "../SecondBrainEntryDetailsScreen";
 import { apiRequest } from "../../api";
+import { theme } from "../../theme";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
@@ -100,6 +101,47 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Assistant")).toBeTruthy();
     expect(getByText("Please summarize this")).toBeTruthy();
     expect(getByText("Here is a summary.")).toBeTruthy();
+  });
+
+  it("renders assistant conversation bubble with bgBase background", () => {
+    const entry = {
+      title: "Claude thread",
+      raw_text: JSON.stringify({
+        _format: "chat_conversation_v1",
+        messages: [
+          { sender: "human", text: "Please summarize this" },
+          { sender: "assistant", text: "Here is a summary." },
+        ],
+      }),
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    const assistantLabel = getByText("Assistant");
+    let node = assistantLabel.parent;
+    let foundBgBase = false;
+    while (node) {
+      const styleProp = node.props?.style;
+      const flattened = Array.isArray(styleProp)
+        ? styleProp.flatMap((part) => (Array.isArray(part) ? part : [part]))
+        : [styleProp];
+      if (
+        flattened.some(
+          (part) =>
+            part &&
+            typeof part === "object" &&
+            part.backgroundColor === theme.colors.bgBase,
+        )
+      ) {
+        foundBgBase = true;
+        break;
+      }
+      node = node.parent;
+    }
+
+    expect(foundBgBase).toBe(true);
   });
 
   it("falls back to raw body rendering when imported conversation JSON is invalid", () => {

@@ -1,0 +1,94 @@
+[
+  {
+    "uuid": "6a0db525-3a40-83ec-aed6-2917e4c81963",
+    "name": "GIF based on poem",
+    "summary": "",
+    "created_at": "2026-05-20T13:54:34.495Z",
+    "updated_at": "2026-05-20T13:54:34.495Z",
+    "account": {
+      "uuid": "[REDACTED]"
+    },
+    "chat_messages": [
+      {
+        "uuid": "1057d915-8ca6-44d9-98a8-2e0ce937d1dd",
+        "text": "generate a GIF based on this poem:\nWhen she doesn’t respond,\nI know she’s used up all her words,\nso I slowly whisper I love you\nthirty-two and a third times.\nAfter that, we just sit on the line\nand listen to each other breathe.\nthe GIF should not contain any words at all but should contain the essence of the poem. i want at least 1 actual human being in the GIF. it should look surreal",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "generate a GIF based on this poem:\nWhen she doesn’t respond,\nI know she’s used up all her words,\nso I slowly whisper I love you\nthirty-two and a third times.\nAfter that, we just sit on the line\nand listen to each other breathe.\nthe GIF should not contain any words at all but should contain the essence of the poem. i want at least 1 actual human being in the GIF. it should look surreal",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2026-05-20T13:54:34.495Z",
+        "updated_at": "2026-05-20T13:54:34.495Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "56a385bc-01ab-4053-84b3-672a4a206b33",
+        "text": "Generated image: Silent connection across the void",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "Generated image: Silent connection across the void",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2026-05-20T13:54:34.495Z",
+        "updated_at": "2026-05-20T13:54:34.495Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "c57544d0-0f83-45f1-938d-5961e4428a8d",
+        "text": "too creepy. the idea is a strong sense of longing",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "too creepy. the idea is a strong sense of longing",
+            "citations": []
+          }
+        ],
+        "sender": "human",
+        "created_at": "2026-05-20T13:54:34.495Z",
+        "updated_at": "2026-05-20T13:54:34.495Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      },
+      {
+        "uuid": "717b7be7-f092-420f-a0ee-da686add0b72",
+        "text": "Generated image: Connected by a golden thread",
+        "content": [
+          {
+            "start_timestamp": null,
+            "stop_timestamp": null,
+            "flags": null,
+            "type": "text",
+            "text": "Generated image: Connected by a golden thread",
+            "citations": []
+          }
+        ],
+        "sender": "assistant",
+        "created_at": "2026-05-20T13:54:34.495Z",
+        "updated_at": "2026-05-20T13:54:34.495Z",
+        "attachments": [],
+        "files": [],
+        "parent_message_uuid": null
+      }
+    ]
+  }
+]

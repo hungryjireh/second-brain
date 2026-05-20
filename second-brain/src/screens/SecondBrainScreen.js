@@ -113,6 +113,7 @@ export default function SecondBrainScreen({ token, navigation }) {
     generateTelegramLinkKey,
     copyTelegramLinkKey,
     handleOpenImportDialog,
+    handleImportChatGptShareUrl,
     handleTimezoneChange,
   } = useSecondBrainSettings({
     token,
@@ -459,6 +460,7 @@ export default function SecondBrainScreen({ token, navigation }) {
     telegramLinkError,
     importingConversations,
     handleOpenImportDialog,
+    handleImportChatGptShareUrl,
     savingSettings,
     saveSettings,
   };

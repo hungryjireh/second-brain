@@ -70,6 +70,7 @@ describe("SecondBrainSettingsModal", () => {
       telegramLinkError: "",
       importingConversations: false,
       onOpenImportDialog: jest.fn(),
+      onImportChatGptShareUrl: jest.fn(),
       savingSettings: false,
       onSave: jest.fn(),
       ...overrides,
@@ -87,12 +88,14 @@ describe("SecondBrainSettingsModal", () => {
     fireEvent.press(getByTestId("timezone-dropdown"));
     fireEvent.press(getByText("Generate Telegram link key"));
     fireEvent.press(getByText("Import LLM conversations"));
+    fireEvent.press(getByText("Import ChatGPT share URL"));
     fireEvent.press(getByText("Save"));
     fireEvent.press(getByText("Cancel"));
 
     expect(props.onTimezoneChange).toHaveBeenCalledWith("America/New_York");
     expect(props.onGenerateTelegramLinkKey).toHaveBeenCalledTimes(1);
     expect(props.onOpenImportDialog).toHaveBeenCalledTimes(1);
+    expect(props.onImportChatGptShareUrl).toHaveBeenCalledTimes(1);
     expect(props.onSave).toHaveBeenCalledTimes(1);
     expect(props.onRequestClose).toHaveBeenCalledTimes(1);
   });

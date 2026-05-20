@@ -173,6 +173,62 @@ export function useSecondBrainSettings({ token, setEntries }) {
     input.click();
   }, [handleImportConversationFile, importingConversations]);
 
+  const handleImportChatGptShareUrl = useCallback(async () => {
+    if (importingConversations) return;
+
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        "Import ChatGPT share URL",
+        "Importing via URL is currently available on web.",
+      );
+      return;
+    }
+
+    const promptFn = globalThis?.prompt;
+    if (typeof promptFn !== "function") {
+      Alert.alert(
+        "Import ChatGPT share URL",
+        "Prompt is unavailable in this browser context.",
+      );
+      return;
+    }
+
+    const input = promptFn("Paste a ChatGPT public share URL");
+    const chatUrl = String(input || "").trim();
+    if (!chatUrl) return;
+
+    setImportingConversations(true);
+    try {
+      const response = await apiRequest("/import-chatgpt-share", {
+        method: "POST",
+        token,
+        body: { chat_url: chatUrl },
+      });
+
+      const created = Array.isArray(response?.created) ? response.created : [];
+      if (created.length === 0) {
+        Alert.alert(
+          "Import ChatGPT share URL",
+          "No valid conversation messages were found in that shared link.",
+        );
+        return;
+      }
+
+      setEntries((prev) => sortEntriesByUpdatedAt([...created, ...prev]));
+      Alert.alert(
+        "Import ChatGPT share URL",
+        `Imported ${created.length} conversation${created.length === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      Alert.alert(
+        "Import ChatGPT share URL",
+        `Failed to import from URL: ${err.message}`,
+      );
+    } finally {
+      setImportingConversations(false);
+    }
+  }, [importingConversations, setEntries, token]);
+
   const handleTimezoneChange = useCallback((nextTimezone) => {
     setTimezoneDraft(nextTimezone);
     setTimezoneError("");
@@ -195,6 +251,7 @@ export function useSecondBrainSettings({ token, setEntries }) {
     generateTelegramLinkKey,
     copyTelegramLinkKey,
     handleOpenImportDialog,
+    handleImportChatGptShareUrl,
     handleTimezoneChange,
     setSettingsOpen,
   };

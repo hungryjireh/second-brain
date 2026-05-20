@@ -452,7 +452,10 @@ export default function SecondBrainEntryDetailsScreen({
                         styles.conversationBubble,
                         fromHuman
                           ? styles.conversationBubbleHuman
-                          : styles.conversationBubbleAssistant,
+                          : [
+                              styles.conversationBubbleAssistant,
+                              { backgroundColor: theme.colors.bgBase },
+                            ],
                       ]}
                     >
                       <Text style={styles.conversationSender}>

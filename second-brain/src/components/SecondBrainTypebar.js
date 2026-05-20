@@ -45,6 +45,7 @@ export default function SecondBrainTypebar({
   telegramLinkError,
   importingConversations,
   handleOpenImportDialog,
+  handleImportChatGptShareUrl,
   savingSettings,
   saveSettings,
 }) {
@@ -90,6 +91,7 @@ export default function SecondBrainTypebar({
         telegramLinkError={telegramLinkError}
         importingConversations={importingConversations}
         onOpenImportDialog={handleOpenImportDialog}
+        onImportChatGptShareUrl={handleImportChatGptShareUrl}
         savingSettings={savingSettings}
         onSave={saveSettings}
       />
