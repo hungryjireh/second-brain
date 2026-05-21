@@ -1,5 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Platform } from "react-native";
 import SecondBrainFlatList from "../SecondBrainFlatList";
 
 jest.mock("../SecondBrainEntryCard", () => {
@@ -20,9 +20,16 @@ jest.mock("../SecondBrainEntryCard", () => {
 });
 
 jest.mock("../SwipeToDeleteRow", () => {
-  const { View } = require("react-native");
-  return function MockSwipeToDeleteRow({ children }) {
-    return <View>{children}</View>;
+  const { Pressable, Text, View } = require("react-native");
+  return function MockSwipeToDeleteRow({ children, id, onActionPress }) {
+    return (
+      <View>
+        {children}
+        <Pressable testID={`swipe-delete-${id}`} onPress={onActionPress}>
+          <Text>Delete</Text>
+        </Pressable>
+      </View>
+    );
   };
 });
 
@@ -181,5 +188,39 @@ describe("SecondBrainFlatList", () => {
         )
       : false;
     expect(hasTopPadding).toBe(true);
+  });
+
+  it("wires swipe delete action to requestDelete for entry rows", () => {
+    const requestDelete = jest.fn();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          requestDelete,
+        })}
+      />,
+    );
+
+    fireEvent.press(getByTestId("swipe-delete-1"));
+    expect(requestDelete).toHaveBeenCalledWith(1);
+  });
+
+  it("sets FlatList virtualization props for performance tuning", () => {
+    const { getByTestId } = render(<SecondBrainFlatList {...createBaseProps()} />);
+    const list = getByTestId("second-brain-flat-list");
+
+    expect(list.props.initialNumToRender).toBe(10);
+    expect(list.props.maxToRenderPerBatch).toBe(8);
+    expect(list.props.updateCellsBatchingPeriod).toBe(50);
+    expect(list.props.windowSize).toBe(9);
+    expect(list.props.removeClippedSubviews).toBe(Platform.OS !== "web");
   });
 });

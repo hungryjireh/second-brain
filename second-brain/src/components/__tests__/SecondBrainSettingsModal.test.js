@@ -91,7 +91,7 @@ describe("SecondBrainSettingsModal", () => {
     fireEvent.press(getByTestId("timezone-dropdown"));
     fireEvent.press(getByText("Generate Telegram link key"));
     fireEvent.press(getByText("Import LLM conversations"));
-    fireEvent.press(getByText("Import ChatGPT share URL"));
+    fireEvent.press(getByText("Import LLM Conversation History"));
     fireEvent.press(getByText("Log out"));
     fireEvent.press(getByText("Save"));
     fireEvent.press(getByText("Cancel"));
@@ -111,14 +111,14 @@ describe("SecondBrainSettingsModal", () => {
       telegramLinkKey: "abc123",
       telegramCopyStatus: "Copied",
       telegramLinkError: "Could not generate key",
-      importError: "Please enter a valid ChatGPT share URL.",
+      importError: "Please enter a valid ChatGPT or Claude share URL.",
     });
 
     expect(getByText("Invalid timezone")).toBeTruthy();
     expect(getByText("abc123")).toBeTruthy();
     expect(getByText("✓ Copied")).toBeTruthy();
     expect(getByText("Could not generate key")).toBeTruthy();
-    expect(getByText("Please enter a valid ChatGPT share URL.")).toBeTruthy();
+    expect(getByText("Please enter a valid ChatGPT or Claude share URL.")).toBeTruthy();
   });
 
   it("disables save and cancel while settings are saving", () => {

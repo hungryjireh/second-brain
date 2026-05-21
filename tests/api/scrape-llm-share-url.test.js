@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  getShareUrlProvider,
+  isLlmShareUrl,
   isChatGptShareUrl,
   patchWebGLFingerprint,
-} from "../../lib/scrape-chatgpt-share-url.js";
+} from "../../lib/scrape-llm-share-url.js";
 
-test("isChatGptShareUrl validates ChatGPT share URLs", () => {
+test("isChatGptShareUrl validates ChatGPT and Claude share URLs", () => {
   assert.equal(
     isChatGptShareUrl(
       "https://chatgpt.com/share/6a0db525-3a40-83ec-aed6-2917e4c81963",
@@ -19,8 +21,59 @@ test("isChatGptShareUrl validates ChatGPT share URLs", () => {
     ),
     true,
   );
+  assert.equal(
+    isChatGptShareUrl(
+      "https://claude.ai/share/52cc8fea-93d2-4aa6-a820-e2b592558077",
+    ),
+    true,
+  );
   assert.equal(isChatGptShareUrl("https://chatgpt.com/c/abc"), false);
   assert.equal(isChatGptShareUrl("https://example.com/share/abc"), false);
+});
+
+test("getShareUrlProvider returns provider for supported share links", () => {
+  assert.equal(
+    getShareUrlProvider(
+      "https://chatgpt.com/share/6a0db525-3a40-83ec-aed6-2917e4c81963",
+    ),
+    "chatgpt",
+  );
+  assert.equal(
+    getShareUrlProvider(
+      "https://claude.ai/share/52cc8fea-93d2-4aa6-a820-e2b592558077",
+    ),
+    "claude",
+  );
+  assert.equal(getShareUrlProvider("https://example.com/share/abc"), null);
+});
+
+test("isLlmShareUrl validates supported provider share URLs", () => {
+  assert.equal(
+    isLlmShareUrl(
+      "https://chatgpt.com/share/6a0db525-3a40-83ec-aed6-2917e4c81963",
+    ),
+    true,
+  );
+  assert.equal(
+    isLlmShareUrl(
+      "https://claude.ai/share/52cc8fea-93d2-4aa6-a820-e2b592558077",
+    ),
+    true,
+  );
+  assert.equal(isLlmShareUrl("https://example.com/share/abc"), false);
+});
+
+test("isChatGptShareUrl remains a compatibility alias of isLlmShareUrl", () => {
+  const urls = [
+    "https://chatgpt.com/share/abc",
+    "https://claude.ai/share/52cc8fea-93d2-4aa6-a820-e2b592558077",
+    "https://example.com/share/abc",
+    "not-a-url",
+  ];
+
+  for (const url of urls) {
+    assert.equal(isChatGptShareUrl(url), isLlmShareUrl(url));
+  }
 });
 
 test("patchWebGLFingerprint is safe when WebGL constructors are missing", () => {

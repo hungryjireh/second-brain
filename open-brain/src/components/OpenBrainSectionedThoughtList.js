@@ -1,5 +1,15 @@
+import { memo, useCallback } from "react";
 import { FlatList, Text, View } from "react-native";
 import styles from "./OpenBrainSectionedThoughtList.styles";
+
+const SectionHeaderRow = memo(function SectionHeaderRow({ title }) {
+  return (
+    <View style={styles.sectionHeaderRow}>
+      <Text style={styles.sectionHeader}>{title}</Text>
+      <View style={styles.sectionHeaderLine} />
+    </View>
+  );
+});
 
 export default function OpenBrainSectionedThoughtList({
   data,
@@ -9,6 +19,16 @@ export default function OpenBrainSectionedThoughtList({
   contentContainerStyle,
   listEmptyComponent,
 }) {
+  const renderListItem = useCallback(
+    ({ item }) => {
+      if (item?.type === "section") {
+        return <SectionHeaderRow title={item.title} />;
+      }
+      return renderThoughtItem({ item });
+    },
+    [renderThoughtItem],
+  );
+
   return (
     <FlatList
       data={data}
@@ -16,17 +36,7 @@ export default function OpenBrainSectionedThoughtList({
       keyExtractor={keyExtractor}
       contentContainerStyle={contentContainerStyle}
       ListEmptyComponent={listEmptyComponent}
-      renderItem={({ item }) => {
-        if (item?.type === "section") {
-          return (
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeader}>{item.title}</Text>
-              <View style={styles.sectionHeaderLine} />
-            </View>
-          );
-        }
-        return renderThoughtItem({ item });
-      }}
+      renderItem={renderListItem}
       initialNumToRender={8}
       maxToRenderPerBatch={6}
       updateCellsBatchingPeriod={50}

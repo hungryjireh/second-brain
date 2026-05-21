@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,49 @@ import {
 import { isRequiredFieldPresent } from "../utils/formFields";
 import { sortUsersByQuery } from "../utils/searchRanking";
 import styles from "./OpenBrainSearchScreen.styles";
+
+const SearchSectionRow = memo(function SearchSectionRow({ label }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>{label}</Text>
+    </View>
+  );
+});
+
+const SearchUserRow = memo(function SearchUserRow({ user, openProfile }) {
+  return (
+    <Pressable
+      style={styles.resultRow}
+      onPress={() => openProfile(user.username)}
+    >
+      <Text style={styles.resultPrimary}>@{user.username}</Text>
+      <Text style={styles.resultSecondary}>
+        {Number.isInteger(user.streak_count)
+          ? `${user.streak_count} day streak`
+          : "open profile"}
+      </Text>
+    </Pressable>
+  );
+});
+
+const SearchThoughtRow = memo(function SearchThoughtRow({ thought, openProfile }) {
+  return (
+    <Pressable
+      style={styles.resultRow}
+      onPress={() => openProfile(thought?.profile?.username)}
+    >
+      <Text style={styles.resultPrimary}>
+        {(thought?.text || "").replace(/\s+/g, " ").slice(0, 160) ||
+          "View thought"}
+      </Text>
+      <Text style={styles.resultSecondary}>
+        {thought?.profile?.username
+          ? `by @${thought.profile.username}`
+          : "open profile"}
+      </Text>
+    </Pressable>
+  );
+});
 
 export default function OpenBrainSearchScreen({ token, navigation, route }) {
   const initialQuery = useMemo(
@@ -56,45 +99,12 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
   const renderResultItem = useCallback(
     ({ item }) => {
       if (item.type === "section") {
-        return (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{item.label}</Text>
-          </View>
-        );
+        return <SearchSectionRow label={item.label} />;
       }
       if (item.type === "user") {
-        const user = item.user;
-        return (
-          <Pressable
-            style={styles.resultRow}
-            onPress={() => openProfile(user.username)}
-          >
-            <Text style={styles.resultPrimary}>@{user.username}</Text>
-            <Text style={styles.resultSecondary}>
-              {Number.isInteger(user.streak_count)
-                ? `${user.streak_count} day streak`
-                : "open profile"}
-            </Text>
-          </Pressable>
-        );
+        return <SearchUserRow user={item.user} openProfile={openProfile} />;
       }
-      const thought = item.thought;
-      return (
-        <Pressable
-          style={styles.resultRow}
-          onPress={() => openProfile(thought?.profile?.username)}
-        >
-          <Text style={styles.resultPrimary}>
-            {(thought?.text || "").replace(/\s+/g, " ").slice(0, 160) ||
-              "View thought"}
-          </Text>
-          <Text style={styles.resultSecondary}>
-            {thought?.profile?.username
-              ? `by @${thought.profile.username}`
-              : "open profile"}
-          </Text>
-        </Pressable>
-      );
+      return <SearchThoughtRow thought={item.thought} openProfile={openProfile} />;
     },
     [openProfile],
   );

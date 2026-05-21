@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -104,6 +104,78 @@ export const __testables = {
   notificationPayload,
 };
 
+const SearchSectionRow = memo(function SearchSectionRow({ label }) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>{label}</Text>
+    </View>
+  );
+});
+
+const SearchUserRow = memo(function SearchUserRow({
+  user,
+  isFollowing,
+  followBusy,
+  token,
+  openProfile,
+  toggleFollowFromSearch,
+}) {
+  return (
+    <View style={styles.resultRow}>
+      <Pressable
+        style={styles.userInfoPressable}
+        onPress={() => openProfile(user.username)}
+      >
+        <Text style={styles.resultPrimary}>@{user.username}</Text>
+        <Text style={styles.resultSecondary}>
+          {Number.isInteger(user.streak_count)
+            ? `${user.streak_count} day streak`
+            : "open profile"}
+        </Text>
+      </Pressable>
+      {!user?.is_self ? (
+        <Pressable
+          style={[
+            styles.followButton,
+            isFollowing
+              ? styles.followButtonFollowing
+              : styles.followButtonActive,
+            followBusy ? { opacity: 0.55 } : null,
+          ]}
+          onPress={() => toggleFollowFromSearch(user)}
+          disabled={followBusy || !token}
+        >
+          <Text style={styles.followButtonText}>
+            {isFollowing ? "Unfollow" : "Follow"}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+});
+
+const SearchThoughtRow = memo(function SearchThoughtRow({
+  thought,
+  openProfile,
+}) {
+  return (
+    <Pressable
+      style={styles.resultRow}
+      onPress={() => openProfile(thought?.profile?.username)}
+    >
+      <Text style={styles.resultPrimary}>
+        {(thought?.text || "").replace(/\s+/g, " ").slice(0, 100) ||
+          "View thought"}
+      </Text>
+      <Text style={styles.resultSecondary}>
+        {thought?.profile?.username
+          ? `by @${thought.profile.username}`
+          : "open profile"}
+      </Text>
+    </Pressable>
+  );
+});
+
 export default function OpenBrainTopMenu({
   navigation,
   token,
@@ -167,42 +239,45 @@ export default function OpenBrainTopMenu({
     await runSearch();
   }
 
-  async function toggleFollowFromSearch(user) {
-    const targetUserId = user?.id;
-    if (!token || !targetUserId || followBusyUserId) return;
-    const isSelf = user?.is_self === true;
-    if (isSelf) return;
-    const currentlyFollowing = user?.is_following === true;
-    setFollowBusyUserId(targetUserId);
-    setResults((current) => ({
-      ...current,
-      users: (current.users || []).map((item) =>
-        item?.id === targetUserId
-          ? { ...item, is_following: !currentlyFollowing }
-          : item,
-      ),
-    }));
-    try {
-      await executeOpenBrainFollowToggle({
-        token,
-        targetUserId,
-        isFollowing: currentlyFollowing,
-        apiRequest,
-        sendFollowNotification,
-      });
-    } catch {
+  const toggleFollowFromSearch = useCallback(
+    async (user) => {
+      const targetUserId = user?.id;
+      if (!token || !targetUserId || followBusyUserId) return;
+      const isSelf = user?.is_self === true;
+      if (isSelf) return;
+      const currentlyFollowing = user?.is_following === true;
+      setFollowBusyUserId(targetUserId);
       setResults((current) => ({
         ...current,
         users: (current.users || []).map((item) =>
           item?.id === targetUserId
-            ? { ...item, is_following: currentlyFollowing }
+            ? { ...item, is_following: !currentlyFollowing }
             : item,
         ),
       }));
-    } finally {
-      setFollowBusyUserId("");
-    }
-  }
+      try {
+        await executeOpenBrainFollowToggle({
+          token,
+          targetUserId,
+          isFollowing: currentlyFollowing,
+          apiRequest,
+          sendFollowNotification,
+        });
+      } catch {
+        setResults((current) => ({
+          ...current,
+          users: (current.users || []).map((item) =>
+            item?.id === targetUserId
+              ? { ...item, is_following: currentlyFollowing }
+              : item,
+          ),
+        }));
+      } finally {
+        setFollowBusyUserId("");
+      }
+    },
+    [followBusyUserId, setResults, token],
+  );
 
   function closeSearch() {
     blurFocusedElementOnWeb();
@@ -268,11 +343,14 @@ export default function OpenBrainTopMenu({
     }
   }
 
-  function openProfile(username) {
-    if (!username) return;
-    closeSearch();
-    navigation.navigate("OpenBrainProfile", { username });
-  }
+  const openProfile = useCallback(
+    (username) => {
+      if (!username) return;
+      closeSearch();
+      navigation.navigate("OpenBrainProfile", { username });
+    },
+    [navigation],
+  );
 
   function openSeeMore() {
     const value = normalizeOpenBrainSearchInput(query);
@@ -299,69 +377,27 @@ export default function OpenBrainTopMenu({
   const renderSearchResultItem = useCallback(
     ({ item }) => {
       if (item.type === "section") {
-        return (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{item.label}</Text>
-          </View>
-        );
+        return <SearchSectionRow label={item.label} />;
       }
       if (item.type === "user") {
         const user = item.user;
-        const isSelf = user?.is_self === true;
         const isFollowing = user?.is_following === true;
         const followBusy = followBusyUserId === user?.id;
         return (
-          <View style={styles.resultRow}>
-            <Pressable
-              style={styles.userInfoPressable}
-              onPress={() => openProfile(user.username)}
-            >
-              <Text style={styles.resultPrimary}>@{user.username}</Text>
-              <Text style={styles.resultSecondary}>
-                {Number.isInteger(user.streak_count)
-                  ? `${user.streak_count} day streak`
-                  : "open profile"}
-              </Text>
-            </Pressable>
-            {!isSelf ? (
-              <Pressable
-                style={[
-                  styles.followButton,
-                  isFollowing
-                    ? styles.followButtonFollowing
-                    : styles.followButtonActive,
-                  followBusy && { opacity: 0.55 },
-                ]}
-                onPress={() => toggleFollowFromSearch(user)}
-                disabled={followBusy || !token}
-              >
-                <Text style={styles.followButtonText}>
-                  {isFollowing ? "Unfollow" : "Follow"}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+          <SearchUserRow
+            user={user}
+            isFollowing={isFollowing}
+            followBusy={followBusy}
+            token={token}
+            openProfile={openProfile}
+            toggleFollowFromSearch={toggleFollowFromSearch}
+          />
         );
       }
       const thought = item.thought;
-      return (
-        <Pressable
-          style={styles.resultRow}
-          onPress={() => openProfile(thought?.profile?.username)}
-        >
-          <Text style={styles.resultPrimary}>
-            {(thought?.text || "").replace(/\s+/g, " ").slice(0, 100) ||
-              "View thought"}
-          </Text>
-          <Text style={styles.resultSecondary}>
-            {thought?.profile?.username
-              ? `by @${thought.profile.username}`
-              : "open profile"}
-          </Text>
-        </Pressable>
-      );
+      return <SearchThoughtRow thought={thought} openProfile={openProfile} />;
     },
-    [followBusyUserId, openProfile, token],
+    [followBusyUserId, openProfile, token, toggleFollowFromSearch],
   );
 
   return (

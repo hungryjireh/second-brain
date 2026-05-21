@@ -8,11 +8,14 @@ import { sortEntriesByUpdatedAt } from "../utils/secondBrainEntryUtils";
 const DEFAULT_TIMEZONE =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Singapore";
 
-function isValidChatGptShareUrl(value) {
+function isValidLlmShareUrl(value) {
   try {
     const parsed = new URL(String(value || "").trim());
     const host = parsed.hostname.toLowerCase();
-    const isAllowedHost = host === "chatgpt.com" || host === "chat.openai.com";
+    const isAllowedHost =
+      host === "chatgpt.com" ||
+      host === "chat.openai.com" ||
+      host === "claude.ai";
     if (!isAllowedHost) return false;
     return parsed.pathname.startsWith("/share/");
   } catch {
@@ -239,7 +242,7 @@ export function useSecondBrainSettings({
 
     if (Platform.OS !== "web") {
       Alert.alert(
-        "Import ChatGPT share URL",
+        "Import LLM Conversation History",
         "Importing via URL is currently available on web.",
       );
       return;
@@ -248,18 +251,18 @@ export function useSecondBrainSettings({
     const promptFn = globalThis?.prompt;
     if (typeof promptFn !== "function") {
       Alert.alert(
-        "Import ChatGPT share URL",
+        "Import LLM Conversation History",
         "Prompt is unavailable in this browser context.",
       );
       return;
     }
 
-    const input = promptFn("Paste a ChatGPT public share URL");
+    const input = promptFn("Paste a ChatGPT or Claude public share URL");
     const chatUrl = String(input || "").trim();
     if (!chatUrl) return;
-    if (!isValidChatGptShareUrl(chatUrl)) {
+    if (!isValidLlmShareUrl(chatUrl)) {
       setImportError(
-        "Please enter a valid ChatGPT share URL (https://chatgpt.com/share/...).",
+        "Please enter a valid ChatGPT or Claude share URL (https://chatgpt.com/share/... or https://claude.ai/share/...).",
       );
       return;
     }
@@ -269,7 +272,7 @@ export function useSecondBrainSettings({
     setSettingsOpen(false);
     setImportingConversations(true);
     try {
-      const response = await apiRequest("/import-chatgpt-share", {
+      const response = await apiRequest("/import-llm-share", {
         method: "POST",
         token,
         body: { chat_url: chatUrl },
@@ -278,7 +281,7 @@ export function useSecondBrainSettings({
       const created = Array.isArray(response?.created) ? response.created : [];
       if (created.length === 0) {
         Alert.alert(
-          "Import ChatGPT share URL",
+          "Import LLM Conversation History",
           "No valid conversation messages were found in that shared link.",
         );
         return;
@@ -286,7 +289,7 @@ export function useSecondBrainSettings({
 
       setEntries((prev) => sortEntriesByUpdatedAt([...created, ...prev]));
       Alert.alert(
-        "Import ChatGPT share URL",
+        "Import LLM Conversation History",
         `Imported ${created.length} conversation${created.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {

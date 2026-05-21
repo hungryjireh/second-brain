@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,6 +9,78 @@ import {
 import { theme } from "../theme";
 import SecondBrainEntryCard from "./SecondBrainEntryCard";
 import SwipeToDeleteRow from "./SwipeToDeleteRow";
+
+const ListSectionHeader = memo(function ListSectionHeader({
+  group,
+  count,
+  styles,
+}) {
+  return <Text style={styles.sectionHeaderText}>{`${group} · ${count}`}</Text>;
+});
+
+const ListEntryRow = memo(function ListEntryRow({
+  entry,
+  styles,
+  item,
+  isBusy,
+  isWeb,
+  isSwipeOpen,
+  isActionDrawerActive,
+  hasOpenActionDrawer,
+  closeSwipe,
+  openEntry,
+  startEdit,
+  toggleArchiveWithConfirmation,
+  downloadIcs,
+  requestDelete,
+  handleActionDrawerChange,
+  closeAnyActionDrawer,
+  setOpenSwipeId,
+  swipeActionWidth,
+}) {
+  const handleDelete = useCallback(() => {
+    requestDelete(entry.id);
+  }, [entry.id, requestDelete]);
+
+  const cardContent = (
+    <SecondBrainEntryCard
+      entry={entry}
+      styles={styles}
+      theme={theme}
+      isBusy={isBusy}
+      isSwipeOpen={isSwipeOpen}
+      isDeleteConfirm={false}
+      displayDate={item.displayDate}
+      displayRemindAt={item.displayRemindAt}
+      onOpenEntry={openEntry}
+      onCloseSwipe={closeSwipe}
+      onStartEdit={startEdit}
+      onToggleArchive={toggleArchiveWithConfirmation}
+      onDownloadIcs={downloadIcs}
+      onRequestDelete={requestDelete}
+      onActionDrawerChange={handleActionDrawerChange}
+      isActionDrawerActive={isActionDrawerActive}
+      hasOpenActionDrawer={hasOpenActionDrawer}
+      onCloseAnyActionDrawer={closeAnyActionDrawer}
+    />
+  );
+  if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
+
+  return (
+    <SwipeToDeleteRow
+      id={entry.id}
+      isOpen={isSwipeOpen}
+      isRaised={isActionDrawerActive}
+      onOpen={setOpenSwipeId}
+      actionLabel={isBusy ? "..." : "Delete"}
+      onActionPress={handleDelete}
+      actionWidth={swipeActionWidth}
+      styles={styles}
+    >
+      {cardContent}
+    </SwipeToDeleteRow>
+  );
+});
 
 export default function SecondBrainFlatList({
   groupedRows,
@@ -34,6 +106,8 @@ export default function SecondBrainFlatList({
   closeAnyActionDrawer,
   pullRefreshing = false,
 }) {
+  const isWeb = Platform.OS === "web";
+
   const closeSwipe = useCallback(() => {
     setOpenSwipeId(null);
   }, [setOpenSwipeId]);
@@ -42,53 +116,37 @@ export default function SecondBrainFlatList({
     ({ item }) => {
       if (item.type === "header") {
         return (
-          <Text
-            style={styles.sectionHeaderText}
-          >{`${item.group} · ${item.count}`}</Text>
+          <ListSectionHeader
+            group={item.group}
+            count={item.count}
+            styles={styles}
+          />
         );
       }
 
       const entry = item.entry;
       if (!entry) return null;
-      const isBusy = busyId === entry.id;
-      const isWeb = Platform.OS === "web";
-      const cardContent = (
-        <SecondBrainEntryCard
+      return (
+        <ListEntryRow
           entry={entry}
           styles={styles}
-          theme={theme}
-          isBusy={isBusy}
+          item={item}
+          isBusy={busyId === entry.id}
+          isWeb={isWeb}
           isSwipeOpen={openSwipeId === entry.id}
-          isDeleteConfirm={false}
-          displayDate={item.displayDate}
-          displayRemindAt={item.displayRemindAt}
-          onOpenEntry={openEntry}
-          onCloseSwipe={closeSwipe}
-          onStartEdit={startEdit}
-          onToggleArchive={toggleArchiveWithConfirmation}
-          onDownloadIcs={downloadIcs}
-          onRequestDelete={requestDelete}
-          onActionDrawerChange={handleActionDrawerChange}
           isActionDrawerActive={openActionDrawerId === entry.id}
           hasOpenActionDrawer={openActionDrawerId !== null}
-          onCloseAnyActionDrawer={closeAnyActionDrawer}
+          closeSwipe={closeSwipe}
+          openEntry={openEntry}
+          startEdit={startEdit}
+          toggleArchiveWithConfirmation={toggleArchiveWithConfirmation}
+          downloadIcs={downloadIcs}
+          requestDelete={requestDelete}
+          handleActionDrawerChange={handleActionDrawerChange}
+          closeAnyActionDrawer={closeAnyActionDrawer}
+          setOpenSwipeId={setOpenSwipeId}
+          swipeActionWidth={swipeActionWidth}
         />
-      );
-      if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
-
-      return (
-        <SwipeToDeleteRow
-          id={entry.id}
-          isOpen={openSwipeId === entry.id}
-          isRaised={openActionDrawerId === entry.id}
-          onOpen={setOpenSwipeId}
-          actionLabel={isBusy ? "..." : "Delete"}
-          onActionPress={() => requestDelete(entry.id)}
-          actionWidth={swipeActionWidth}
-          styles={styles}
-        >
-          {cardContent}
-        </SwipeToDeleteRow>
       );
     },
     [
@@ -98,6 +156,7 @@ export default function SecondBrainFlatList({
       closeOpenActionDrawer,
       downloadIcs,
       handleActionDrawerChange,
+      isWeb,
       openActionDrawerId,
       openEntry,
       openSwipeId,
@@ -109,6 +168,44 @@ export default function SecondBrainFlatList({
       toggleArchiveWithConfirmation,
     ],
   );
+
+  const listContentContainerStyle = useMemo(
+    () => [
+      styles.listContent,
+      loadingEntries && groupedRows.length === 0
+        ? styles.listContentEmpty
+        : null,
+      pullRefreshing ? { paddingTop: 100 } : null,
+      { paddingBottom: listBottomPadding },
+    ],
+    [
+      groupedRows.length,
+      listBottomPadding,
+      loadingEntries,
+      pullRefreshing,
+      styles.listContent,
+      styles.listContentEmpty,
+    ],
+  );
+
+  const listEmptyComponent = useMemo(() => {
+    if (loadingEntries) {
+      return (
+        <View style={styles.listEmptyCentered}>
+          <Text style={styles.listEmptyText}>Loading thoughts...</Text>
+        </View>
+      );
+    }
+    if (hasActiveFilters) {
+      return <Text style={styles.listEmptyText}>No matching entries</Text>;
+    }
+    return null;
+  }, [
+    hasActiveFilters,
+    loadingEntries,
+    styles.listEmptyCentered,
+    styles.listEmptyText,
+  ]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -127,35 +224,27 @@ export default function SecondBrainFlatList({
           <ActivityIndicator size="large" color={theme.colors.textSecondary} />
         </View>
       ) : null}
-      <View style={{ flex: 1, transform: [{ translateY: pullRefreshing ? -40 : 0 }] }}>
+      <View
+        style={{
+          flex: 1,
+          transform: [{ translateY: pullRefreshing ? -40 : 0 }],
+        }}
+      >
         <FlatList
           testID="second-brain-flat-list"
           data={groupedRows}
           extraData={openActionDrawerId}
           style={styles.list}
-          contentContainerStyle={[
-            styles.listContent,
-            loadingEntries && groupedRows.length === 0 && styles.listContentEmpty,
-            pullRefreshing ? { paddingTop: 100 } : null,
-            { paddingBottom: listBottomPadding },
-          ]}
+          contentContainerStyle={listContentContainerStyle}
           keyExtractor={keyExtractor}
           CellRendererComponent={renderCell}
           renderItem={renderListItem}
-          ListEmptyComponent={
-            loadingEntries ? (
-              <View style={styles.listEmptyCentered}>
-                <Text style={styles.listEmptyText}>Loading thoughts...</Text>
-              </View>
-            ) : hasActiveFilters ? (
-              <Text style={styles.listEmptyText}>No matching entries</Text>
-            ) : null
-          }
+          ListEmptyComponent={listEmptyComponent}
           initialNumToRender={10}
           maxToRenderPerBatch={8}
           updateCellsBatchingPeriod={50}
           windowSize={9}
-          removeClippedSubviews={false}
+          removeClippedSubviews={!isWeb}
           onScrollBeginDrag={closeOpenActionDrawer}
           onRefresh={onRefresh}
           refreshing={loadingEntries && !pullRefreshing}

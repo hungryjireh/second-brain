@@ -754,7 +754,7 @@ describe("SecondBrainScreen", () => {
       if (url === "/entries?limit=60") return { entries: [] };
       if (url === "/tags") return { tags: [] };
       if (url === "/settings") return {};
-      if (url === "/import-chatgpt-share" && options.method === "POST") {
+      if (url === "/import-llm-share" && options.method === "POST") {
         throw new Error(
           "Timed out while loading the ChatGPT shared conversation",
         );
@@ -770,7 +770,7 @@ describe("SecondBrainScreen", () => {
     fireEvent.press(getByLabelText("Open settings"));
     await waitFor(() => expect(getByText("Settings")).toBeTruthy());
 
-    fireEvent.press(getByText("Import ChatGPT share URL"));
+    fireEvent.press(getByText("Import LLM Conversation History"));
 
     await waitFor(() => {
       expect(queryByText("Settings")).toBeNull();
@@ -795,7 +795,7 @@ describe("SecondBrainScreen", () => {
       }
       if (url === "/tags") return { tags: [] };
       if (url === "/settings") return {};
-      if (url === "/import-chatgpt-share" && options.method === "POST") {
+      if (url === "/import-llm-share" && options.method === "POST") {
         throw new Error(
           "Timed out while loading the ChatGPT shared conversation",
         );
@@ -813,7 +813,7 @@ describe("SecondBrainScreen", () => {
     fireEvent.press(getByLabelText("Open settings"));
     await waitFor(() => expect(getByText("Settings")).toBeTruthy());
 
-    fireEvent.press(getByText("Import ChatGPT share URL"));
+    fireEvent.press(getByText("Import LLM Conversation History"));
 
     await waitFor(() => {
       expect(getByText("Failed to load entries")).toBeTruthy();

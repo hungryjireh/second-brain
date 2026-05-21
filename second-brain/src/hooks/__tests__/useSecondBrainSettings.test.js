@@ -277,7 +277,7 @@ describe("useSecondBrainSettings", () => {
     });
     apiRequest.mockImplementation(async (url, options = {}) => {
       if (url === "/settings" && !options.method) return {};
-      if (url === "/import-chatgpt-share" && options.method === "POST") {
+      if (url === "/import-llm-share" && options.method === "POST") {
         return {
           created: [{ id: 77, created_at: 300, updated_at: 300 }],
         };
@@ -298,10 +298,10 @@ describe("useSecondBrainSettings", () => {
     expect(latestValue.settingsOpen).toBe(false);
 
     expect(global.prompt).toHaveBeenCalledWith(
-      "Paste a ChatGPT public share URL",
+      "Paste a ChatGPT or Claude public share URL",
     );
     expect(apiRequest).toHaveBeenCalledWith(
-      "/import-chatgpt-share",
+      "/import-llm-share",
       expect.objectContaining({
         method: "POST",
         token,
@@ -310,7 +310,7 @@ describe("useSecondBrainSettings", () => {
     );
     expect(setEntries).toHaveBeenCalledWith(expect.any(Function));
     expect(alertSpy).toHaveBeenCalledWith(
-      "Import ChatGPT share URL",
+      "Import LLM Conversation History",
       "Imported 1 conversation.",
     );
     expect(setCreatingEntries).toHaveBeenCalledTimes(2);
@@ -326,7 +326,7 @@ describe("useSecondBrainSettings", () => {
     alertSpy.mockRestore();
   });
 
-  it("shows an error for invalid ChatGPT share URL and does not start import", async () => {
+  it("shows an error for invalid LLM share URL and does not start import", async () => {
     global.prompt = jest.fn(() => "https://example.com/not-share");
     Object.defineProperty(Platform, "OS", {
       value: "web",
@@ -348,10 +348,10 @@ describe("useSecondBrainSettings", () => {
     });
 
     expect(latestValue.importError).toBe(
-      "Please enter a valid ChatGPT share URL (https://chatgpt.com/share/...).",
+      "Please enter a valid ChatGPT or Claude share URL (https://chatgpt.com/share/... or https://claude.ai/share/...).",
     );
     expect(apiRequest).not.toHaveBeenCalledWith(
-      "/import-chatgpt-share",
+      "/import-llm-share",
       expect.anything(),
     );
     expect(latestValue.settingsOpen).toBe(true);
@@ -372,7 +372,7 @@ describe("useSecondBrainSettings", () => {
     });
 
     expect(alertSpy).toHaveBeenCalledWith(
-      "Import ChatGPT share URL",
+      "Import LLM Conversation History",
       "Importing via URL is currently available on web.",
     );
     alertSpy.mockRestore();
@@ -386,7 +386,7 @@ describe("useSecondBrainSettings", () => {
     });
     apiRequest.mockImplementation(async (url, options = {}) => {
       if (url === "/settings" && !options.method) return {};
-      if (url === "/import-chatgpt-share" && options.method === "POST") {
+      if (url === "/import-llm-share" && options.method === "POST") {
         throw new Error(
           "Timed out while loading the ChatGPT shared conversation",
         );

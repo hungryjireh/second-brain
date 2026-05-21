@@ -150,7 +150,7 @@ export default function SecondBrainSettingsModal({
                 <Text style={styles.settingsActionButtonText}>
                   {importingConversations
                     ? "Importing…"
-                    : "Import ChatGPT share URL"}
+                    : "Import LLM Conversation History"}
                 </Text>
               </Pressable>
               {!!importError && <Text style={styles.error}>{importError}</Text>}

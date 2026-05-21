@@ -4,9 +4,13 @@ import {
   verifyAuthToken,
   resolveAuthUserId,
 } from "../lib/auth.js";
+import { extractClaudeShareConversation } from "../lib/extract-claude-share-html.js";
 import { extractChatGptShareConversation } from "../lib/extract-chatgpt-share-html.js";
 import { importLlmConversationsAsEntries } from "../lib/llm-conversation-import.js";
-import { scrapeChatGptShareData } from "../lib/scrape-chatgpt-share-url.js";
+import {
+  getShareUrlProvider,
+  scrapeLlmShareData,
+} from "../lib/scrape-llm-share-url.js";
 import { normalizeEntry } from "./entries.js";
 
 export default async function handler(req, res) {
@@ -38,10 +42,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { html, estuaryUrls } = await scrapeChatGptShareData(chatUrl);
-    const conversations = extractChatGptShareConversation(html, {
-      estuaryUrls,
-    });
+    const { html, estuaryUrls } = await scrapeLlmShareData(chatUrl);
+    console.log(html);
+    const provider = getShareUrlProvider(chatUrl);
+    const conversations =
+      provider === "claude"
+        ? extractClaudeShareConversation(html, { estuaryUrls })
+        : extractChatGptShareConversation(html, { estuaryUrls });
     const created = await importLlmConversationsAsEntries({
       userId,
       authToken: token,
@@ -61,7 +68,7 @@ export default async function handler(req, res) {
       created,
     });
   } catch (err) {
-    console.error("[POST /api/import-chatgpt-share]", err);
+    console.error("[POST /api/import-llm-share]", err);
     return json(res, err?.status === 400 ? 400 : 500, { error: err.message });
   }
 }
