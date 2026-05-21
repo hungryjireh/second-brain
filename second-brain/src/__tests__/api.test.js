@@ -167,4 +167,58 @@ describe("native auth refresh", () => {
       expect.any(Object),
     );
   });
+
+  it("reuses in-flight refresh for concurrent 401s", async () => {
+    const { apiRequest, secureStore } = loadApiWith({});
+    secureStore.getItemAsync.mockImplementation(async (key) => {
+      if (key === "authRefreshToken") return "refresh-token-1";
+      return null;
+    });
+
+    const fetchMock = jest.fn();
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ error: "Token expired" }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => JSON.stringify({ error: "Token expired" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            token: "new-access-token",
+            refreshToken: "refresh-token-2",
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true, request: 1 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ ok: true, request: 2 }),
+      });
+    global.fetch = fetchMock;
+
+    const [dataOne, dataTwo] = await Promise.all([
+      apiRequest("/entries", { token: "expired-token" }),
+      apiRequest("/entries", { token: "expired-token" }),
+    ]);
+
+    expect(dataOne).toEqual({ ok: true, request: 1 });
+    expect(dataTwo).toEqual({ ok: true, request: 2 });
+    expect(fetchMock.mock.calls[2][0]).toContain("/auth/refresh");
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("/auth/refresh"),
+    );
+    expect(refreshCalls).toHaveLength(1);
+  });
 });

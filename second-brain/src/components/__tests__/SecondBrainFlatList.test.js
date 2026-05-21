@@ -41,6 +41,7 @@ function createBaseProps(overrides = {}) {
     openActionDrawerId: null,
     styles,
     loadingEntries: false,
+    onRefresh: jest.fn(),
     listBottomPadding: 24,
     keyExtractor: (item) => item.key,
     renderCell: ({ children }) => children,
@@ -129,5 +130,23 @@ describe("SecondBrainFlatList", () => {
 
     fireEvent.press(getByTestId("close-swipe-1"));
     expect(setOpenSwipeId).toHaveBeenCalledWith(null);
+  });
+
+  it("calls onRefresh when pull-to-refresh is triggered", () => {
+    const onRefresh = jest.fn();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId } = render(
+      <SecondBrainFlatList {...createBaseProps({ groupedRows, onRefresh })} />,
+    );
+
+    fireEvent(getByTestId("second-brain-flat-list"), "refresh");
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

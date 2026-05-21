@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
   extractChatGptShareConversation,
   stripTagsToMarkdown,
+  writeChatGptShareConversationFile,
 } from "../../lib/extract-chatgpt-share-html.js";
 
 test("stripTagsToMarkdown converts relevant HTML blocks to Markdown", () => {
@@ -90,4 +93,72 @@ test("extractChatGptShareConversation preserves sequence for image responses", (
   assert.equal(firstUserPromptIndex >= 0, true);
   assert.equal(imageResponseIndex > firstUserPromptIndex, true);
   assert.equal(secondUserPromptIndex > imageResponseIndex, true);
+});
+
+test("extractChatGptShareConversation attaches estuary URL to assistant image messages", () => {
+  const html = fs.readFileSync("sample/chatgpt/sample_chat_2.txt", "utf8");
+  const estuaryUrl =
+    "https://chatgpt.com/backend-api/estuary/content?id=file_0000000080f07207adb8508ee31a1d92&ts=494245&p=fs&cid=1&sig=d57f74aa7b64941a36b4ab41b9fb7be7204658e2eb7759ce82111de43e2b1893&v=0";
+  const payload = extractChatGptShareConversation(html, {
+    estuaryUrls: [estuaryUrl],
+  });
+  const messages = payload[0].chat_messages;
+  const imageMessage = messages.find((message) =>
+    message.files.some(
+      (file) => file.id === "file_0000000080f07207adb8508ee31a1d92",
+    ),
+  );
+
+  assert.equal(Boolean(imageMessage), true);
+  const imageFile = imageMessage.files.find(
+    (file) => file.id === "file_0000000080f07207adb8508ee31a1d92",
+  );
+  assert.equal(Boolean(imageFile), true);
+  assert.equal(imageFile.url, estuaryUrl);
+});
+
+test("extractChatGptShareConversation matches backend-anon file download URLs by file id in path", () => {
+  const html = fs.readFileSync("sample/chatgpt/sample_chat_2.txt", "utf8");
+  const estuaryUrl =
+    "https://chatgpt.com/backend-anon/files/download/file_0000000080f07207adb8508ee31a1d92?shared_conversation_id=6a0db525-3a40-83ec-aed6-2917e4c81963&inline=false";
+  const payload = extractChatGptShareConversation(html, {
+    estuaryUrls: [estuaryUrl],
+  });
+  const imageMessage = payload[0].chat_messages.find((message) =>
+    message.files.some(
+      (file) => file.id === "file_0000000080f07207adb8508ee31a1d92",
+    ),
+  );
+
+  assert.equal(Boolean(imageMessage), true);
+  const imageFile = imageMessage.files.find(
+    (file) => file.id === "file_0000000080f07207adb8508ee31a1d92",
+  );
+  assert.equal(Boolean(imageFile), true);
+  assert.equal(imageFile.url, estuaryUrl);
+});
+
+test("writeChatGptShareConversationFile writes estuary URLs into output JSON", () => {
+  const inputPath = "sample/chatgpt/sample_chat_2.txt";
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "chatgpt-share-extractor-"),
+  );
+  const outputPath = path.join(tempDir, "conversation.json");
+  const estuaryUrls = [
+    "https://chatgpt.com/backend-anon/files/download/file_0000000080f07207adb8508ee31a1d92?shared_conversation_id=6a0db525-3a40-83ec-aed6-2917e4c81963&inline=false",
+    "https://chatgpt.com/backend-anon/files/download/file_0000000096087207b95f139e192ab7dd?shared_conversation_id=6a0db525-3a40-83ec-aed6-2917e4c81963&inline=false",
+  ];
+
+  try {
+    writeChatGptShareConversationFile(inputPath, outputPath, { estuaryUrls });
+    const writtenPayload = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+    const messageUrls = writtenPayload[0].chat_messages.flatMap((message) =>
+      message.files.map((file) => file.url),
+    );
+
+    assert.equal(messageUrls.includes(estuaryUrls[0]), true);
+    assert.equal(messageUrls.includes(estuaryUrls[1]), true);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });

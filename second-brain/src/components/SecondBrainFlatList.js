@@ -9,6 +9,7 @@ export default function SecondBrainFlatList({
   openActionDrawerId,
   styles,
   loadingEntries,
+  onRefresh,
   listBottomPadding,
   keyExtractor,
   renderCell,
@@ -104,6 +105,7 @@ export default function SecondBrainFlatList({
 
   return (
     <FlatList
+      testID="second-brain-flat-list"
       data={groupedRows}
       extraData={openActionDrawerId}
       style={styles.list}
@@ -130,6 +132,8 @@ export default function SecondBrainFlatList({
       windowSize={9}
       removeClippedSubviews={false}
       onScrollBeginDrag={closeOpenActionDrawer}
+      onRefresh={onRefresh}
+      refreshing={loadingEntries}
     />
   );
 }

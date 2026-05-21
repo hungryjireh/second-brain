@@ -8,7 +8,38 @@ import { sortEntriesByUpdatedAt } from "../utils/secondBrainEntryUtils";
 const DEFAULT_TIMEZONE =
   Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Singapore";
 
-export function useSecondBrainSettings({ token, setEntries }) {
+function isValidChatGptShareUrl(value) {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    const host = parsed.hostname.toLowerCase();
+    const isAllowedHost = host === "chatgpt.com" || host === "chat.openai.com";
+    if (!isAllowedHost) return false;
+    return parsed.pathname.startsWith("/share/");
+  } catch {
+    return false;
+  }
+}
+
+function buildChatGptShareImportErrorMessage(errorMessage) {
+  const message = String(errorMessage || "").trim();
+  if (
+    message.toLowerCase() ===
+    "timed out while loading the chatgpt shared conversation"
+  ) {
+    return (
+      "Timed out while loading the ChatGPT shared conversation. " +
+      "Please retry the import in SecondBrain."
+    );
+  }
+
+  return `Failed to import from URL: ${message || "Unknown error"}`;
+}
+
+export function useSecondBrainSettings({
+  token,
+  setEntries,
+  setCreatingEntries,
+}) {
   const [importingConversations, setImportingConversations] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
@@ -19,6 +50,7 @@ export function useSecondBrainSettings({ token, setEntries }) {
   const [loadingTelegramLinkKey, setLoadingTelegramLinkKey] = useState(false);
   const [telegramLinkError, setTelegramLinkError] = useState("");
   const [telegramCopyStatus, setTelegramCopyStatus] = useState("");
+  const [importError, setImportError] = useState("");
 
   useEffect(() => {
     async function loadSettings() {
@@ -44,6 +76,7 @@ export function useSecondBrainSettings({ token, setEntries }) {
     setTelegramLinkKey("");
     setTelegramLinkError("");
     setTelegramCopyStatus("");
+    setImportError("");
     setSettingsOpen(true);
   }, [timezone]);
 
@@ -104,10 +137,29 @@ export function useSecondBrainSettings({ token, setEntries }) {
     }
   }, [telegramLinkKey]);
 
+  const startCreatingImportEntry = useCallback(() => {
+    const creatingId = `import-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setCreatingEntries((prev) => [
+      ...prev,
+      { id: creatingId, title: "conversations" },
+    ]);
+    return creatingId;
+  }, [setCreatingEntries]);
+
+  const endCreatingImportEntry = useCallback(
+    (creatingId) => {
+      setCreatingEntries((prev) =>
+        prev.filter((item) => item.id !== creatingId),
+      );
+    },
+    [setCreatingEntries],
+  );
+
   const handleImportConversationFile = useCallback(
     async (file) => {
       if (!file || importingConversations) return;
 
+      const creatingId = startCreatingImportEntry();
       setImportingConversations(true);
       try {
         const raw = await file.text();
@@ -145,9 +197,16 @@ export function useSecondBrainSettings({ token, setEntries }) {
         );
       } finally {
         setImportingConversations(false);
+        endCreatingImportEntry(creatingId);
       }
     },
-    [importingConversations, setEntries, token],
+    [
+      endCreatingImportEntry,
+      importingConversations,
+      setEntries,
+      startCreatingImportEntry,
+      token,
+    ],
   );
 
   const handleOpenImportDialog = useCallback(() => {
@@ -167,6 +226,8 @@ export function useSecondBrainSettings({ token, setEntries }) {
     input.onchange = async (event) => {
       const file = event?.target?.files?.[0];
       if (!file) return;
+      setImportError("");
+      setSettingsOpen(false);
       await handleImportConversationFile(file);
       input.value = "";
     };
@@ -196,7 +257,16 @@ export function useSecondBrainSettings({ token, setEntries }) {
     const input = promptFn("Paste a ChatGPT public share URL");
     const chatUrl = String(input || "").trim();
     if (!chatUrl) return;
+    if (!isValidChatGptShareUrl(chatUrl)) {
+      setImportError(
+        "Please enter a valid ChatGPT share URL (https://chatgpt.com/share/...).",
+      );
+      return;
+    }
 
+    setImportError("");
+    const creatingId = startCreatingImportEntry();
+    setSettingsOpen(false);
     setImportingConversations(true);
     try {
       const response = await apiRequest("/import-chatgpt-share", {
@@ -220,14 +290,18 @@ export function useSecondBrainSettings({ token, setEntries }) {
         `Imported ${created.length} conversation${created.length === 1 ? "" : "s"}.`,
       );
     } catch (err) {
-      Alert.alert(
-        "Import ChatGPT share URL",
-        `Failed to import from URL: ${err.message}`,
-      );
+      setImportError(buildChatGptShareImportErrorMessage(err?.message));
     } finally {
       setImportingConversations(false);
+      endCreatingImportEntry(creatingId);
     }
-  }, [importingConversations, setEntries, token]);
+  }, [
+    endCreatingImportEntry,
+    importingConversations,
+    setEntries,
+    startCreatingImportEntry,
+    token,
+  ]);
 
   const handleTimezoneChange = useCallback((nextTimezone) => {
     setTimezoneDraft(nextTimezone);
@@ -245,6 +319,7 @@ export function useSecondBrainSettings({ token, setEntries }) {
     loadingTelegramLinkKey,
     telegramLinkError,
     telegramCopyStatus,
+    importError,
     openSettings,
     closeSettings,
     saveSettings,

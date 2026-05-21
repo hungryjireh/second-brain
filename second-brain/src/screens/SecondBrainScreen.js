@@ -62,7 +62,7 @@ function formatCreatingTitle(description) {
 
 export { sortEntriesByUpdatedAt } from "../utils/secondBrainEntryUtils";
 
-export default function SecondBrainScreen({ token, navigation }) {
+export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isSmallScreen = width <= SMALL_SCREEN_FILTER_BREAKPOINT;
@@ -107,6 +107,7 @@ export default function SecondBrainScreen({ token, navigation }) {
     loadingTelegramLinkKey,
     telegramLinkError,
     telegramCopyStatus,
+    importError,
     openSettings,
     closeSettings,
     saveSettings,
@@ -118,6 +119,7 @@ export default function SecondBrainScreen({ token, navigation }) {
   } = useSecondBrainSettings({
     token,
     setEntries,
+    setCreatingEntries,
   });
   const filterDropdownOpenedAtMsRef = useRef(0);
   const handleVoiceEntryCreated = useCallback(
@@ -128,6 +130,9 @@ export default function SecondBrainScreen({ token, navigation }) {
   );
   const handleVoiceReloadEntries = useCallback(async () => {
     await loadEntries();
+  }, [loadEntries]);
+  const handlePullToRefresh = useCallback(async () => {
+    await loadEntries({ bypassCache: true });
   }, [loadEntries]);
   const {
     voiceBusy,
@@ -459,10 +464,12 @@ export default function SecondBrainScreen({ token, navigation }) {
     telegramCopyStatus,
     telegramLinkError,
     importingConversations,
+    importError,
     handleOpenImportDialog,
     handleImportChatGptShareUrl,
     savingSettings,
     saveSettings,
+    onLogout,
   };
   const filterDropdownProps = {
     styles,
@@ -510,12 +517,16 @@ export default function SecondBrainScreen({ token, navigation }) {
         </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
+        {!error && !!importError && (
+          <Text style={styles.error}>{importError}</Text>
+        )}
 
         <SecondBrainFlatList
           groupedRows={groupedRows}
           openActionDrawerId={openActionDrawerId}
           styles={styles}
           loadingEntries={loadingEntries}
+          onRefresh={handlePullToRefresh}
           listBottomPadding={listBottomPadding}
           keyExtractor={keyExtractor}
           renderCell={renderCell}

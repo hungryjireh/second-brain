@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
+import { Linking } from "react-native";
 import MarkdownBody from "../MarkdownBody";
 
 const styles = {
@@ -65,5 +66,31 @@ describe("MarkdownBody", () => {
     expect(getByText("Second")).toBeTruthy();
     expect(getByText("Quoted line")).toBeTruthy();
     expect(getByText("const x = 1;")).toBeTruthy();
+  });
+
+  it("renders attachment links from fileUrls", () => {
+    const { getByText } = render(
+      <MarkdownBody
+        text="Generated image: sample"
+        fileUrls={["https://example.com/file-a.png"]}
+        styles={styles}
+      />,
+    );
+
+    expect(getByText("Attachments:")).toBeTruthy();
+    expect(getByText("Attachment 1")).toBeTruthy();
+  });
+
+  it("opens URLs when markdown links are pressed", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody text="[Open](https://example.com/path)" styles={styles} />,
+    );
+
+    fireEvent.press(getByText("Open"));
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/path");
+    openUrlSpy.mockRestore();
   });
 });

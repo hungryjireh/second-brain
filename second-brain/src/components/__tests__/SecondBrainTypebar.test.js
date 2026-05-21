@@ -65,6 +65,7 @@ describe("SecondBrainTypebar", () => {
       telegramCopyStatus: "",
       telegramLinkError: "",
       importingConversations: false,
+      importError: "",
       handleOpenImportDialog: jest.fn(),
       handleImportChatGptShareUrl: jest.fn(),
       savingSettings: false,

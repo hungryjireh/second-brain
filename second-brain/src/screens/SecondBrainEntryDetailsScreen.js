@@ -32,6 +32,11 @@ function parseImportedConversationFromEntry(entry) {
         .map((msg) => ({
           sender: msg?.sender === "human" ? "human" : "assistant",
           text: String(msg?.text ?? "").trim(),
+          fileUrls: Array.isArray(msg?.files)
+            ? msg.files
+                .map((file) => String(file?.url ?? "").trim())
+                .filter(Boolean)
+            : [],
         }))
         .filter((msg) => msg.text),
     };
@@ -461,7 +466,11 @@ export default function SecondBrainEntryDetailsScreen({
                       <Text style={styles.conversationSender}>
                         {fromHuman ? "You" : "Assistant"}
                       </Text>
-                      <MarkdownBody text={msg.text} styles={styles} />
+                      <MarkdownBody
+                        text={msg.text}
+                        fileUrls={msg.fileUrls}
+                        styles={styles}
+                      />
                     </View>
                   </View>
                 );

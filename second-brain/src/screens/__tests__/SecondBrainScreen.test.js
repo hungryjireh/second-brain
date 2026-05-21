@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import fs from "node:fs";
 import path from "node:path";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +20,8 @@ jest.mock("../../api", () => ({
 describe("SecondBrainScreen", () => {
   const token = "token";
   const originalFetch = global.fetch;
+  const originalPrompt = global.prompt;
+  const originalPlatformOs = Platform.OS;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -34,6 +36,11 @@ describe("SecondBrainScreen", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    global.prompt = originalPrompt;
+    Object.defineProperty(Platform, "OS", {
+      value: originalPlatformOs,
+      configurable: true,
+    });
   });
 
   it("sorts entries by updated_at descending with created_at fallback", () => {
@@ -734,5 +741,87 @@ describe("SecondBrainScreen", () => {
     expect(getByTestId("offline-banner")).toBeTruthy();
     expect(getByText("Offline mode")).toBeTruthy();
     expect(getByText("2 changes queued for sync.")).toBeTruthy();
+  });
+
+  it("shows ChatGPT share import timeout on SecondBrainScreen after modal closes", async () => {
+    Object.defineProperty(Platform, "OS", {
+      value: "web",
+      configurable: true,
+    });
+    global.prompt = jest.fn(() => "https://chatgpt.com/share/abc");
+
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      if (url === "/import-chatgpt-share" && options.method === "POST") {
+        throw new Error(
+          "Timed out while loading the ChatGPT shared conversation",
+        );
+      }
+      return {};
+    });
+
+    const { getByLabelText, getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => expect(getByLabelText("Open settings")).toBeTruthy());
+    fireEvent.press(getByLabelText("Open settings"));
+    await waitFor(() => expect(getByText("Settings")).toBeTruthy());
+
+    fireEvent.press(getByText("Import ChatGPT share URL"));
+
+    await waitFor(() => {
+      expect(queryByText("Settings")).toBeNull();
+      expect(
+        getByText(
+          "Timed out while loading the ChatGPT shared conversation. Please retry the import in SecondBrain.",
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it("prioritizes existing screen error over import error text", async () => {
+    Object.defineProperty(Platform, "OS", {
+      value: "web",
+      configurable: true,
+    });
+    global.prompt = jest.fn(() => "https://chatgpt.com/share/abc");
+
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/entries?limit=60") {
+        throw new Error("Failed to load entries");
+      }
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      if (url === "/import-chatgpt-share" && options.method === "POST") {
+        throw new Error(
+          "Timed out while loading the ChatGPT shared conversation",
+        );
+      }
+      return {};
+    });
+
+    const { getByLabelText, getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() =>
+      expect(getByText("Failed to load entries")).toBeTruthy(),
+    );
+    fireEvent.press(getByLabelText("Open settings"));
+    await waitFor(() => expect(getByText("Settings")).toBeTruthy());
+
+    fireEvent.press(getByText("Import ChatGPT share URL"));
+
+    await waitFor(() => {
+      expect(getByText("Failed to load entries")).toBeTruthy();
+      expect(
+        queryByText(
+          "Timed out while loading the ChatGPT shared conversation. Please retry the import in SecondBrain.",
+        ),
+      ).toBeNull();
+    });
   });
 });

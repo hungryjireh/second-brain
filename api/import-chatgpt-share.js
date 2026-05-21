@@ -6,7 +6,7 @@ import {
 } from "../lib/auth.js";
 import { extractChatGptShareConversation } from "../lib/extract-chatgpt-share-html.js";
 import { importLlmConversationsAsEntries } from "../lib/llm-conversation-import.js";
-import { scrapeChatGptShareHtml } from "../lib/scrape-chatgpt-share-url.js";
+import { scrapeChatGptShareData } from "../lib/scrape-chatgpt-share-url.js";
 import { normalizeEntry } from "./entries.js";
 
 export default async function handler(req, res) {
@@ -38,9 +38,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const html = await scrapeChatGptShareHtml(chatUrl);
-    console.log(html);
-    const conversations = extractChatGptShareConversation(html);
+    const { html, estuaryUrls } = await scrapeChatGptShareData(chatUrl);
+    const conversations = extractChatGptShareConversation(html, {
+      estuaryUrls,
+    });
     const created = await importLlmConversationsAsEntries({
       userId,
       authToken: token,
@@ -56,6 +57,7 @@ export default async function handler(req, res) {
 
     return json(res, 201, {
       source_url: chatUrl,
+      extracted_conversations: conversations,
       created,
     });
   } catch (err) {

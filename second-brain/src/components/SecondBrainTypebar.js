@@ -44,10 +44,12 @@ export default function SecondBrainTypebar({
   telegramCopyStatus,
   telegramLinkError,
   importingConversations,
+  importError,
   handleOpenImportDialog,
   handleImportChatGptShareUrl,
   savingSettings,
   saveSettings,
+  onLogout,
 }) {
   const isWeb = Platform.OS === "web";
   const typebarPlaceholder = isSmallScreen
@@ -90,10 +92,12 @@ export default function SecondBrainTypebar({
         telegramCopyStatus={telegramCopyStatus}
         telegramLinkError={telegramLinkError}
         importingConversations={importingConversations}
+        importError={importError}
         onOpenImportDialog={handleOpenImportDialog}
         onImportChatGptShareUrl={handleImportChatGptShareUrl}
         savingSettings={savingSettings}
         onSave={saveSettings}
+        onLogout={onLogout}
       />
       <View style={[styles.typebarRow, { bottom }]}>
         <TextInput

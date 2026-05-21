@@ -17,12 +17,17 @@ describe("useSecondBrainSettings", () => {
   let latestValue = null;
   const token = "token";
   const setEntries = jest.fn();
+  const setCreatingEntries = jest.fn();
   const originalDocument = global.document;
   const originalPlatformOs = Platform.OS;
   const originalPrompt = global.prompt;
 
   function Harness() {
-    const value = useSecondBrainSettings({ token, setEntries });
+    const value = useSecondBrainSettings({
+      token,
+      setEntries,
+      setCreatingEntries,
+    });
     useEffect(() => {
       latestValue = value;
     }, [value]);
@@ -33,6 +38,7 @@ describe("useSecondBrainSettings", () => {
     latestValue = null;
     jest.clearAllMocks();
     apiRequest.mockResolvedValue({});
+    setCreatingEntries.mockReset();
   });
 
   afterEach(() => {
@@ -209,6 +215,10 @@ describe("useSecondBrainSettings", () => {
     });
 
     render(<Harness />);
+    act(() => {
+      latestValue.openSettings();
+    });
+    expect(latestValue.settingsOpen).toBe(true);
 
     act(() => {
       latestValue.handleOpenImportDialog();
@@ -225,6 +235,8 @@ describe("useSecondBrainSettings", () => {
     await act(async () => {
       await input.onchange({ target: { files: [file] } });
     });
+
+    expect(latestValue.settingsOpen).toBe(false);
 
     expect(apiRequest).toHaveBeenCalledWith(
       "/entries",
@@ -243,6 +255,16 @@ describe("useSecondBrainSettings", () => {
       "Imported 1 conversation.",
     );
     expect(input.value).toBe("");
+    expect(setCreatingEntries).toHaveBeenCalledTimes(2);
+    expect(setCreatingEntries).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(setCreatingEntries).toHaveBeenNthCalledWith(2, expect.any(Function));
+
+    const addCreating = setCreatingEntries.mock.calls[0][0];
+    const removeCreating = setCreatingEntries.mock.calls[1][0];
+    const added = addCreating([]);
+    expect(added).toHaveLength(1);
+    expect(added[0].title).toBe("conversations");
+    expect(removeCreating(added)).toEqual([]);
     alertSpy.mockRestore();
   });
 
@@ -264,10 +286,16 @@ describe("useSecondBrainSettings", () => {
     });
 
     render(<Harness />);
+    act(() => {
+      latestValue.openSettings();
+    });
+    expect(latestValue.settingsOpen).toBe(true);
 
     await act(async () => {
       await latestValue.handleImportChatGptShareUrl();
     });
+
+    expect(latestValue.settingsOpen).toBe(false);
 
     expect(global.prompt).toHaveBeenCalledWith(
       "Paste a ChatGPT public share URL",
@@ -285,7 +313,49 @@ describe("useSecondBrainSettings", () => {
       "Import ChatGPT share URL",
       "Imported 1 conversation.",
     );
+    expect(setCreatingEntries).toHaveBeenCalledTimes(2);
+    expect(setCreatingEntries).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(setCreatingEntries).toHaveBeenNthCalledWith(2, expect.any(Function));
+
+    const addCreating = setCreatingEntries.mock.calls[0][0];
+    const removeCreating = setCreatingEntries.mock.calls[1][0];
+    const added = addCreating([]);
+    expect(added).toHaveLength(1);
+    expect(added[0].title).toBe("conversations");
+    expect(removeCreating(added)).toEqual([]);
     alertSpy.mockRestore();
+  });
+
+  it("shows an error for invalid ChatGPT share URL and does not start import", async () => {
+    global.prompt = jest.fn(() => "https://example.com/not-share");
+    Object.defineProperty(Platform, "OS", {
+      value: "web",
+      configurable: true,
+    });
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/settings" && !options.method) return {};
+      return {};
+    });
+
+    render(<Harness />);
+    act(() => {
+      latestValue.openSettings();
+    });
+    expect(latestValue.settingsOpen).toBe(true);
+
+    await act(async () => {
+      await latestValue.handleImportChatGptShareUrl();
+    });
+
+    expect(latestValue.importError).toBe(
+      "Please enter a valid ChatGPT share URL (https://chatgpt.com/share/...).",
+    );
+    expect(apiRequest).not.toHaveBeenCalledWith(
+      "/import-chatgpt-share",
+      expect.anything(),
+    );
+    expect(latestValue.settingsOpen).toBe(true);
+    expect(setCreatingEntries).not.toHaveBeenCalled();
   });
 
   it("shows non-web ChatGPT share URL import alert outside web platform", async () => {
@@ -306,5 +376,35 @@ describe("useSecondBrainSettings", () => {
       "Importing via URL is currently available on web.",
     );
     alertSpy.mockRestore();
+  });
+
+  it("shows retry guidance when ChatGPT share import times out", async () => {
+    global.prompt = jest.fn(() => "https://chatgpt.com/share/abc");
+    Object.defineProperty(Platform, "OS", {
+      value: "web",
+      configurable: true,
+    });
+    apiRequest.mockImplementation(async (url, options = {}) => {
+      if (url === "/settings" && !options.method) return {};
+      if (url === "/import-chatgpt-share" && options.method === "POST") {
+        throw new Error(
+          "Timed out while loading the ChatGPT shared conversation",
+        );
+      }
+      return {};
+    });
+
+    render(<Harness />);
+    act(() => {
+      latestValue.openSettings();
+    });
+
+    await act(async () => {
+      await latestValue.handleImportChatGptShareUrl();
+    });
+
+    expect(latestValue.importError).toBe(
+      "Timed out while loading the ChatGPT shared conversation. Please retry the import in SecondBrain.",
+    );
   });
 });

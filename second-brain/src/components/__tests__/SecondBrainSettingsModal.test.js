@@ -49,6 +49,7 @@ const styles = {
   settingsActionsRow: {},
   settingsSecondaryButton: {},
   settingsSecondaryButtonText: {},
+  settingsLogoutButtonText: {},
   editSaveButton: {},
   buttonText: {},
 };
@@ -69,10 +70,12 @@ describe("SecondBrainSettingsModal", () => {
       telegramCopyStatus: "",
       telegramLinkError: "",
       importingConversations: false,
+      importError: "",
       onOpenImportDialog: jest.fn(),
       onImportChatGptShareUrl: jest.fn(),
       savingSettings: false,
       onSave: jest.fn(),
+      onLogout: jest.fn(),
       ...overrides,
     };
 
@@ -89,6 +92,7 @@ describe("SecondBrainSettingsModal", () => {
     fireEvent.press(getByText("Generate Telegram link key"));
     fireEvent.press(getByText("Import LLM conversations"));
     fireEvent.press(getByText("Import ChatGPT share URL"));
+    fireEvent.press(getByText("Log out"));
     fireEvent.press(getByText("Save"));
     fireEvent.press(getByText("Cancel"));
 
@@ -96,6 +100,7 @@ describe("SecondBrainSettingsModal", () => {
     expect(props.onGenerateTelegramLinkKey).toHaveBeenCalledTimes(1);
     expect(props.onOpenImportDialog).toHaveBeenCalledTimes(1);
     expect(props.onImportChatGptShareUrl).toHaveBeenCalledTimes(1);
+    expect(props.onLogout).toHaveBeenCalledTimes(1);
     expect(props.onSave).toHaveBeenCalledTimes(1);
     expect(props.onRequestClose).toHaveBeenCalledTimes(1);
   });
@@ -106,12 +111,14 @@ describe("SecondBrainSettingsModal", () => {
       telegramLinkKey: "abc123",
       telegramCopyStatus: "Copied",
       telegramLinkError: "Could not generate key",
+      importError: "Please enter a valid ChatGPT share URL.",
     });
 
     expect(getByText("Invalid timezone")).toBeTruthy();
     expect(getByText("abc123")).toBeTruthy();
     expect(getByText("✓ Copied")).toBeTruthy();
     expect(getByText("Could not generate key")).toBeTruthy();
+    expect(getByText("Please enter a valid ChatGPT share URL.")).toBeTruthy();
   });
 
   it("disables save and cancel while settings are saving", () => {

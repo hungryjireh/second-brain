@@ -23,10 +23,12 @@ export default function SecondBrainSettingsModal({
   telegramCopyStatus,
   telegramLinkError,
   importingConversations,
+  importError,
   onOpenImportDialog,
   onImportChatGptShareUrl,
   savingSettings,
   onSave,
+  onLogout,
 }) {
   return (
     <Modal
@@ -151,8 +153,25 @@ export default function SecondBrainSettingsModal({
                     : "Import ChatGPT share URL"}
                 </Text>
               </Pressable>
+              {!!importError && <Text style={styles.error}>{importError}</Text>}
             </View>
             <View style={styles.settingsActionsRow}>
+              <Pressable
+                style={styles.settingsSecondaryButton}
+                onPress={onLogout}
+                disabled={savingSettings}
+                accessibilityRole="button"
+                accessibilityLabel="Log out"
+              >
+                <Text
+                  style={[
+                    styles.settingsSecondaryButtonText,
+                    styles.settingsLogoutButtonText,
+                  ]}
+                >
+                  Log out
+                </Text>
+              </Pressable>
               <Pressable
                 style={styles.settingsSecondaryButton}
                 onPress={onRequestClose}

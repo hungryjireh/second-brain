@@ -55,6 +55,7 @@ const TOKEN_STORAGE_OPTIONS = {
 };
 const CACHE_PREFIX = "apiCache:";
 let authExpiredHandler = null;
+let refreshAccessTokenPromise = null;
 
 function stableSerialize(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -260,28 +261,45 @@ function isNativeMobilePlatform() {
 
 async function refreshAccessToken() {
   if (!isNativeMobilePlatform()) return "";
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) return "";
+  if (refreshAccessTokenPromise) return refreshAccessTokenPromise;
 
-  const response = await fetch(buildApiUrl("/auth/refresh"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  const raw = await response.text();
-  const data = raw ? JSON.parse(raw) : {};
-  if (!response.ok) {
-    return "";
+  refreshAccessTokenPromise = (async () => {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) return "";
+
+    const response = await fetch(buildApiUrl("/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    let data = {};
+    try {
+      const raw = await response.text();
+      data = raw ? JSON.parse(raw) : {};
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok) {
+      return "";
+    }
+
+    const refreshedAccessToken = String(data?.token || "").trim();
+    if (!refreshedAccessToken) return "";
+
+    await setSessionTokens({
+      token: refreshedAccessToken,
+      refreshToken: String(data?.refreshToken || refreshToken),
+    });
+    return refreshedAccessToken;
+  })();
+
+  try {
+    return await refreshAccessTokenPromise;
+  } finally {
+    refreshAccessTokenPromise = null;
   }
-
-  const refreshedAccessToken = String(data?.token || "").trim();
-  if (!refreshedAccessToken) return "";
-
-  await setSessionTokens({
-    token: refreshedAccessToken,
-    refreshToken: String(data?.refreshToken || refreshToken),
-  });
-  return refreshedAccessToken;
 }
 
 export async function invalidateApiCache({
@@ -321,11 +339,16 @@ export async function apiRequest(
   path,
   { method = "GET", body, token, cache, _retryOnAuthFailure = true } = {},
 ) {
+  const requestToken =
+    normalizeAuthToken(token) ||
+    (isNativeMobilePlatform() ? await getToken() : "");
   const normalizedMethod = String(method || "GET").toUpperCase();
   const cacheEnabled = normalizedMethod === "GET" && cache?.enabled !== false;
   const ttlMs = Number.isFinite(cache?.ttlMs) ? Math.max(0, cache.ttlMs) : 0;
   const staleOnError = cache?.staleOnError !== false;
-  const cacheKey = cacheEnabled ? buildCacheKey(path, token, cache?.key) : "";
+  const cacheKey = cacheEnabled
+    ? buildCacheKey(path, requestToken, cache?.key)
+    : "";
   const hasUsableCache = cacheEnabled && ttlMs > 0;
   const bypassCache = cache?.bypass === true;
 
@@ -337,7 +360,7 @@ export async function apiRequest(
   }
 
   const headers = { "Content-Type": "application/json" };
-  const authHeaders = createAuthHeaders(token);
+  const authHeaders = createAuthHeaders(requestToken);
   if (authHeaders?.Authorization)
     headers.Authorization = authHeaders.Authorization;
 

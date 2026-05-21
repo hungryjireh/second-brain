@@ -88,7 +88,11 @@ describe("SecondBrainEntryDetailsScreen", () => {
         _format: "chat_conversation_v1",
         messages: [
           { sender: "human", text: "Please summarize this" },
-          { sender: "assistant", text: "Here is a summary." },
+          {
+            sender: "assistant",
+            text: "Here is a summary.",
+            files: [{ url: "https://example.com/generated-image.png" }],
+          },
         ],
       }),
     };
@@ -101,6 +105,8 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Assistant")).toBeTruthy();
     expect(getByText("Please summarize this")).toBeTruthy();
     expect(getByText("Here is a summary.")).toBeTruthy();
+    expect(getByText("Attachments:")).toBeTruthy();
+    expect(getByText("Attachment 1")).toBeTruthy();
   });
 
   it("renders assistant conversation bubble with bgBase background", () => {

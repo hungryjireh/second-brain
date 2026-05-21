@@ -562,6 +562,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 13,
   },
+  settingsLogoutButtonText: {
+    color: theme.colors.dangerStrong,
+  },
   button: {
     backgroundColor: theme.colors.brand,
     borderRadius: 10,

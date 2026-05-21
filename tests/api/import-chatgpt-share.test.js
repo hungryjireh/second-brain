@@ -208,6 +208,8 @@ test("POST /api/import-chatgpt-share imports a shared conversation URL", async (
 
   const payload = jsonBody(res);
   assert.equal(payload.source_url, shareUrl);
+  assert.equal(Array.isArray(payload.extracted_conversations), true);
+  assert.equal(payload.extracted_conversations.length, 1);
   assert.equal(Array.isArray(payload.created), true);
   assert.equal(payload.created.length, 1);
 });

@@ -130,6 +130,11 @@ export default function App() {
     })();
   }, []);
 
+  async function logout() {
+    await clearToken();
+    setToken(null);
+  }
+
   useEffect(() => {
     setAuthExpiredHandler(async () => {
       await clearToken();
@@ -206,7 +211,13 @@ export default function App() {
                     headerShadowVisible: false,
                   }}
                 >
-                  {(props) => <SecondBrainScreen {...props} token={token} />}
+                  {(props) => (
+                    <SecondBrainScreen
+                      {...props}
+                      token={token}
+                      onLogout={logout}
+                    />
+                  )}
                 </Stack.Screen>
 
                 <Stack.Screen

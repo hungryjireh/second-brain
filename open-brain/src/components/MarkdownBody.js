@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from "react-native";
+import { Linking, ScrollView, Text, View } from "react-native";
 
 function renderInlineMarkdown(text) {
   const source = String(text ?? "");
@@ -19,6 +19,7 @@ function renderInlineMarkdown(text) {
         key: `link-${match.index}`,
         type: "link",
         text: match[2],
+        url: match[3],
       });
     else if (match[4])
       segments.push({
@@ -57,6 +58,14 @@ function renderInlineMarkdown(text) {
 
 function MarkdownText({ text, style, styles }) {
   const segments = renderInlineMarkdown(text);
+  async function handleOpenLink(url) {
+    if (!url) return;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // Ignore URL open failures in renderer.
+    }
+  }
   return (
     <Text style={style}>
       {segments.map((segment) => {
@@ -86,7 +95,12 @@ function MarkdownText({ text, style, styles }) {
           );
         if (segment.type === "link")
           return (
-            <Text key={segment.key} style={styles.markdownLink}>
+            <Text
+              key={segment.key}
+              style={styles.markdownLink}
+              accessibilityRole="link"
+              onPress={() => handleOpenLink(segment.url)}
+            >
               {segment.text}
             </Text>
           );
