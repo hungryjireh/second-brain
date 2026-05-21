@@ -82,6 +82,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const [actionTooltip, setActionTooltip] = useState("");
   const [typebarFocused, setTypebarFocused] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const {
     entries,
     setEntries,
@@ -132,7 +133,12 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     await loadEntries();
   }, [loadEntries]);
   const handlePullToRefresh = useCallback(async () => {
-    await loadEntries({ bypassCache: true });
+    setPullRefreshing(true);
+    try {
+      await loadEntries({ bypassCache: true });
+    } finally {
+      setPullRefreshing(false);
+    }
   }, [loadEntries]);
   const {
     voiceBusy,
@@ -543,6 +549,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
           handleActionDrawerChange={handleActionDrawerChange}
           swipeActionWidth={SWIPE_ACTION_WIDTH}
           closeAnyActionDrawer={closeOpenActionDrawer}
+          pullRefreshing={pullRefreshing}
         />
       </SecondBrainTypebar>
     </View>

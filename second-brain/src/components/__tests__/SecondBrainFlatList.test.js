@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
+import { ActivityIndicator } from "react-native";
 import SecondBrainFlatList from "../SecondBrainFlatList";
 
 jest.mock("../SecondBrainEntryCard", () => {
@@ -148,5 +149,37 @@ describe("SecondBrainFlatList", () => {
 
     fireEvent(getByTestId("second-brain-flat-list"), "refresh");
     expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses custom pull-refresh UI and disables native spinner while pulling", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId, UNSAFE_getAllByType } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          loadingEntries: true,
+          pullRefreshing: true,
+        })}
+      />,
+    );
+
+    const list = getByTestId("second-brain-flat-list");
+    expect(list.props.refreshing).toBe(false);
+    expect(list.props.scrollEnabled).toBe(false);
+    expect(UNSAFE_getAllByType(ActivityIndicator)).toHaveLength(1);
+
+    const hasTopPadding = Array.isArray(list.props.contentContainerStyle)
+      ? list.props.contentContainerStyle.some(
+          (style) => style && style.paddingTop === 100,
+        )
+      : false;
+    expect(hasTopPadding).toBe(true);
   });
 });

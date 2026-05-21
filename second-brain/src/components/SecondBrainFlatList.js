@@ -1,5 +1,11 @@
 import { useCallback } from "react";
-import { FlatList, Platform, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Text,
+  View,
+} from "react-native";
 import { theme } from "../theme";
 import SecondBrainEntryCard from "./SecondBrainEntryCard";
 import SwipeToDeleteRow from "./SwipeToDeleteRow";
@@ -26,6 +32,7 @@ export default function SecondBrainFlatList({
   handleActionDrawerChange,
   swipeActionWidth,
   closeAnyActionDrawer,
+  pullRefreshing = false,
 }) {
   const closeSwipe = useCallback(() => {
     setOpenSwipeId(null);
@@ -104,36 +111,57 @@ export default function SecondBrainFlatList({
   );
 
   return (
-    <FlatList
-      testID="second-brain-flat-list"
-      data={groupedRows}
-      extraData={openActionDrawerId}
-      style={styles.list}
-      contentContainerStyle={[
-        styles.listContent,
-        loadingEntries && groupedRows.length === 0 && styles.listContentEmpty,
-        { paddingBottom: listBottomPadding },
-      ]}
-      keyExtractor={keyExtractor}
-      CellRendererComponent={renderCell}
-      renderItem={renderListItem}
-      ListEmptyComponent={
-        loadingEntries ? (
-          <View style={styles.listEmptyCentered}>
-            <Text style={styles.listEmptyText}>Loading thoughts...</Text>
-          </View>
-        ) : hasActiveFilters ? (
-          <Text style={styles.listEmptyText}>No matching entries</Text>
-        ) : null
-      }
-      initialNumToRender={10}
-      maxToRenderPerBatch={8}
-      updateCellsBatchingPeriod={50}
-      windowSize={9}
-      removeClippedSubviews={false}
-      onScrollBeginDrag={closeOpenActionDrawer}
-      onRefresh={onRefresh}
-      refreshing={loadingEntries}
-    />
+    <View style={{ flex: 1 }}>
+      {pullRefreshing ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 2,
+            alignItems: "center",
+          }}
+        >
+          <ActivityIndicator size="large" color={theme.colors.textSecondary} />
+        </View>
+      ) : null}
+      <View style={{ flex: 1, transform: [{ translateY: pullRefreshing ? -40 : 0 }] }}>
+        <FlatList
+          testID="second-brain-flat-list"
+          data={groupedRows}
+          extraData={openActionDrawerId}
+          style={styles.list}
+          contentContainerStyle={[
+            styles.listContent,
+            loadingEntries && groupedRows.length === 0 && styles.listContentEmpty,
+            pullRefreshing ? { paddingTop: 100 } : null,
+            { paddingBottom: listBottomPadding },
+          ]}
+          keyExtractor={keyExtractor}
+          CellRendererComponent={renderCell}
+          renderItem={renderListItem}
+          ListEmptyComponent={
+            loadingEntries ? (
+              <View style={styles.listEmptyCentered}>
+                <Text style={styles.listEmptyText}>Loading thoughts...</Text>
+              </View>
+            ) : hasActiveFilters ? (
+              <Text style={styles.listEmptyText}>No matching entries</Text>
+            ) : null
+          }
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={50}
+          windowSize={9}
+          removeClippedSubviews={false}
+          onScrollBeginDrag={closeOpenActionDrawer}
+          onRefresh={onRefresh}
+          refreshing={loadingEntries && !pullRefreshing}
+          scrollEnabled={!pullRefreshing}
+        />
+      </View>
+    </View>
   );
 }
