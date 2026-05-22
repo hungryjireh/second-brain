@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  View,
+} from "react-native";
 import styles from "./SecondBrainBrainstormScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import { apiRequest } from "../api";
@@ -249,98 +255,104 @@ export default function SecondBrainBrainstormScreen({
 
   return (
     <SecondBrainEntryPageLayout panelStyle={styles.fullScreenPanel}>
-      <SecondBrainTypebar
-        styles={secondBrainScreenStyles}
-        bottom={10}
-        placeholder="Share your thought, or type /end"
-        draft={draft}
-        onChangeDraft={(value) => {
-          if (busy) return;
-          setDraft(value);
-        }}
-        onSubmitDraft={sendMessage}
-        closeOpenActionDrawer={noop}
-        setTypebarFocused={noop}
-        isSmallScreen={false}
-        inputHeight={inputHeight}
-        setInputHeight={(nextValue) => {
-          setInputHeight((prev) => {
-            const rawNext =
-              typeof nextValue === "function" ? nextValue(prev) : nextValue;
-            const safeNext = Number(rawNext);
-            if (!Number.isFinite(safeNext)) return prev;
-            const clamped = Math.max(
-              COMPOSER_MIN_HEIGHT,
-              Math.min(COMPOSER_MAX_HEIGHT, Math.ceil(safeNext)),
-            );
-            return prev === clamped ? prev : clamped;
-          });
-        }}
-        hideTypebarSideActions
-        actionTooltip=""
-        setActionTooltip={noop}
-        recording={false}
-        isVoiceCaptureActive={false}
-        voiceBusy={busy}
-        voiceStarting={false}
-        loadingTelegramLinkKey={false}
-        startVoiceCapture={noop}
-        stopVoiceCaptureAndSubmit={noop}
-        cancelVoiceCapture={noop}
-        voiceElapsedMs={0}
-        voiceMaxDurationMs={0}
-        openSettings={noop}
-        settingsOpen={false}
-        closeSettings={noop}
-        timezoneDraft=""
-        handleTimezoneChange={noop}
-        timezoneError=""
-        generateTelegramLinkKey={noop}
-        telegramLinkKey=""
-        copyTelegramLinkKey={noop}
-        telegramCopyStatus=""
-        telegramLinkError=""
-        importingConversations={false}
-        importError=""
-        handleOpenImportDialog={noop}
-        handleImportChatGptShareUrl={noop}
-        savingSettings={false}
-        saveSettings={noop}
-        onLogout={noop}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        enabled={Platform.OS !== "web"}
       >
-        <View style={styles.container}>
-          <FlatList
-            style={styles.messagesList}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messagesWrap}
-            renderItem={({ item }) => {
-              const isUser = item.role === "user";
-              return (
-                <View
-                  style={[
-                    styles.messageRow,
-                    isUser ? styles.userRow : styles.assistantRow,
-                  ]}
-                >
+        <SecondBrainTypebar
+          styles={secondBrainScreenStyles}
+          bottom={10}
+          placeholder="Share your thought, or type /end"
+          draft={draft}
+          onChangeDraft={(value) => {
+            if (busy) return;
+            setDraft(value);
+          }}
+          onSubmitDraft={sendMessage}
+          closeOpenActionDrawer={noop}
+          setTypebarFocused={noop}
+          isSmallScreen={false}
+          inputHeight={inputHeight}
+          setInputHeight={(nextValue) => {
+            setInputHeight((prev) => {
+              const rawNext =
+                typeof nextValue === "function" ? nextValue(prev) : nextValue;
+              const safeNext = Number(rawNext);
+              if (!Number.isFinite(safeNext)) return prev;
+              const clamped = Math.max(
+                COMPOSER_MIN_HEIGHT,
+                Math.min(COMPOSER_MAX_HEIGHT, Math.ceil(safeNext)),
+              );
+              return prev === clamped ? prev : clamped;
+            });
+          }}
+          hideTypebarSideActions
+          actionTooltip=""
+          setActionTooltip={noop}
+          recording={false}
+          isVoiceCaptureActive={false}
+          voiceBusy={busy}
+          voiceStarting={false}
+          loadingTelegramLinkKey={false}
+          startVoiceCapture={noop}
+          stopVoiceCaptureAndSubmit={noop}
+          cancelVoiceCapture={noop}
+          voiceElapsedMs={0}
+          voiceMaxDurationMs={0}
+          openSettings={noop}
+          settingsOpen={false}
+          closeSettings={noop}
+          timezoneDraft=""
+          handleTimezoneChange={noop}
+          timezoneError=""
+          generateTelegramLinkKey={noop}
+          telegramLinkKey=""
+          copyTelegramLinkKey={noop}
+          telegramCopyStatus=""
+          telegramLinkError=""
+          importingConversations={false}
+          importError=""
+          handleOpenImportDialog={noop}
+          handleImportChatGptShareUrl={noop}
+          savingSettings={false}
+          saveSettings={noop}
+          onLogout={noop}
+        >
+          <View style={styles.container}>
+            <FlatList
+              style={styles.messagesList}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messagesWrap}
+              renderItem={({ item }) => {
+                const isUser = item.role === "user";
+                return (
                   <View
                     style={[
-                      styles.bubble,
-                      isUser ? styles.userBubble : styles.assistantBubble,
+                      styles.messageRow,
+                      isUser ? styles.userRow : styles.assistantRow,
                     ]}
                   >
-                    <Text style={styles.roleLabel}>
-                      {isUser ? "You" : "Assistant"}
-                    </Text>
-                    <Text style={styles.messageText}>{item.content}</Text>
+                    <View
+                      style={[
+                        styles.bubble,
+                        isUser ? styles.userBubble : styles.assistantBubble,
+                      ]}
+                    >
+                      <Text style={styles.roleLabel}>
+                        {isUser ? "You" : "Assistant"}
+                      </Text>
+                      <Text style={styles.messageText}>{item.content}</Text>
+                    </View>
                   </View>
-                </View>
-              );
-            }}
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
-      </SecondBrainTypebar>
+                );
+              }}
+            />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </View>
+        </SecondBrainTypebar>
+      </KeyboardAvoidingView>
     </SecondBrainEntryPageLayout>
   );
 }
