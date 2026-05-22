@@ -3,10 +3,11 @@ import { act, render, waitFor } from "@testing-library/react-native";
 import { Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useSecondBrainSettings } from "../useSecondBrainSettings";
-import { apiRequest } from "../../api";
+import { apiRequest, getRefreshToken } from "../../api";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
+  getRefreshToken: jest.fn(),
 }));
 
 jest.mock("expo-clipboard", () => ({
@@ -38,6 +39,7 @@ describe("useSecondBrainSettings", () => {
     latestValue = null;
     jest.clearAllMocks();
     apiRequest.mockResolvedValue({});
+    getRefreshToken.mockResolvedValue("refresh-token");
     setCreatingEntries.mockReset();
   });
 
@@ -124,6 +126,14 @@ describe("useSecondBrainSettings", () => {
       await latestValue.generateTelegramLinkKey();
     });
     expect(latestValue.telegramLinkKey).toBe("abc123");
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/telegram/link-key",
+      expect.objectContaining({
+        method: "POST",
+        token,
+        body: { refreshToken: "refresh-token" },
+      }),
+    );
 
     await act(async () => {
       await latestValue.copyTelegramLinkKey();

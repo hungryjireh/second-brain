@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { apiRequest } from "../api";
+import { apiRequest, getRefreshToken } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import { sortEntriesByUpdatedAt } from "../utils/secondBrainEntryUtils";
 
@@ -121,7 +121,12 @@ export function useSecondBrainSettings({
     setTelegramLinkError("");
     setTelegramCopyStatus("");
     try {
-      const data = await apiRequest("/telegram/link-key", { token });
+      const refreshToken = await getRefreshToken();
+      const data = await apiRequest("/telegram/link-key", {
+        method: "POST",
+        token,
+        body: { refreshToken },
+      });
       setTelegramLinkKey(data?.key || "");
     } catch (err) {
       setTelegramLinkError(err.message);

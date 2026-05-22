@@ -5,7 +5,7 @@ async function importFresh(path, tag) {
   return import(`${path}?t=${Date.now()}-${tag}`);
 }
 
-test("telegram link key embeds provided auth token", async () => {
+test("telegram link key embeds durable telegram session token and request auth token", async () => {
   const originalJwtSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = "test-secret";
 
@@ -18,10 +18,84 @@ test("telegram link key embeds provided auth token", async () => {
     const linkKey = createTelegramLinkKey(
       "123e4567-e89b-42d3-a456-426614174000",
       "short-lived-login-token",
+      "durable-refresh-token",
     );
-    const { userId, authToken } = verifyTelegramLinkKey(linkKey);
+    const { userId, authTokenToStore, requestAuthToken } =
+      verifyTelegramLinkKey(linkKey);
     assert.equal(userId, "123e4567-e89b-42d3-a456-426614174000");
-    assert.equal(authToken, "short-lived-login-token");
+    assert.equal(requestAuthToken, "short-lived-login-token");
+    assert.equal(typeof authTokenToStore, "string");
+    assert.notEqual(authTokenToStore, "short-lived-login-token");
+  } finally {
+    process.env.JWT_SECRET = originalJwtSecret;
+  }
+});
+
+test("telegram link key fallback stores bearer token when refresh token is missing", async () => {
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = "test-secret";
+
+  try {
+    const { createTelegramLinkKey, verifyTelegramLinkKey } = await importFresh(
+      "../../lib/auth.js",
+      "telegram-link-fallback-token",
+    );
+
+    const bearerToken = "short-lived-login-token";
+    const linkKey = createTelegramLinkKey(
+      "123e4567-e89b-42d3-a456-426614174000",
+      bearerToken,
+    );
+    const { userId, authTokenToStore, requestAuthToken } =
+      verifyTelegramLinkKey(linkKey);
+    assert.equal(userId, "123e4567-e89b-42d3-a456-426614174000");
+    assert.equal(authTokenToStore, bearerToken);
+    assert.equal(requestAuthToken, bearerToken);
+  } finally {
+    process.env.JWT_SECRET = originalJwtSecret;
+  }
+});
+
+test("telegram session token includes purpose/version/refresh token payload", async () => {
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = "test-secret";
+
+  try {
+    const {
+      createTelegramSessionToken,
+      verifyAuthJwt,
+      TELEGRAM_SESSION_TOKEN_PURPOSE,
+      TELEGRAM_SESSION_VERSION,
+    } = await importFresh("../../lib/auth.js", "telegram-session-payload");
+
+    const sessionToken = createTelegramSessionToken(
+      "123e4567-e89b-42d3-a456-426614174000",
+      "durable-refresh-token",
+    );
+    const payload = verifyAuthJwt(sessionToken);
+    assert.equal(payload?.sub, "123e4567-e89b-42d3-a456-426614174000");
+    assert.equal(payload?.purpose, TELEGRAM_SESSION_TOKEN_PURPOSE);
+    assert.equal(payload?.v, TELEGRAM_SESSION_VERSION);
+    assert.equal(payload?.srt, "durable-refresh-token");
+  } finally {
+    process.env.JWT_SECRET = originalJwtSecret;
+  }
+});
+
+test("createTelegramSessionToken rejects missing refresh token", async () => {
+  const originalJwtSecret = process.env.JWT_SECRET;
+  process.env.JWT_SECRET = "test-secret";
+
+  try {
+    const { createTelegramSessionToken } = await importFresh(
+      "../../lib/auth.js",
+      "telegram-session-missing-refresh",
+    );
+
+    assert.throws(
+      () => createTelegramSessionToken("123e4567-e89b-42d3-a456-426614174000"),
+      /Missing refresh token for Telegram session/,
+    );
   } finally {
     process.env.JWT_SECRET = originalJwtSecret;
   }

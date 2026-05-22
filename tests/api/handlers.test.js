@@ -69,10 +69,14 @@ async function importFresh(path, tag) {
 
 test("POST /api/auth/login returns 400 when identifier/password are missing", async () => {
   const { default: loginHandler } = await importFresh(
-    "../../api/auth/login.js",
+    "../../api/auth/[action].js",
     "login-missing",
   );
-  const req = createReq({ method: "POST", body: {} });
+  const req = createReq({
+    method: "POST",
+    body: {},
+    query: { action: "login" },
+  });
   const res = createRes();
 
   await loginHandler(req, res);
@@ -85,12 +89,13 @@ test("POST /api/auth/login returns 400 when identifier/password are missing", as
 
 test("POST /api/auth/login rejects invalid email/password credentials", async () => {
   const { default: loginHandler } = await importFresh(
-    "../../api/auth/login.js",
+    "../../api/auth/[action].js",
     "login-invalid-email",
   );
   const req = createReq({
     method: "POST",
     body: { email: "nobody@example.com", password: "wrong" },
+    query: { action: "login" },
   });
   const res = createRes();
 
@@ -102,7 +107,7 @@ test("POST /api/auth/login rejects invalid email/password credentials", async ()
 
 test("POST /api/auth/login returns 401 for non-email username when local auth does not match", async () => {
   const { default: loginHandler } = await importFresh(
-    "../../api/auth/login.js",
+    "../../api/auth/[action].js",
     "login-invalid",
   );
   const original = {
@@ -116,6 +121,7 @@ test("POST /api/auth/login returns 401 for non-email username when local auth do
   const req = createReq({
     method: "POST",
     body: { username: "someoneelse", password: "wrong" },
+    query: { action: "login" },
   });
   const res = createRes();
 
@@ -132,21 +138,28 @@ test("POST /api/auth/login returns 401 for non-email username when local auth do
 
 test("auth handlers: OPTIONS returns 204 and unsupported methods return 405", async () => {
   const { default: loginHandler } = await importFresh(
-    "../../api/auth/login.js",
+    "../../api/auth/[action].js",
     "login-methods",
   );
 
   const loginOptionsRes = createRes();
-  await loginHandler(createReq({ method: "OPTIONS" }), loginOptionsRes);
+  await loginHandler(
+    createReq({ method: "OPTIONS", query: { action: "login" } }),
+    loginOptionsRes,
+  );
   assert.equal(loginOptionsRes.statusCode, 204);
 });
 
 test("POST /api/auth/refresh returns 400 when refreshToken is missing", async () => {
   const { default: refreshHandler } = await importFresh(
-    "../../api/auth/refresh.js",
+    "../../api/auth/[action].js",
     "refresh-missing-token",
   );
-  const req = createReq({ method: "POST", body: {} });
+  const req = createReq({
+    method: "POST",
+    body: {},
+    query: { action: "refresh" },
+  });
   const res = createRes();
 
   await refreshHandler(req, res);
@@ -157,18 +170,60 @@ test("POST /api/auth/refresh returns 400 when refreshToken is missing", async ()
 
 test("auth refresh handler: OPTIONS returns 204 and unsupported methods return 405", async () => {
   const { default: refreshHandler } = await importFresh(
-    "../../api/auth/refresh.js",
+    "../../api/auth/[action].js",
     "refresh-methods",
   );
 
   const optionsRes = createRes();
-  await refreshHandler(createReq({ method: "OPTIONS" }), optionsRes);
+  await refreshHandler(
+    createReq({ method: "OPTIONS", query: { action: "refresh" } }),
+    optionsRes,
+  );
   assert.equal(optionsRes.statusCode, 204);
 
   const wrongMethodRes = createRes();
-  await refreshHandler(createReq({ method: "GET" }), wrongMethodRes);
+  await refreshHandler(
+    createReq({ method: "GET", query: { action: "refresh" } }),
+    wrongMethodRes,
+  );
   assert.equal(wrongMethodRes.statusCode, 405);
   assert.deepEqual(jsonBody(wrongMethodRes), { error: "Method not allowed" });
+});
+
+test("POST /api/auth/reset-password returns 400 when email is missing", async () => {
+  const { default: resetPasswordHandler } = await importFresh(
+    "../../api/auth/[action].js",
+    "reset-password-missing-email",
+  );
+  const req = createReq({
+    method: "POST",
+    body: {},
+    query: { action: "reset-password" },
+  });
+  const res = createRes();
+
+  await resetPasswordHandler(req, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(jsonBody(res), { error: "email is required" });
+});
+
+test("auth action handler returns 404 for unknown action", async () => {
+  const { default: authActionHandler } = await importFresh(
+    "../../api/auth/[action].js",
+    "auth-unknown-action",
+  );
+  const req = createReq({
+    method: "POST",
+    body: {},
+    query: { action: "unknown-action" },
+  });
+  const res = createRes();
+
+  await authActionHandler(req, res);
+
+  assert.equal(res.statusCode, 404);
+  assert.deepEqual(jsonBody(res), { error: "Not found" });
 });
 
 test("settings handler: OPTIONS preflight and bearer token guard", async () => {
@@ -224,11 +279,86 @@ test("telegram link key handler: OPTIONS, bearer token guard, and method check",
   assert.equal(noBearerRes.statusCode, 401);
   assert.deepEqual(jsonBody(noBearerRes), { error: "missing bearer token" });
 
-  const wrongMethodReq = createReq({ method: "POST" });
+  const wrongMethodReq = createReq({ method: "PUT" });
   const wrongMethodRes = createRes();
   await telegramLinkKeyHandler(wrongMethodReq, wrongMethodRes);
   assert.equal(wrongMethodRes.statusCode, 405);
   assert.deepEqual(jsonBody(wrongMethodRes), { error: "Method not allowed" });
+});
+
+test("telegram link key handler: POST embeds durable telegram session token when refresh token is provided", async () => {
+  const { default: telegramLinkKeyHandler } = await importFresh(
+    "../../api/telegram/link-key.js",
+    "telegram-post-durable-link",
+  );
+  const {
+    verifyTelegramLinkKey,
+    verifyAuthJwt,
+    TELEGRAM_SESSION_TOKEN_PURPOSE,
+  } = await importFresh("../../lib/auth.js", "telegram-post-durable-link-auth");
+
+  const userId = "123e4567-e89b-42d3-a456-426614174000";
+  const bearer = createTestJwt({ sub: userId });
+  const req = createReq({
+    method: "POST",
+    headers: { authorization: `Bearer ${bearer}` },
+    body: { refreshToken: "refresh-token-xyz" },
+  });
+  const res = createRes();
+
+  await telegramLinkKeyHandler(req, res);
+
+  assert.equal(res.statusCode, 200);
+  const key = String(jsonBody(res)?.key || "");
+  assert.ok(key);
+
+  const {
+    userId: linkedUserId,
+    authTokenToStore,
+    requestAuthToken,
+  } = verifyTelegramLinkKey(key);
+  assert.equal(linkedUserId, userId);
+  assert.equal(requestAuthToken, bearer);
+  assert.notEqual(authTokenToStore, bearer);
+
+  const storedPayload = verifyAuthJwt(authTokenToStore);
+  assert.equal(storedPayload?.purpose, TELEGRAM_SESSION_TOKEN_PURPOSE);
+  assert.equal(storedPayload?.sub, userId);
+  assert.equal(storedPayload?.srt, "refresh-token-xyz");
+});
+
+test("telegram link key handler: GET keeps backward-compatible fallback token payload", async () => {
+  const { default: telegramLinkKeyHandler } = await importFresh(
+    "../../api/telegram/link-key.js",
+    "telegram-get-fallback-link",
+  );
+  const { verifyTelegramLinkKey } = await importFresh(
+    "../../lib/auth.js",
+    "telegram-get-fallback-link-auth",
+  );
+
+  const userId = "123e4567-e89b-42d3-a456-426614174000";
+  const bearer = createTestJwt({ sub: userId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${bearer}` },
+  });
+  const res = createRes();
+
+  await telegramLinkKeyHandler(req, res);
+
+  assert.equal(res.statusCode, 200);
+  const key = String(jsonBody(res)?.key || "");
+  assert.ok(key);
+
+  const {
+    userId: linkedUserId,
+    authTokenToStore,
+    requestAuthToken,
+  } = verifyTelegramLinkKey(key);
+  assert.equal(linkedUserId, userId);
+  assert.equal(authTokenToStore, bearer);
+  assert.equal(requestAuthToken, bearer);
 });
 
 test("entries handler: OPTIONS preflight and bearer token guard", async () => {
@@ -333,6 +463,20 @@ test("bot handler enforces and communicates 120-second voice note limit", () => 
   assert.match(
     botSource,
     /voice note \(max \$\{MAX_VOICE_NOTE_DURATION_SECONDS\} seconds\) or text/,
+  );
+});
+
+test("bot handler persists rotated telegram refresh token after session refresh", () => {
+  const botSource = fs.readFileSync(
+    new URL("../../api/bot.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(botSource, /createTelegramSessionToken/);
+  assert.match(botSource, /session\?\.refresh_token/);
+  assert.match(
+    botSource,
+    /setTelegramChatIdForUser[\s\S]*nextSessionToken[\s\S]*refreshedAccessToken/,
   );
 });
 

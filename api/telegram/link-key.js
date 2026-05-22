@@ -8,7 +8,7 @@ import { json } from "../../lib/open-brain/helpers.js";
 
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "GET")
+  if (req.method !== "GET" && req.method !== "POST")
     return json(res, 405, { error: "Method not allowed" });
 
   const token = getBearerToken(req);
@@ -27,6 +27,8 @@ export default async function handler(req, res) {
       error: "invalid auth token payload: expected UUID user id",
     });
 
-  const key = createTelegramLinkKey(userId, token);
+  const refreshToken =
+    req.method === "POST" ? String(req.body?.refreshToken || "") : "";
+  const key = createTelegramLinkKey(userId, token, refreshToken);
   return json(res, 200, { key });
 }

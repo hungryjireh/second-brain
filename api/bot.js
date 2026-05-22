@@ -3,6 +3,8 @@ import {
   setTelegramChatIdForUser,
 } from "../lib/db.js";
 import {
+  createTelegramSessionToken,
+  refreshSupabaseSession,
   TELEGRAM_SESSION_TOKEN_PURPOSE,
   verifyTelegramLinkKey,
 } from "../lib/auth.js";
@@ -46,8 +48,14 @@ async function processText(rawText, chatId, userId, authToken) {
 }
 
 async function linkTelegramChatToUser(chatId, linkKey) {
-  const { userId, authToken } = verifyTelegramLinkKey(linkKey);
-  await setTelegramChatIdForUser(userId, chatId, authToken);
+  const { userId, authTokenToStore, requestAuthToken } =
+    verifyTelegramLinkKey(linkKey);
+  await setTelegramChatIdForUser(
+    userId,
+    chatId,
+    authTokenToStore,
+    requestAuthToken,
+  );
   return userId;
 }
 
@@ -71,7 +79,54 @@ function maybeReadJwtPayloadWithoutVerifying(token) {
 
 function isLegacyLocalTelegramSessionToken(token) {
   const payload = maybeReadJwtPayloadWithoutVerifying(token);
-  return payload?.purpose === TELEGRAM_SESSION_TOKEN_PURPOSE && !payload?.exp;
+  if (payload?.purpose !== TELEGRAM_SESSION_TOKEN_PURPOSE) return false;
+  const hasRefreshToken = typeof payload?.srt === "string" && payload.srt;
+  const hasVersion = Number.isInteger(payload?.v);
+  return !payload?.exp && !hasRefreshToken && !hasVersion;
+}
+
+async function resolveBotAuthToken({ chatId, userId, storedToken }) {
+  const payload = maybeReadJwtPayloadWithoutVerifying(storedToken);
+  if (payload?.purpose !== TELEGRAM_SESSION_TOKEN_PURPOSE) {
+    return String(storedToken || "").trim();
+  }
+
+  const refreshToken = String(payload?.srt || "").trim();
+  if (!refreshToken) {
+    throw new Error("missing refresh token for telegram session");
+  }
+
+  const session = await refreshSupabaseSession({ refreshToken });
+  const refreshedAccessToken = String(session?.access_token || "").trim();
+  if (!refreshedAccessToken) {
+    throw new Error("Supabase session did not return an access token");
+  }
+
+  const nextRefreshToken = String(
+    session?.refresh_token || refreshToken,
+  ).trim();
+  if (nextRefreshToken && nextRefreshToken !== refreshToken) {
+    const nextSessionToken = createTelegramSessionToken(
+      userId,
+      nextRefreshToken,
+    );
+    try {
+      await setTelegramChatIdForUser(
+        userId,
+        chatId,
+        nextSessionToken,
+        refreshedAccessToken,
+      );
+    } catch (err) {
+      console.warn("[bot webhook] failed to persist rotated refresh token", {
+        userId,
+        chatId: String(chatId),
+        error: err?.message || "unknown error",
+      });
+    }
+  }
+
+  return refreshedAccessToken;
 }
 
 export default async function handler(req, res) {
@@ -122,6 +177,12 @@ export default async function handler(req, res) {
       return res.status(200).end();
     }
 
+    const authToken = await resolveBotAuthToken({
+      chatId,
+      userId: linkedUser.userId,
+      storedToken: linkedUser.authToken,
+    });
+
     if (text?.startsWith("/start")) {
       await sendMessage(
         `👋 *Second Brain* is ready.\n\nSend me a voice note (max ${MAX_VOICE_NOTE_DURATION_SECONDS} seconds) or text and I'll classify and store it.\n\n• ⏰ Reminders\n• ✅ TODOs\n• 💡 Thoughts\n• 📝 Notes\n\nNeed to relink? Use /link <your-key>.`,
@@ -129,7 +190,7 @@ export default async function handler(req, res) {
       );
     } else if (text) {
       await notifyTyping(chatId);
-      await processText(text, chatId, linkedUser.userId, linkedUser.authToken);
+      await processText(text, chatId, linkedUser.userId, authToken);
     } else if (msg.voice) {
       if ((msg.voice.duration || 0) < MIN_VOICE_NOTE_DURATION_SECONDS) {
         await sendMessage(
@@ -157,12 +218,7 @@ export default async function handler(req, res) {
         );
       } else {
         await sendMessage(`🎙️ _Transcribed: "${rawText}"_`, chatId);
-        await processText(
-          rawText,
-          chatId,
-          linkedUser.userId,
-          linkedUser.authToken,
-        );
+        await processText(rawText, chatId, linkedUser.userId, authToken);
       }
     }
   } catch (err) {
