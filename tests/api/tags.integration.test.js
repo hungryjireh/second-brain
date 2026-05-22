@@ -19,6 +19,7 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
   const tagsTable = [];
   const entryTagsTable = [];
   let nextTagId = 1;
+  let createdEntryBody = null;
 
   function jsonResponse(status, body) {
     return {
@@ -38,6 +39,7 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
 
     if (path === "/rest/v1/entries" && method === "POST") {
       const row = body?.[0] ?? {};
+      createdEntryBody = row;
       return jsonResponse(201, [
         {
           id: 42,
@@ -46,6 +48,7 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
           category: row.category,
           title: row.title,
           summary: row.summary,
+          content: row.content,
           remind_at: row.remind_at,
           priority: row.priority,
           is_archived: row.is_archived,
@@ -188,6 +191,7 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
       category: "todo",
       title: "Follow up with Alice",
       summary: "Follow up about quarterly planning",
+      content: "Follow up with Alice about quarterly planning details",
       tags: ["Work", "planning", "work"],
       authToken: "token",
     });
@@ -200,6 +204,83 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
 
     assert.equal(entryTagsTable.length, 2);
     assert.ok(entryTagsTable.every((row) => row.entry_id === 42));
+    assert.equal(
+      createdEntryBody?.content,
+      "Follow up with Alice about quarterly planning details",
+    );
+  } finally {
+    global.fetch = originalFetch;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  }
+});
+
+test("insertEntry falls back to summary when content is omitted", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+
+  let createdEntryBody = null;
+
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      async text() {
+        return body === null ? "" : JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input, options = {}) => {
+    const method = options.method || "GET";
+    const url = new URL(String(input));
+    const path = url.pathname;
+    const body = options.body ? JSON.parse(options.body) : undefined;
+
+    if (path === "/rest/v1/entries" && method === "POST") {
+      const row = body?.[0] ?? {};
+      createdEntryBody = row;
+      return jsonResponse(201, [{ id: 9, ...row }]);
+    }
+
+    if (path === "/rest/v1/entry_tags" && method === "DELETE") {
+      return jsonResponse(204, null);
+    }
+
+    if (path === "/rest/v1/entry_tags" && method === "GET") {
+      return jsonResponse(200, []);
+    }
+
+    if (path === "/rest/v1/tags" && method === "DELETE") {
+      return jsonResponse(204, null);
+    }
+
+    throw new Error(`Unhandled fetch: ${method} ${path}`);
+  };
+
+  try {
+    const { insertEntry } = await importFresh(
+      "../../lib/db.js",
+      "insert-entry-content-fallback",
+    );
+    await insertEntry({
+      userId: "11111111-1111-4111-8111-111111111111",
+      raw_text: "Draft note",
+      category: "note",
+      title: "Draft note",
+      summary: "Summary fallback content",
+      authToken: "token",
+    });
+
+    assert.equal(createdEntryBody?.content, "Summary fallback content");
   } finally {
     global.fetch = originalFetch;
     process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;

@@ -139,16 +139,23 @@ export function useSecondBrainEntries({ token, onError }) {
       setLoadingEntries(true);
       try {
         onError("");
-        setOfflineMode(false);
         await flushOfflineQueue();
         const [data, tagsData] = await Promise.all([
           apiRequest("/entries?limit=60", {
             token,
-            cache: { ttlMs: CACHE_TTL_MS.FEED, bypass: bypassCache },
+            cache: {
+              ttlMs: CACHE_TTL_MS.FEED,
+              bypass: bypassCache,
+              staleOnError: !bypassCache,
+            },
           }),
           apiRequest("/tags", {
             token,
-            cache: { ttlMs: CACHE_TTL_MS.SETTINGS, bypass: bypassCache },
+            cache: {
+              ttlMs: CACHE_TTL_MS.SETTINGS,
+              bypass: bypassCache,
+              staleOnError: !bypassCache,
+            },
           }),
         ]);
         const list = Array.isArray(data.entries)
@@ -173,6 +180,7 @@ export function useSecondBrainEntries({ token, onError }) {
         setOfflineMode(false);
       } catch (err) {
         if (isLikelyOfflineError(err)) {
+          setOfflineMode(true);
           const snapshot = await readOfflineState();
           if (Array.isArray(snapshot?.entries) && snapshot.entries.length > 0) {
             setEntries(sortEntriesByUpdatedAt(snapshot.entries));
@@ -187,6 +195,8 @@ export function useSecondBrainEntries({ token, onError }) {
             onError("Offline mode: showing saved entries.");
             return;
           }
+          onError("Offline mode: unable to load saved entries.");
+          return;
         }
         onError(err.message);
       } finally {
@@ -206,7 +216,6 @@ export function useSecondBrainEntries({ token, onError }) {
     async (entry) => {
       setBusyId(entry.id);
       try {
-        setOfflineMode(false);
         const updated = await apiRequest(`/entries?id=${entry.id}`, {
           method: "PATCH",
           token,
@@ -218,6 +227,7 @@ export function useSecondBrainEntries({ token, onError }) {
         const sortedEntries = sortEntriesByUpdatedAt(nextEntries);
         setEntries(sortedEntries);
         await persistCurrentOfflineState(sortedEntries, userTags);
+        setOfflineMode(false);
       } catch (err) {
         if (isLikelyOfflineError(err)) {
           const nextEntries = entries.map((item) =>
@@ -259,11 +269,11 @@ export function useSecondBrainEntries({ token, onError }) {
     async (entryId) => {
       setBusyId(entryId);
       try {
-        setOfflineMode(false);
         await apiRequest(`/entries?id=${entryId}`, { method: "DELETE", token });
         const nextEntries = entries.filter((item) => item.id !== entryId);
         setEntries(nextEntries);
         await persistCurrentOfflineState(nextEntries, userTags);
+        setOfflineMode(false);
       } catch (err) {
         if (isLikelyOfflineError(err)) {
           const nextEntries = entries.filter((item) => item.id !== entryId);

@@ -153,6 +153,74 @@ describe("SecondBrainScreen", () => {
     expect(entryLoadCalls).toHaveLength(1);
   });
 
+  it("routes /brainstorm input to brainstorm screen", async () => {
+    const navigate = jest.fn();
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    fireEvent.changeText(
+      getByPlaceholderText("Type a note, reminder or thought..."),
+      "/brainstorm",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstorm");
+    });
+  });
+
+  it("does not route /brainstorm input while offline", async () => {
+    const navigate = jest.fn();
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByPlaceholderText, getByLabelText, getByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    await waitFor(() => expect(getByText("Offline mode")).toBeTruthy());
+    fireEvent.changeText(
+      getByPlaceholderText("Type a note, reminder or thought..."),
+      "/brainstorm",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    expect(navigate).not.toHaveBeenCalledWith("SecondBrainBrainstorm");
+    expect(getByText("Brainstorm is unavailable while offline.")).toBeTruthy();
+  });
+
   it("shows centered loading thoughts state while entries are being fetched", async () => {
     let resolveEntries;
     let resolveTags;
@@ -688,6 +756,16 @@ describe("SecondBrainScreen", () => {
     expect(source).toContain("setFilterDropdownOpenedAtMs,");
     expect(source).toContain("clearFilters,");
     expect(source).toContain("creatingEntries,");
+    expect(source).toContain("offlineBanner:");
+    expect(source).toContain("errorBanner:");
+  });
+
+  it("forces bypass-cache reload for initial and voice-triggered refreshes", () => {
+    const screenPath = path.resolve(__dirname, "../SecondBrainScreen.js");
+    const source = fs.readFileSync(screenPath, "utf8");
+
+    expect(source).toContain("await loadEntries({ bypassCache: true });");
+    expect(source).toContain("loadEntries({ bypassCache: true });");
   });
 
   it("delegates list row rendering to SecondBrainFlatList", () => {

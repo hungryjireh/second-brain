@@ -221,7 +221,9 @@ describe("SecondBrainFlatList", () => {
   });
 
   it("sets FlatList virtualization props for performance tuning", () => {
-    const { getByTestId } = render(<SecondBrainFlatList {...createBaseProps()} />);
+    const { getByTestId } = render(
+      <SecondBrainFlatList {...createBaseProps()} />,
+    );
     const list = getByTestId("second-brain-flat-list");
 
     expect(list.props.initialNumToRender).toBe(10);
@@ -243,7 +245,9 @@ describe("SecondBrainFlatList", () => {
         displayRemindAt: "09:30",
       },
     ];
-    const { rerender } = render(<SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />);
+    const { rerender } = render(
+      <SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />,
+    );
 
     expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
 
@@ -256,7 +260,9 @@ describe("SecondBrainFlatList", () => {
         displayRemindAt: "09:30",
       },
     ];
-    rerender(<SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />);
+    rerender(
+      <SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />,
+    );
 
     expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
   });
@@ -273,7 +279,9 @@ describe("SecondBrainFlatList", () => {
         displayRemindAt: "09:30",
       },
     ];
-    const { rerender } = render(<SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />);
+    const { rerender } = render(
+      <SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />,
+    );
 
     expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
 
@@ -286,7 +294,9 @@ describe("SecondBrainFlatList", () => {
         displayRemindAt: "09:30",
       },
     ];
-    rerender(<SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />);
+    rerender(
+      <SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />,
+    );
 
     expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(2);
   });

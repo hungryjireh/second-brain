@@ -57,5 +57,8 @@ export const theme = {
     dangerStrong: "#f87171",
     dangerBg: "rgba(220,60,60,0.1)",
     dangerBorder: "rgba(220,60,60,0.28)",
+    conversationBubbleHumanBg: "rgba(29,158,117,0.18)",
+    conversationBubbleHumanBorder: "rgba(29,158,117,0.38)",
+    conversationBubbleAssistantBorder: "rgba(255,255,255,0.07)",
   },
 };

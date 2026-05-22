@@ -319,6 +319,7 @@ export default async function handler(req, res) {
         category: finalCategory,
         title: compactWhitespace(title) || derived.title,
         summary: compactWhitespace(summary) || derived.summary,
+        content: compactWhitespace(content) || derived.raw_text,
         remind_at,
         priority: parsedPriority,
         tags: finalTags,
@@ -378,6 +379,7 @@ export default async function handler(req, res) {
         return json(res, 400, { error: "description is required" });
       const derived = deriveEntryFields(nextDescriptionSource.trim());
       updates.raw_text = derived.raw_text;
+      updates.content = derived.raw_text;
       updates.title = derived.title;
       updates.summary = derived.summary;
     }

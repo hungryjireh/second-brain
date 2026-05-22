@@ -118,7 +118,9 @@ describe("SecondBrainSettingsModal", () => {
     expect(getByText("abc123")).toBeTruthy();
     expect(getByText("✓ Copied")).toBeTruthy();
     expect(getByText("Could not generate key")).toBeTruthy();
-    expect(getByText("Please enter a valid ChatGPT or Claude share URL.")).toBeTruthy();
+    expect(
+      getByText("Please enter a valid ChatGPT or Claude share URL."),
+    ).toBeTruthy();
   });
 
   it("disables save and cancel while settings are saving", () => {

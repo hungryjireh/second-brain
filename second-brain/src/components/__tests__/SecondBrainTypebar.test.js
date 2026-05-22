@@ -48,6 +48,7 @@ describe("SecondBrainTypebar", () => {
       voiceBusy: false,
       voiceStarting: false,
       loadingTelegramLinkKey: false,
+      offlineMode: false,
       startVoiceCapture: jest.fn(),
       stopVoiceCaptureAndSubmit: jest.fn(),
       cancelVoiceCapture: jest.fn(),
@@ -129,6 +130,18 @@ describe("SecondBrainTypebar", () => {
     expect(queryByLabelText("Record voice note")).toBeNull();
     expect(queryByLabelText("Open settings")).toBeNull();
     expect(getByLabelText("Enter note")).toBeTruthy();
+  });
+
+  it("disables settings button while offline", () => {
+    const { getByLabelText, props, queryByText } = renderTypebar({
+      offlineMode: true,
+    });
+
+    const settingsButton = getByLabelText("Open settings");
+    fireEvent.press(settingsButton);
+
+    expect(props.openSettings).not.toHaveBeenCalled();
+    expect(queryByText("Open settings")).toBeNull();
   });
 
   it("renders voice capture overlay when voice capture is active", () => {

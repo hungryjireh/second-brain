@@ -130,7 +130,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     [setEntries],
   );
   const handleVoiceReloadEntries = useCallback(async () => {
-    await loadEntries();
+    await loadEntries({ bypassCache: true });
   }, [loadEntries]);
   const handlePullToRefresh = useCallback(async () => {
     setPullRefreshing(true);
@@ -173,7 +173,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const isVoiceCaptureActive = recording || voiceStarting;
 
   useEffect(() => {
-    loadEntries();
+    loadEntries({ bypassCache: true });
   }, [token]);
   useEffect(() => {
     if (!navigation?.addListener) return undefined;
@@ -221,6 +221,16 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   async function createEntry() {
     const description = draft.trim();
     if (!description) return;
+    if (description === "/brainstorm") {
+      if (isNativeOfflineMode) {
+        setError("Brainstorm is unavailable while offline.");
+        return;
+      }
+      setDraft("");
+      setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
+      navigation.navigate("SecondBrainBrainstorm");
+      return;
+    }
     const creatingId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const creatingTitle = formatCreatingTitle(description);
     setCreatingEntries((prev) => [
@@ -453,6 +463,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     voiceBusy,
     voiceStarting,
     loadingTelegramLinkKey,
+    offlineMode: isNativeOfflineMode,
     startVoiceCapture,
     stopVoiceCaptureAndSubmit,
     cancelVoiceCapture,
@@ -498,6 +509,19 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     searchQuery,
     setSearchQuery,
     creatingEntries,
+    offlineBanner: isNativeOfflineMode ? (
+      <View style={styles.offlineBannerWrap}>
+        <SecondBrainOfflineBanner
+          styles={styles}
+          offlineQueueSize={offlineQueueSize}
+        />
+      </View>
+    ) : null,
+    errorBanner: error ? (
+      <Text style={styles.error}>{error}</Text>
+    ) : importError ? (
+      <Text style={styles.error}>{importError}</Text>
+    ) : null,
   };
 
   return (
@@ -513,19 +537,8 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
         />
 
         <View>
-          {isNativeOfflineMode ? (
-            <SecondBrainOfflineBanner
-              styles={styles}
-              offlineQueueSize={offlineQueueSize}
-            />
-          ) : null}
           <SecondBrainFilterDropdown {...filterDropdownProps} />
         </View>
-
-        {!!error && <Text style={styles.error}>{error}</Text>}
-        {!error && !!importError && (
-          <Text style={styles.error}>{importError}</Text>
-        )}
 
         <SecondBrainFlatList
           groupedRows={groupedRows}

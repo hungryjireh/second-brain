@@ -29,6 +29,7 @@ const styles = {
   pillTextActive: {},
   pillTextDisabled: {},
   filterSearchInput: {},
+  filterStatusStackItem: {},
   creatingStatusList: {},
   creatingStatusText: {},
   filterDropdownDismissOverlay: {},
@@ -57,6 +58,8 @@ describe("SecondBrainFilterDropdown", () => {
       searchQuery: "",
       setSearchQuery: jest.fn(),
       creatingEntries: [],
+      offlineBanner: null,
+      errorBanner: null,
       ...overrides,
     };
 
@@ -168,5 +171,20 @@ describe("SecondBrainFilterDropdown", () => {
     const openRootStyle = UNSAFE_getAllByType(View)[0].props.style;
     expect(openRootStyle).toContain(styles.filterSection);
     expect(openRootStyle).toContain(styles.filterSectionOpen);
+  });
+
+  it("renders offline and error banners in status stack slots below search", () => {
+    const offlineNode = <View testID="offline-slot" />;
+    const errorNode = <View testID="error-slot" />;
+    const { getByTestId, UNSAFE_getAllByProps } = renderDropdown({
+      offlineBanner: offlineNode,
+      errorBanner: errorNode,
+    });
+
+    expect(getByTestId("offline-slot")).toBeTruthy();
+    expect(getByTestId("error-slot")).toBeTruthy();
+    expect(
+      UNSAFE_getAllByProps({ style: styles.filterStatusStackItem }).length,
+    ).toBeGreaterThanOrEqual(2);
   });
 });

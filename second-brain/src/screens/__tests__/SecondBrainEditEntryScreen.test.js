@@ -64,10 +64,7 @@ describe("SecondBrainEditEntryScreen", () => {
         expect.objectContaining({ method: "PATCH" }),
       );
     });
-    expect(apiRequest).not.toHaveBeenCalledWith(
-      "/tags",
-      expect.anything(),
-    );
+    expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
     expect(navigate).toHaveBeenCalledWith(
       "SecondBrainEntryDetails",
       expect.objectContaining({
@@ -153,10 +150,7 @@ describe("SecondBrainEditEntryScreen", () => {
       "/entries?id=42",
       expect.objectContaining({ method: "PATCH" }),
     );
-    expect(apiRequest).not.toHaveBeenCalledWith(
-      "/tags",
-      expect.anything(),
-    );
+    expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
     expect(goBack).not.toHaveBeenCalled();
   });
 
@@ -168,10 +162,7 @@ describe("SecondBrainEditEntryScreen", () => {
       />,
     );
 
-    expect(apiRequest).not.toHaveBeenCalledWith(
-      "/tags",
-      expect.anything(),
-    );
+    expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
   });
 
   it("disables description input and renders markdown preview when toggle is enabled", async () => {

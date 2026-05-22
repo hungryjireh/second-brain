@@ -221,4 +221,45 @@ describe("native auth refresh", () => {
     );
     expect(refreshCalls).toHaveLength(1);
   });
+
+  it("prefers latest stored native token over stale passed token", async () => {
+    const { apiRequest, secureStore } = loadApiWith({});
+    secureStore.getItemAsync.mockImplementation(async (key) => {
+      if (key === "authToken") return "fresh-native-token";
+      return null;
+    });
+
+    const fetchMock = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true }),
+    });
+    global.fetch = fetchMock;
+
+    await apiRequest("/entries", { token: "stale-prop-token" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
+      "Bearer fresh-native-token",
+    );
+  });
+
+  it("falls back to passed token when stored native token is unavailable", async () => {
+    const { apiRequest, secureStore } = loadApiWith({});
+    secureStore.getItemAsync.mockResolvedValue(null);
+
+    const fetchMock = jest.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true }),
+    });
+    global.fetch = fetchMock;
+
+    await apiRequest("/entries", { token: "passed-token" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe(
+      "Bearer passed-token",
+    );
+  });
 });

@@ -79,6 +79,16 @@ alter table public.settings
 
 commit;
 
+-- ===== backfill_entries_content_from_summary.sql =====
+begin;
+
+update public.entries
+set content = summary
+where content is null
+  and summary is not null;
+
+commit;
+
 -- ===== add_entries_updated_at.sql =====
 begin;
 

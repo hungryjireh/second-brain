@@ -278,7 +278,7 @@ async function refreshAccessToken() {
       const raw = await response.text();
       data = raw ? JSON.parse(raw) : {};
     } catch {
-      data = {};
+      // Keep default empty object when response body is not JSON.
     }
 
     if (!response.ok) {
@@ -339,9 +339,9 @@ export async function apiRequest(
   path,
   { method = "GET", body, token, cache, _retryOnAuthFailure = true } = {},
 ) {
+  const storedNativeToken = isNativeMobilePlatform() ? await getToken() : "";
   const requestToken =
-    normalizeAuthToken(token) ||
-    (isNativeMobilePlatform() ? await getToken() : "");
+    normalizeAuthToken(storedNativeToken) || normalizeAuthToken(token);
   const normalizedMethod = String(method || "GET").toUpperCase();
   const cacheEnabled = normalizedMethod === "GET" && cache?.enabled !== false;
   const ttlMs = Number.isFinite(cache?.ttlMs) ? Math.max(0, cache.ttlMs) : 0;

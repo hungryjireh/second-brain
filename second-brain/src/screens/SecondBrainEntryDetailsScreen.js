@@ -132,7 +132,8 @@ export default function SecondBrainEntryDetailsScreen({
   const categoryTag =
     CATEGORY_TAG_STYLES[entry?.category] ?? CATEGORY_TAG_STYLES.note;
   const title = entry?.title || entry?.content || "Untitled";
-  const summary = entry?.summary || entry?.content || "";
+  const summary =
+    entry?.content === null ? entry?.summary || "" : entry?.content || "";
   const body = entry?.description || entry?.raw_text || entry?.content || "";
   const createdLabel = formatEntryTimestamp(entry?.created_at);
   const updatedLabel = formatEntryTimestamp(entry?.updated_at);
@@ -215,6 +216,11 @@ export default function SecondBrainEntryDetailsScreen({
       return;
     }
     navigation?.navigate?.("SecondBrainEditEntry", { entryId, entry });
+  }
+
+  function handleContinueBrainstorming() {
+    closeActionDrawer();
+    navigation?.navigate?.("SecondBrainBrainstorm", { seedEntry: entry });
   }
 
   async function handleToggleArchive() {
@@ -309,6 +315,15 @@ export default function SecondBrainEntryDetailsScreen({
             </Pressable>
             <Pressable
               style={styles.secondaryButton}
+              onPress={handleContinueBrainstorming}
+              disabled={isBusy}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Continue Brainstorming
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButton}
               onPress={handleDeleteEntry}
               disabled={isBusy}
             >
@@ -357,6 +372,15 @@ export default function SecondBrainEntryDetailsScreen({
                   disabled={isBusy}
                 >
                   <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={handleContinueBrainstorming}
+                  disabled={isBusy}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    Continue Brainstorming
+                  </Text>
                 </Pressable>
                 <Pressable
                   style={styles.secondaryButton}
@@ -457,10 +481,7 @@ export default function SecondBrainEntryDetailsScreen({
                         styles.conversationBubble,
                         fromHuman
                           ? styles.conversationBubbleHuman
-                          : [
-                              styles.conversationBubbleAssistant,
-                              { backgroundColor: theme.colors.bgBase },
-                            ],
+                          : styles.conversationBubbleAssistant,
                       ]}
                     >
                       <Text style={styles.conversationSender}>

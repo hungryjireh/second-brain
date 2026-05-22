@@ -70,9 +70,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statsGridSmall: { flexWrap: "nowrap", gap: 4 },
-  filterSection: { marginBottom: 10 },
+  filterSection: { marginBottom: 10, position: "relative", zIndex: 1 },
   filterSectionOpen: {
-    zIndex: 7,
+    zIndex: 2,
   },
   filterDropdownDismissOverlay: {
     position: "absolute",
@@ -89,8 +89,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 8,
     gap: 2,
+  },
+  offlineBannerWrap: {
+    position: "relative",
+    zIndex: 3,
+    elevation: 8,
   },
   offlineBannerTitle: {
     color: theme.colors.brandText,
@@ -196,6 +200,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 13,
     zIndex: 2,
+  },
+  filterStatusStackItem: {
+    marginTop: 8,
   },
   creatingStatusList: {
     marginTop: 6,
@@ -865,12 +872,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   conversationBubbleHuman: {
-    backgroundColor: "rgba(29,158,117,0.18)",
-    borderColor: "rgba(29,158,117,0.38)",
+    backgroundColor: theme.colors.conversationBubbleHumanBg,
+    borderColor: theme.colors.conversationBubbleHumanBorder,
   },
   conversationBubbleAssistant: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgBase,
+    borderColor: theme.colors.conversationBubbleAssistantBorder,
   },
   conversationSender: {
     color: theme.colors.textMuted,
@@ -1015,7 +1022,7 @@ const styles = StyleSheet.create({
   itemTagText: { color: theme.colors.brandText, fontSize: 11, lineHeight: 14 },
   error: {
     ...commonStatusStyles.errorBanner,
-    marginVertical: 6,
+    marginVertical: 0,
   },
   editPanel: {
     width: "100%",

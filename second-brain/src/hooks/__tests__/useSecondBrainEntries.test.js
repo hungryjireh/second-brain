@@ -115,6 +115,34 @@ describe("useSecondBrainEntries", () => {
     });
   });
 
+  it("keeps offline mode enabled when offline and no cached entries exist", async () => {
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network down");
+    });
+    isLikelyOfflineError.mockReturnValue(true);
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries();
+    });
+
+    await waitFor(() => {
+      expect(latestValue.offlineMode).toBe(true);
+      expect(onError).toHaveBeenCalledWith(
+        "Offline mode: unable to load saved entries.",
+      );
+    });
+  });
+
   it("queues archive action and updates entry optimistically when offline", async () => {
     apiRequest.mockImplementation(async (url, options = {}) => {
       if (url === "/entries?limit=60") {
@@ -167,5 +195,69 @@ describe("useSecondBrainEntries", () => {
         "Offline mode: changes will sync automatically.",
       );
     });
+  });
+
+  it("disables stale-on-error cache fallback for forced refresh loads", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      return {};
+    });
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries({ bypassCache: true });
+    });
+
+    const entriesCall = apiRequest.mock.calls.find(
+      ([url]) => url === "/entries?limit=60",
+    );
+    const tagsCall = apiRequest.mock.calls.find(([url]) => url === "/tags");
+
+    expect(entriesCall?.[1]?.cache?.bypass).toBe(true);
+    expect(entriesCall?.[1]?.cache?.staleOnError).toBe(false);
+    expect(tagsCall?.[1]?.cache?.bypass).toBe(true);
+    expect(tagsCall?.[1]?.cache?.staleOnError).toBe(false);
+  });
+
+  it("keeps stale-on-error cache fallback enabled for non-forced loads", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      return {};
+    });
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries();
+    });
+
+    const entriesCall = apiRequest.mock.calls.find(
+      ([url]) => url === "/entries?limit=60",
+    );
+    const tagsCall = apiRequest.mock.calls.find(([url]) => url === "/tags");
+
+    expect(entriesCall?.[1]?.cache?.bypass).toBe(false);
+    expect(entriesCall?.[1]?.cache?.staleOnError).toBe(true);
+    expect(tagsCall?.[1]?.cache?.bypass).toBe(false);
+    expect(tagsCall?.[1]?.cache?.staleOnError).toBe(true);
   });
 });

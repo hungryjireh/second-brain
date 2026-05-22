@@ -19,6 +19,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       id: 42,
       title: "Ship tests",
       summary: "Write behavior checks",
+      content: null,
       raw_text: "Full detail content",
       category: "todo",
       tags: ["work"],
@@ -33,6 +34,24 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Write behavior checks")).toBeTruthy();
     expect(getByText("Full detail content")).toBeTruthy();
     expect(getByText("#work")).toBeTruthy();
+  });
+
+  it("prefers content over summary when content is present", () => {
+    const entry = {
+      id: 52,
+      title: "Prefer content",
+      summary: "Summary fallback text",
+      content: "Primary content text",
+      raw_text: "Body",
+      category: "note",
+    };
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(getByText("Primary content text")).toBeTruthy();
+    expect(queryByText("Summary fallback text")).toBeNull();
   });
 
   it("renders a category pill for the entry above the title section", () => {
@@ -203,6 +222,24 @@ describe("SecondBrainEntryDetailsScreen", () => {
       entry: { id: 9, title: "Entry 9" },
     });
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("navigates to brainstorm screen from continue action", () => {
+    const navigate = jest.fn();
+    const entry = { id: 91, title: "Entry 91", raw_text: "Body text" };
+    const { getByLabelText, getByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entry } }}
+        navigation={{ navigate }}
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Open entry actions"));
+    fireEvent.press(getByText("Continue Brainstorming"));
+
+    expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstorm", {
+      seedEntry: entry,
+    });
   });
 
   it("shows Delete in the action drawer and prompts for confirmation", () => {

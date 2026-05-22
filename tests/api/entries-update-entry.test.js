@@ -65,7 +65,11 @@ test("updateEntry PATCH includes updated_at unix timestamp", async () => {
     const entry = await updateEntry(
       "11111111-1111-4111-8111-111111111111",
       42,
-      { raw_text: "updated text", title: "updated title" },
+      {
+        raw_text: "updated text",
+        title: "updated title",
+        content: "updated content",
+      },
       "token",
     );
     const after = Math.floor(Date.now() / 1000);
@@ -75,6 +79,7 @@ test("updateEntry PATCH includes updated_at unix timestamp", async () => {
     assert.equal(Number.isInteger(patchBody.updated_at), true);
     assert.equal(patchBody.updated_at >= before, true);
     assert.equal(patchBody.updated_at <= after, true);
+    assert.equal(patchBody.content, "updated content");
     assert.equal(entry?.updated_at, patchBody.updated_at);
   } finally {
     global.fetch = originalFetch;

@@ -11,6 +11,7 @@ export default function SecondBrainTypebar({
   styles,
   children,
   bottom,
+  placeholder,
   draft,
   onChangeDraft,
   onSubmitDraft,
@@ -27,6 +28,7 @@ export default function SecondBrainTypebar({
   voiceBusy,
   voiceStarting,
   loadingTelegramLinkKey,
+  offlineMode,
   startVoiceCapture,
   stopVoiceCaptureAndSubmit,
   cancelVoiceCapture,
@@ -109,7 +111,7 @@ export default function SecondBrainTypebar({
             setTypebarFocused(true);
           }}
           onBlur={() => setTypebarFocused(false)}
-          placeholder={typebarPlaceholder}
+          placeholder={placeholder || typebarPlaceholder}
           placeholderTextColor={theme.colors.textSecondary}
           style={[
             styles.typebarInput,
@@ -255,11 +257,16 @@ export default function SecondBrainTypebar({
               </View>
             ) : null}
             <Pressable
-              style={[styles.typebarButton, styles.typebarUploadButton]}
+              style={[
+                styles.typebarButton,
+                styles.typebarUploadButton,
+                offlineMode && styles.typebarButtonDisabled,
+              ]}
               onPress={() => {
                 closeOpenActionDrawer();
                 openSettings();
               }}
+              disabled={offlineMode}
               accessibilityRole="button"
               accessibilityLabel="Open settings"
               onHoverIn={() => setActionTooltip("settings")}
@@ -271,7 +278,10 @@ export default function SecondBrainTypebar({
             >
               <Feather
                 name="settings"
-                style={styles.typebarUploadButtonIcon}
+                style={[
+                  styles.typebarUploadButtonIcon,
+                  offlineMode && styles.typebarButtonIconDisabled,
+                ]}
                 size={15}
               />
             </Pressable>

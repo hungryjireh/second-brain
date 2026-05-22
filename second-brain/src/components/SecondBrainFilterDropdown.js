@@ -29,6 +29,8 @@ export default function SecondBrainFilterDropdown({
   searchQuery,
   setSearchQuery,
   creatingEntries,
+  offlineBanner,
+  errorBanner,
 }) {
   return (
     <View
@@ -211,6 +213,12 @@ export default function SecondBrainFilterDropdown({
         returnKeyType="search"
         clearButtonMode="while-editing"
       />
+      {offlineBanner ? (
+        <View style={styles.filterStatusStackItem}>{offlineBanner}</View>
+      ) : null}
+      {errorBanner ? (
+        <View style={styles.filterStatusStackItem}>{errorBanner}</View>
+      ) : null}
       {creatingEntries.length ? (
         <View style={styles.creatingStatusList}>
           {creatingEntries.map((item) => (
