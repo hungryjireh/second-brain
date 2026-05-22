@@ -61,4 +61,11 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(cell.flexShrink).toBe(0);
     expect(cell.flexBasis).toBe(0);
   });
+
+  it("keeps queued edits entry spacing aligned with main entry row spacing", () => {
+    const swipeRow = StyleSheet.flatten(styles.swipeRow);
+    const queuedEntriesList = StyleSheet.flatten(styles.queuedEntriesList);
+
+    expect(queuedEntriesList.gap).toBe(swipeRow.marginVertical * 2);
+  });
 });

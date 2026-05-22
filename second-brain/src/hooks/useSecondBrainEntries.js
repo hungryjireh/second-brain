@@ -16,6 +16,34 @@ export function useSecondBrainEntries({ token, onError }) {
   const [busyId, setBusyId] = useState(null);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineQueueSize, setOfflineQueueSize] = useState(0);
+  const [queuedEntries, setQueuedEntries] = useState([]);
+
+  const mapQueuedEntries = useCallback((queue) => {
+    if (!Array.isArray(queue)) return [];
+    return queue.map((action, index) => {
+      const queueId =
+        typeof action?.queue_id === "string" && action.queue_id.trim()
+          ? action.queue_id
+          : `queued-${index + 1}`;
+      const rawDescription =
+        typeof action?.description === "string" ? action.description : "";
+      const summary =
+        action?.type === "create"
+          ? rawDescription
+          : action?.type === "archive"
+            ? `Archive entry ${String(action?.id || "")}`.trim()
+            : action?.type === "delete"
+              ? `Delete entry ${String(action?.id || "")}`.trim()
+              : "Queued change";
+      return {
+        queueId,
+        type: action?.type || "unknown",
+        summary,
+        description: rawDescription,
+        editable: action?.type === "create",
+      };
+    });
+  }, []);
 
   const buildOfflineStorageKey = useCallback(() => {
     return `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
@@ -49,11 +77,12 @@ export function useSecondBrainEntries({ token, onError }) {
           }),
         );
         setOfflineQueueSize(queue.length);
+        setQueuedEntries(mapQueuedEntries(queue));
       } catch {
         // Offline persistence is best-effort.
       }
     },
-    [buildOfflineStorageKey],
+    [buildOfflineStorageKey, mapQueuedEntries],
   );
 
   const persistCurrentOfflineState = useCallback(
@@ -77,10 +106,85 @@ export function useSecondBrainEntries({ token, onError }) {
       await writeOfflineState({
         entries: snapshotEntries,
         userTags,
-        queue: [...existingQueue, action],
+        queue: [
+          ...existingQueue,
+          {
+            ...action,
+            queue_id:
+              typeof action?.queue_id === "string" && action.queue_id.trim()
+                ? action.queue_id
+                : `q-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            queued_at: Date.now(),
+          },
+        ],
       });
     },
     [readOfflineState, userTags, writeOfflineState],
+  );
+
+  const updateQueuedEntry = useCallback(
+    async ({ queueId, description }) => {
+      const normalizedQueueId = String(queueId || "").trim();
+      const normalizedDescription = String(description || "").trim();
+      if (!normalizedQueueId) {
+        return {
+          ok: false,
+          error: {
+            code: "invalid_queue_id",
+            message: "Queue entry not found.",
+          },
+        };
+      }
+      if (!normalizedDescription) {
+        return {
+          ok: false,
+          error: {
+            code: "invalid_description",
+            field: "description",
+            message: "Description is required.",
+          },
+        };
+      }
+      const snapshot = await readOfflineState();
+      const queue = Array.isArray(snapshot?.queue) ? snapshot.queue : [];
+      const targetIndex = queue.findIndex(
+        (action) => action?.queue_id === normalizedQueueId,
+      );
+      if (targetIndex < 0) {
+        return {
+          ok: false,
+          error: { code: "not_found", message: "Queue entry was not found." },
+        };
+      }
+      const targetAction = queue[targetIndex];
+      if (targetAction?.type !== "create") {
+        return {
+          ok: false,
+          error: {
+            code: "immutable_entry",
+            message: "Only queued create entries can be edited.",
+          },
+        };
+      }
+
+      const nextQueue = [...queue];
+      nextQueue[targetIndex] = {
+        ...targetAction,
+        description: normalizedDescription,
+      };
+      await writeOfflineState({
+        entries: Array.isArray(snapshot?.entries) ? snapshot.entries : entries,
+        userTags: Array.isArray(snapshot?.userTags)
+          ? snapshot.userTags
+          : userTags,
+        queue: nextQueue,
+      });
+      return {
+        ok: true,
+        queuedEntries: mapQueuedEntries(nextQueue),
+      };
+    },
+    [entries, mapQueuedEntries, readOfflineState, userTags, writeOfflineState],
   );
 
   const flushOfflineQueue = useCallback(async () => {
@@ -191,6 +295,11 @@ export function useSecondBrainEntries({ token, onError }) {
             setOfflineQueueSize(
               Array.isArray(snapshot.queue) ? snapshot.queue.length : 0,
             );
+            setQueuedEntries(
+              mapQueuedEntries(
+                Array.isArray(snapshot.queue) ? snapshot.queue : [],
+              ),
+            );
             setOfflineMode(true);
             onError("Offline mode: showing saved entries.");
             return;
@@ -205,6 +314,7 @@ export function useSecondBrainEntries({ token, onError }) {
     },
     [
       flushOfflineQueue,
+      mapQueuedEntries,
       onError,
       persistCurrentOfflineState,
       readOfflineState,
@@ -344,9 +454,11 @@ export function useSecondBrainEntries({ token, onError }) {
     busyId,
     offlineMode,
     offlineQueueSize,
+    queuedEntries,
     loadEntries,
     toggleArchive,
     deleteEntry,
     applyOfflineCreateFallback,
+    updateQueuedEntry,
   };
 }

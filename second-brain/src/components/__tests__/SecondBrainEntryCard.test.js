@@ -217,4 +217,69 @@ describe("SecondBrainEntryCard", () => {
     fireEvent.press(getByText("Outside action row tap"));
     expect(onActionDrawerChange).toHaveBeenCalledWith(21, false);
   });
+
+  it("hides priority when hidePriority is true", () => {
+    const entry = {
+      id: 31,
+      category: "note",
+      title: "No priority",
+      summary: "Priority hidden",
+      priority: 9,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        hidePriority
+      />,
+    );
+
+    expect(queryByText("P9")).toBeNull();
+  });
+
+  it("hides mobile menu button when hideMenuButton is true", () => {
+    const entry = {
+      id: 41,
+      category: "note",
+      title: "No menu",
+      summary: "Menu hidden",
+      priority: 1,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { queryByTestId } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        isSmallScreenOverride
+        hideMenuButton
+      />,
+    );
+
+    expect(queryByTestId("entry-action-trigger-41")).toBeNull();
+  });
 });

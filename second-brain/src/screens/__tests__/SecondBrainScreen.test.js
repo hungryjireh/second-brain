@@ -221,6 +221,92 @@ describe("SecondBrainScreen", () => {
     expect(getByText("Brainstorm is unavailable while offline.")).toBeTruthy();
   });
 
+  it("navigates to queued edits screen when offline banner is pressed", async () => {
+    const navigate = jest.fn();
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [{ type: "create", description: "Queued change" }],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByTestId } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    await waitFor(() =>
+      expect(getByTestId("offline-banner-pressable")).toBeTruthy(),
+    );
+    fireEvent.press(getByTestId("offline-banner-pressable"));
+    expect(navigate).toHaveBeenCalledWith("SecondBrainQueuedEdits");
+  });
+
+  it("shows offline queued count on banner and keeps queued edits off the main screen", async () => {
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [
+        {
+          type: "create",
+          description: "Queued draft entry",
+          queue_id: "q-offline-1",
+          queued_at: Date.now(),
+        },
+      ],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() =>
+      expect(getByText("1 change queued for sync.")).toBeTruthy(),
+    );
+    expect(queryByText("Queued edits")).toBeNull();
+    expect(queryByText("Queued draft entry")).toBeNull();
+  });
+
   it("shows centered loading thoughts state while entries are being fetched", async () => {
     let resolveEntries;
     let resolveTags;

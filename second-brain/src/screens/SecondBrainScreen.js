@@ -510,10 +510,11 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     setSearchQuery,
     creatingEntries,
     offlineBanner: isNativeOfflineMode ? (
-      <View style={styles.offlineBannerWrap}>
+      <View style={styles.offlineBannerWrap} testID="offline-tools">
         <SecondBrainOfflineBanner
           styles={styles}
           offlineQueueSize={offlineQueueSize}
+          onPress={() => navigation.navigate("SecondBrainQueuedEdits")}
         />
       </View>
     ) : null,

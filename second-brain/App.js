@@ -21,6 +21,7 @@ import SecondBrainScreen from "./src/screens/SecondBrainScreen";
 import SecondBrainEntryDetailsScreen from "./src/screens/SecondBrainEntryDetailsScreen";
 import SecondBrainEditEntryScreen from "./src/screens/SecondBrainEditEntryScreen";
 import SecondBrainBrainstormScreen from "./src/screens/SecondBrainBrainstormScreen";
+import SecondBrainQueuedEditsScreen from "./src/screens/SecondBrainQueuedEditsScreen";
 import { clearToken, getToken, setAuthExpiredHandler } from "./src/api";
 import { theme } from "./src/theme";
 import {
@@ -101,6 +102,7 @@ export default function App() {
           SecondBrainEntryDetails: "second-brain/entry/:entryId",
           SecondBrainEditEntry: "second-brain/edit/:entryId",
           SecondBrainBrainstorm: "second-brain/brainstorm",
+          SecondBrainQueuedEdits: "second-brain/queued-edits",
         },
       },
       getStateFromPath(path, options) {
@@ -259,6 +261,26 @@ export default function App() {
                 >
                   {(props) => (
                     <SecondBrainBrainstormScreen {...props} token={token} />
+                  )}
+                </Stack.Screen>
+
+                <Stack.Screen
+                  name="SecondBrainQueuedEdits"
+                  options={({ navigation }) => ({
+                    headerTitle: () => <HeaderBrand />,
+                    headerTitleAlign: "center",
+                    headerLeft: () => (
+                      <HeaderSecondBrainBack navigation={navigation} />
+                    ),
+                    headerRight: hideSecondBrainHeaderDate
+                      ? undefined
+                      : () => <HeaderLiveStatus />,
+                    headerStyle: { backgroundColor: theme.colors.bgBase },
+                    headerShadowVisible: false,
+                  })}
+                >
+                  {(props) => (
+                    <SecondBrainQueuedEditsScreen {...props} token={token} />
                   )}
                 </Stack.Screen>
 

@@ -188,12 +188,165 @@ describe("useSecondBrainEntries", () => {
       ).toBe(true);
       expect(latestValue.offlineMode).toBe(true);
       expect(latestValue.offlineQueueSize).toBe(1);
-      expect(stored.queue).toEqual([
-        { type: "archive", id: 12, is_archived: true },
-      ]);
+      expect(stored.queue).toHaveLength(1);
+      expect(stored.queue[0]).toEqual(
+        expect.objectContaining({
+          type: "archive",
+          id: 12,
+          is_archived: true,
+          queue_id: expect.any(String),
+          queued_at: expect.any(Number),
+        }),
+      );
       expect(onError).toHaveBeenCalledWith(
         "Offline mode: changes will sync automatically.",
       );
+    });
+  });
+
+  it("exposes queued entries and updates editable queued create entries", async () => {
+    const storageKey = `secondBrainOffline:${token}`;
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        version: 1,
+        entries: [],
+        userTags: [],
+        queue: [
+          {
+            type: "create",
+            description: "Original queued note",
+            queue_id: "q-1",
+            queued_at: 1,
+          },
+          {
+            type: "archive",
+            id: 55,
+            is_archived: true,
+            queue_id: "q-2",
+            queued_at: 2,
+          },
+        ],
+      }),
+    );
+
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network down");
+    });
+    isLikelyOfflineError.mockReturnValue(true);
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries();
+    });
+
+    await waitFor(() => {
+      expect(latestValue.queuedEntries).toEqual([
+        expect.objectContaining({
+          queueId: "q-1",
+          editable: true,
+          summary: "Original queued note",
+        }),
+        expect.objectContaining({
+          queueId: "q-2",
+          editable: false,
+          summary: "Archive entry 55",
+        }),
+      ]);
+    });
+
+    let result;
+    await act(async () => {
+      result = await latestValue.updateQueuedEntry({
+        queueId: "q-1",
+        description: "Updated queued note",
+      });
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        ok: true,
+      }),
+    );
+
+    const storedRaw = await AsyncStorage.getItem(storageKey);
+    const stored = JSON.parse(storedRaw);
+    expect(stored.queue[0]).toEqual(
+      expect.objectContaining({
+        queue_id: "q-1",
+        description: "Updated queued note",
+      }),
+    );
+  });
+
+  it("rejects invalid queued entry updates with structured errors", async () => {
+    const storageKey = `secondBrainOffline:${token}`;
+    await AsyncStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        version: 1,
+        entries: [],
+        userTags: [],
+        queue: [
+          {
+            type: "archive",
+            id: 55,
+            is_archived: true,
+            queue_id: "q-2",
+            queued_at: 2,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    let invalidDescriptionResult;
+    await act(async () => {
+      invalidDescriptionResult = await latestValue.updateQueuedEntry({
+        queueId: "q-2",
+        description: "   ",
+      });
+    });
+    expect(invalidDescriptionResult).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_description",
+        field: "description",
+        message: "Description is required.",
+      },
+    });
+
+    let immutableResult;
+    await act(async () => {
+      immutableResult = await latestValue.updateQueuedEntry({
+        queueId: "q-2",
+        description: "Cannot edit archive",
+      });
+    });
+    expect(immutableResult).toEqual({
+      ok: false,
+      error: {
+        code: "immutable_entry",
+        message: "Only queued create entries can be edited.",
+      },
     });
   });
 

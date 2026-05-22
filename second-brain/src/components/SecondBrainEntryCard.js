@@ -107,6 +107,8 @@ function SecondBrainEntryCard({
   displayRemindAt,
   displayDate,
   isSmallScreenOverride,
+  hidePriority,
+  hideMenuButton,
 }) {
   const actionTriggerRef = useRef(null);
   const ignoreCardPressUntilRef = useRef(0);
@@ -265,14 +267,16 @@ function SecondBrainEntryCard({
                     style={styles.cardIcon}
                     color={theme.colors.brand}
                   />
-                  <Text
-                    style={[
-                      styles.priorityText,
-                      { color: getPriorityColor(priority, theme) },
-                    ]}
-                  >
-                    P{priority}
-                  </Text>
+                  {hidePriority ? null : (
+                    <Text
+                      style={[
+                        styles.priorityText,
+                        { color: getPriorityColor(priority, theme) },
+                      ]}
+                    >
+                      P{priority}
+                    </Text>
+                  )}
                   <View style={styles.cardTitleBlock}>
                     <TwoLineClampText
                       style={styles.cardTitle}
@@ -286,37 +290,41 @@ function SecondBrainEntryCard({
                       {tag.label}
                     </Text>
                   </View>
-                  <View style={styles.mobileActionDrawerWrap}>
-                    <Pressable
-                      ref={actionTriggerRef}
-                      testID={`entry-action-trigger-${entry.id}`}
-                      style={styles.mobileActionTrigger}
-                      onPressIn={(event) => {
-                        markIgnoreCardPress();
-                        event?.stopPropagation?.();
-                      }}
-                      onPress={(event) => {
-                        markIgnoreCardPress();
-                        event?.stopPropagation?.();
-                        if (isActionDrawerActive) {
-                          closeActionDrawer();
-                          return;
-                        }
-                        openActionDrawer();
-                      }}
-                      disabled={isBusy}
-                    >
-                      {isBusy ? (
-                        <Text style={styles.mobileActionTriggerText}>...</Text>
-                      ) : (
-                        <Feather
-                          name="more-horizontal"
-                          size={16}
-                          style={styles.mobileActionTriggerIcon}
-                        />
-                      )}
-                    </Pressable>
-                  </View>
+                  {hideMenuButton ? null : (
+                    <View style={styles.mobileActionDrawerWrap}>
+                      <Pressable
+                        ref={actionTriggerRef}
+                        testID={`entry-action-trigger-${entry.id}`}
+                        style={styles.mobileActionTrigger}
+                        onPressIn={(event) => {
+                          markIgnoreCardPress();
+                          event?.stopPropagation?.();
+                        }}
+                        onPress={(event) => {
+                          markIgnoreCardPress();
+                          event?.stopPropagation?.();
+                          if (isActionDrawerActive) {
+                            closeActionDrawer();
+                            return;
+                          }
+                          openActionDrawer();
+                        }}
+                        disabled={isBusy}
+                      >
+                        {isBusy ? (
+                          <Text style={styles.mobileActionTriggerText}>
+                            ...
+                          </Text>
+                        ) : (
+                          <Feather
+                            name="more-horizontal"
+                            size={16}
+                            style={styles.mobileActionTriggerIcon}
+                          />
+                        )}
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
               </View>
             )
@@ -328,14 +336,16 @@ function SecondBrainEntryCard({
                 style={styles.cardIcon}
                 color={theme.colors.brand}
               />
-              <Text
-                style={[
-                  styles.priorityText,
-                  { color: getPriorityColor(priority, theme) },
-                ]}
-              >
-                P{priority}
-              </Text>
+              {hidePriority ? null : (
+                <Text
+                  style={[
+                    styles.priorityText,
+                    { color: getPriorityColor(priority, theme) },
+                  ]}
+                >
+                  P{priority}
+                </Text>
+              )}
               <View style={styles.cardTitleBlock}>
                 <TwoLineClampText
                   style={styles.cardTitle}

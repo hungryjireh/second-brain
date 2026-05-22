@@ -5,11 +5,13 @@ const styles = {
   offlineBanner: {},
   offlineBannerTitle: {},
   offlineBannerText: {},
+  offlineBannerRow: {},
+  offlineBannerArrow: {},
 };
 
 describe("SecondBrainOfflineBanner", () => {
   it("renders offline banner with fallback sync message when queue is empty", () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <SecondBrainOfflineBanner styles={styles} offlineQueueSize={0} />,
     );
 
@@ -18,6 +20,7 @@ describe("SecondBrainOfflineBanner", () => {
     expect(
       getByText("Showing saved entries. Changes will sync automatically."),
     ).toBeTruthy();
+    expect(queryByText("→")).toBeNull();
   });
 
   it("renders singular queued change message", () => {
@@ -26,6 +29,7 @@ describe("SecondBrainOfflineBanner", () => {
     );
 
     expect(getByText("1 change queued for sync.")).toBeTruthy();
+    expect(getByText("→")).toBeTruthy();
   });
 
   it("renders plural queued changes message", () => {
@@ -34,5 +38,6 @@ describe("SecondBrainOfflineBanner", () => {
     );
 
     expect(getByText("2 changes queued for sync.")).toBeTruthy();
+    expect(getByText("→")).toBeTruthy();
   });
 });
