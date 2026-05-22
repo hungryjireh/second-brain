@@ -12,16 +12,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { apiRequest } from "../api";
 import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import MarkdownBody from "../components/MarkdownBody";
-import { CACHE_TTL_MS } from "../constants/cache";
-import {
-  CATEGORIES,
-  GLOBALLY_PERMISSIVE_TAGS_NORMALIZED,
-  MAX_ENTRY_TAGS,
-  MAX_USER_TAGS,
-} from "../constants/tags";
+import { CATEGORIES } from "../constants/tags";
 import { theme } from "../theme";
 import {
-  countBillableGlobalTags,
   normalizeTagValue,
   parseTagInput,
   tagsToInput,
@@ -72,7 +65,6 @@ export default function SecondBrainEditEntryScreen({
   const [summaryInputHeight, setSummaryInputHeight] = useState(
     SUMMARY_MIN_INPUT_HEIGHT,
   );
-  const [globalTags, setGlobalTags] = useState([]);
   const [isMarkdownPreviewEnabled, setIsMarkdownPreviewEnabled] =
     useState(false);
 
@@ -111,31 +103,6 @@ export default function SecondBrainEditEntryScreen({
   }, [entry?.id, entryId, token]);
 
   useEffect(() => {
-    async function loadTags() {
-      try {
-        const tagsData = await apiRequest("/tags", {
-          token,
-          cache: { ttlMs: CACHE_TTL_MS.SETTINGS },
-        });
-        const normalizedUserTags = (
-          Array.isArray(tagsData?.tags) ? tagsData.tags : []
-        )
-          .map((tag) => normalizeTagValue(tag))
-          .filter(Boolean);
-        setGlobalTags(
-          Array.from(new Set(normalizedUserTags)).sort((a, b) =>
-            a.localeCompare(b, "en", { sensitivity: "base" }),
-          ),
-        );
-      } catch {
-        setGlobalTags([]);
-      }
-    }
-
-    loadTags();
-  }, [token]);
-
-  useEffect(() => {
     if (!entry) return;
     setEditCategory(entry.category || "note");
     setEditTitle(entry.title || "");
@@ -165,25 +132,10 @@ export default function SecondBrainEditEntryScreen({
     const nextTag = normalizeTagValue(editTagDraft);
     if (!nextTag) return;
     setEditTagError("");
-    const existingGlobalTags = new Set(
-      globalTags.map((tag) => normalizeTagValue(tag)),
-    );
-    const isNewGlobalTag = !existingGlobalTags.has(nextTag);
-    const isNewBillableTag =
-      isNewGlobalTag && !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(nextTag);
-    if (
-      isNewBillableTag &&
-      countBillableGlobalTags(globalTags) >= MAX_USER_TAGS
-    ) {
-      setEditTagError(
-        `A maximum of ${MAX_USER_TAGS} tags is allowed per user.`,
-      );
-      return;
-    }
     const merged = parseTagInput([...parsedEditTags, nextTag].join(","));
     setEditTags(merged.join(","));
     setEditTagDraft("");
-  }, [editTagDraft, globalTags, parsedEditTags]);
+  }, [editTagDraft, parsedEditTags]);
 
   const removeEditTag = useCallback(
     (tagToRemove) => {
@@ -195,28 +147,6 @@ export default function SecondBrainEditEntryScreen({
     [parsedEditTags],
   );
 
-  function validateGlobalTagLimit(nextTags) {
-    const existingGlobalTags = new Set(
-      globalTags.map((tag) => normalizeTagValue(tag)),
-    );
-    const newBillableGlobalTags = nextTags.filter(
-      (tag) =>
-        !existingGlobalTags.has(tag) &&
-        !GLOBALLY_PERMISSIVE_TAGS_NORMALIZED.has(tag),
-    );
-    if (newBillableGlobalTags.length === 0) return true;
-    if (
-      countBillableGlobalTags(globalTags) + newBillableGlobalTags.length >
-      MAX_USER_TAGS
-    ) {
-      setEditTagError(
-        `A maximum of ${MAX_USER_TAGS} tags is allowed per user.`,
-      );
-      return false;
-    }
-    return true;
-  }
-
   async function saveEdit() {
     const entryId = entry?.id ?? entry?.entry_id;
     if (!entryId || !editText.trim() || busy) return;
@@ -227,8 +157,6 @@ export default function SecondBrainEditEntryScreen({
       setError("Priority must be an integer from 0 to 10.");
       return;
     }
-
-    if (!validateGlobalTagLimit(tags)) return;
 
     setBusy(true);
     setError("");
@@ -453,13 +381,8 @@ export default function SecondBrainEditEntryScreen({
               setEditTagError("");
             }}
             style={[styles.editField, styles.tagInput]}
-            placeholder={
-              parsedEditTags.length >= MAX_ENTRY_TAGS
-                ? `Maximum ${MAX_ENTRY_TAGS} tags reached`
-                : "Type a tag"
-            }
+            placeholder="Type a tag"
             placeholderTextColor={theme.colors.textSecondary}
-            editable={parsedEditTags.length < MAX_ENTRY_TAGS}
           />
           <Pressable style={styles.secondaryButton} onPress={addEditTag}>
             <Text style={styles.secondaryButtonText}>Add</Text>
@@ -470,9 +393,6 @@ export default function SecondBrainEditEntryScreen({
             {editTagError}
           </Text>
         ) : null}
-        <Text
-          style={styles.tagCountText}
-        >{`${parsedEditTags.length}/${MAX_ENTRY_TAGS} tags`}</Text>
         <View style={styles.tagsRow}>
           {parsedEditTags.map((tag) => (
             <Pressable

@@ -117,6 +117,13 @@ describe("SecondBrainFilterDropdown", () => {
     expect(tagFn("other")).toBe("work");
   });
 
+  it("renders TAGS label without a global count", () => {
+    const { getByText, queryByText } = renderDropdown();
+
+    expect(getByText("TAGS")).toBeTruthy();
+    expect(queryByText(/TAGS \(/i)).toBeNull();
+  });
+
   it("does not close from dismiss overlay when opened too recently", () => {
     const nowSpy = jest.spyOn(Date, "now").mockReturnValue(150);
     const { UNSAFE_getByProps, props } = renderDropdown({

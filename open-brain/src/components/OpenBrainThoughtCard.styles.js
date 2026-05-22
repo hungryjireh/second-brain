@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   },
   markdownCodeBlock: {
     borderRadius: 8,
-    backgroundColor: theme.colors.white09,
+    backgroundColor: theme.colors.bgSurface,
     padding: 10,
     minWidth: 0,
   },

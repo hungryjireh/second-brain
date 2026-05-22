@@ -42,7 +42,7 @@ describe("SecondBrainEditEntryScreen", () => {
 
   it("saves edited text and navigates to entry details", async () => {
     const navigate = jest.fn();
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] }).mockResolvedValueOnce({
+    apiRequest.mockResolvedValueOnce({
       ...entry,
       raw_text: "Updated text",
       summary: "Updated text",
@@ -64,6 +64,10 @@ describe("SecondBrainEditEntryScreen", () => {
         expect.objectContaining({ method: "PATCH" }),
       );
     });
+    expect(apiRequest).not.toHaveBeenCalledWith(
+      "/tags",
+      expect.anything(),
+    );
     expect(navigate).toHaveBeenCalledWith(
       "SecondBrainEntryDetails",
       expect.objectContaining({
@@ -73,9 +77,64 @@ describe("SecondBrainEditEntryScreen", () => {
     );
   });
 
+  it("saves all tags without a 3-tag cap", async () => {
+    const navigate = jest.fn();
+    apiRequest.mockResolvedValueOnce({
+      ...entry,
+      tags: ["one", "two", "three", "four", "five", "six"],
+    });
+
+    const entryWithManyTags = {
+      ...entry,
+      tags: ["one", "two", "three", "four", "five"],
+    };
+
+    const { getByPlaceholderText, getByText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: entryWithManyTags, token } }}
+        navigation={{ navigate }}
+      />,
+    );
+
+    fireEvent.changeText(getByPlaceholderText("Type a tag"), "six");
+    fireEvent.press(getByText("Add"));
+    fireEvent.press(getByText("Save changes"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/entries?id=42",
+        expect.objectContaining({
+          method: "PATCH",
+          body: expect.objectContaining({
+            tags: ["one", "two", "three", "four", "five", "six"],
+          }),
+        }),
+      );
+    });
+  });
+
+  it("keeps tag input editable after three tags and keeps existing tags visible", () => {
+    const entryWithThreeTags = {
+      ...entry,
+      tags: ["one", "two", "three"],
+    };
+
+    const { getByPlaceholderText, getByText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: entryWithThreeTags, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    const tagInput = getByPlaceholderText("Type a tag");
+    expect(tagInput.props.editable).not.toBe(false);
+    expect(getByText("#one ×")).toBeTruthy();
+    expect(getByText("#two ×")).toBeTruthy();
+    expect(getByText("#three ×")).toBeTruthy();
+  });
+
   it("shows validation error and skips PATCH when priority is out of range", async () => {
     const goBack = jest.fn();
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
 
     const { getByPlaceholderText, getByText, findByText } = render(
       <SecondBrainEditEntryScreen
@@ -94,12 +153,29 @@ describe("SecondBrainEditEntryScreen", () => {
       "/entries?id=42",
       expect.objectContaining({ method: "PATCH" }),
     );
+    expect(apiRequest).not.toHaveBeenCalledWith(
+      "/tags",
+      expect.anything(),
+    );
     expect(goBack).not.toHaveBeenCalled();
+  });
+
+  it("does not request global tags on mount", () => {
+    render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    expect(apiRequest).not.toHaveBeenCalledWith(
+      "/tags",
+      expect.anything(),
+    );
   });
 
   it("disables description input and renders markdown preview when toggle is enabled", async () => {
     const goBack = jest.fn();
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
     const markdownEntry = {
       ...entry,
       raw_text: "**Bold** line",
@@ -120,7 +196,6 @@ describe("SecondBrainEditEntryScreen", () => {
   });
 
   it("uses multiline title and summary inputs when values are long", async () => {
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
     const longEntry = {
       ...entry,
       title:
@@ -141,8 +216,6 @@ describe("SecondBrainEditEntryScreen", () => {
   });
 
   it("expands title and summary input heights as content grows", async () => {
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
-
     const { getByPlaceholderText } = render(
       <SecondBrainEditEntryScreen
         route={{ params: { entry, token } }}
@@ -169,7 +242,6 @@ describe("SecondBrainEditEntryScreen", () => {
   });
 
   it("renders centralized reminder picker without action buttons and hides web reminder input", async () => {
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
     const reminderEntry = {
       ...entry,
       category: "reminder",
@@ -195,8 +267,6 @@ describe("SecondBrainEditEntryScreen", () => {
       configurable: true,
       value: "web",
     });
-
-    apiRequest.mockResolvedValueOnce({ tags: ["work"] });
 
     const { queryByPlaceholderText: queryWebPlaceholderText } = render(
       <SecondBrainEditEntryScreen

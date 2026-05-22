@@ -1,8 +1,6 @@
 import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { theme } from "../theme";
-import { MAX_USER_TAGS } from "../constants/tags";
-import { countBillableGlobalTags } from "../utils/secondBrainTagUtils";
 
 const PRIORITY_LEVELS = [
   { key: "high", label: "High (8-10)" },
@@ -167,9 +165,7 @@ export default function SecondBrainFilterDropdown({
           </View>
 
           <View style={styles.filterRow}>
-            <Text
-              style={styles.filterRowLabel}
-            >{`TAGS (${countBillableGlobalTags(globalTags)}/${MAX_USER_TAGS})`}</Text>
+            <Text style={styles.filterRowLabel}>TAGS</Text>
             {globalTags.map((tag) => {
               const isActive = activeTag.toLowerCase() === tag.toLowerCase();
               const isDisabled = !tagUsageCounts.has(tag);

@@ -2,9 +2,12 @@ import { fireEvent, render } from "@testing-library/react-native";
 import { ActivityIndicator, Platform } from "react-native";
 import SecondBrainFlatList from "../SecondBrainFlatList";
 
+const mockSecondBrainEntryCard = jest.fn();
+
 jest.mock("../SecondBrainEntryCard", () => {
   const { Pressable, Text, View } = require("react-native");
   return function MockSecondBrainEntryCard({ entry, onCloseSwipe }) {
+    mockSecondBrainEntryCard(entry?.id);
     return (
       <View>
         <Text>{entry?.title}</Text>
@@ -71,6 +74,10 @@ function createBaseProps(overrides = {}) {
 }
 
 describe("SecondBrainFlatList", () => {
+  beforeEach(() => {
+    mockSecondBrainEntryCard.mockClear();
+  });
+
   it("shows loading placeholder while entries are loading", () => {
     const { getByText } = render(
       <SecondBrainFlatList {...createBaseProps({ loadingEntries: true })} />,
@@ -222,5 +229,65 @@ describe("SecondBrainFlatList", () => {
     expect(list.props.updateCellsBatchingPeriod).toBe(50);
     expect(list.props.windowSize).toBe(9);
     expect(list.props.removeClippedSubviews).toBe(Platform.OS !== "web");
+  });
+
+  it("does not rerender entry cards when grouped row objects change but row props stay stable", () => {
+    const entry = { id: 1, title: "First entry", is_archived: false };
+    const stableProps = createBaseProps();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry,
+        displayDate: "May 22",
+        displayRemindAt: "09:30",
+      },
+    ];
+    const { rerender } = render(<SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />);
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
+
+    const nextGroupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry,
+        displayDate: "May 22",
+        displayRemindAt: "09:30",
+      },
+    ];
+    rerender(<SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />);
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
+  });
+
+  it("rerenders entry cards when row display props change", () => {
+    const entry = { id: 1, title: "First entry", is_archived: false };
+    const stableProps = createBaseProps();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry,
+        displayDate: "May 22",
+        displayRemindAt: "09:30",
+      },
+    ];
+    const { rerender } = render(<SecondBrainFlatList {...stableProps} groupedRows={groupedRows} />);
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(1);
+
+    const nextGroupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry,
+        displayDate: "May 23",
+        displayRemindAt: "09:30",
+      },
+    ];
+    rerender(<SecondBrainFlatList {...stableProps} groupedRows={nextGroupedRows} />);
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(2);
   });
 });

@@ -208,7 +208,7 @@ test("insertEntry persists classifier string tags into tags and entry_tags table
   }
 });
 
-test("insertEntry still succeeds with zero tags when user already has maximum tags", async () => {
+test("insertEntry still succeeds when user already has 10 tags", async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -292,6 +292,14 @@ test("insertEntry still succeeds with zero tags when user already has maximum ta
     }
 
     if (path === "/rest/v1/tags" && method === "POST") {
+      const body = options.body ? JSON.parse(options.body) : [];
+      const row = body?.[0] ?? {};
+      tagsTable.push({
+        id: tagsTable.length + 1,
+        user_id: row.user_id,
+        name: row.name,
+        normalized_name: row.normalized_name,
+      });
       return jsonResponse(201, null);
     }
 
@@ -324,6 +332,7 @@ test("insertEntry still succeeds with zero tags when user already has maximum ta
 
     assert.equal(entry?.id, 4242);
     assert.deepEqual(entry?.tags, []);
+    assert.equal(tagsTable.length, 11);
   } finally {
     global.fetch = originalFetch;
     process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
@@ -527,7 +536,7 @@ test("replaceEntryTags deletes user tags that are no longer referenced", async (
   }
 });
 
-test("replaceEntryTags enforces a maximum of 10 user tags", async () => {
+test("replaceEntryTags allows adding new tags even when user already has 10 tags", async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -619,13 +628,11 @@ test("replaceEntryTags enforces a maximum of 10 user tags", async () => {
   try {
     const { replaceEntryTags } = await importFresh(
       "../../lib/db.js",
-      "replace-tags-max-limit",
+      "replace-tags-unlimited",
     );
-    await assert.rejects(
-      () => replaceEntryTags(userId, 9, ["new-tag"], "token"),
-      /maximum of 10 tags is allowed per user/i,
-    );
-    assert.equal(tagsTable.length, 10);
+    await replaceEntryTags(userId, 9, ["new-tag"], "token");
+    assert.equal(tagsTable.length, 11);
+    assert.equal(tagsTable.at(-1)?.normalized_name, "newtag");
   } finally {
     global.fetch = originalFetch;
     process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
@@ -634,7 +641,7 @@ test("replaceEntryTags enforces a maximum of 10 user tags", async () => {
   }
 });
 
-test("replaceEntryTags does not count globally permissive tags toward 10-tag limit", async () => {
+test("replaceEntryTags continues allowing globally permissive tags", async () => {
   const originalFetch = global.fetch;
   const originalEnv = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -735,6 +742,72 @@ test("replaceEntryTags does not count globally permissive tags toward 10-tag lim
       tagsTable.slice(-2).map((tag) => tag.normalized_name),
       ["openbrain", "secondbrain"],
     );
+  } finally {
+    global.fetch = originalFetch;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  }
+});
+
+test("getUserTags returns all user tags without a hard limit query", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+
+  const userId = "13111111-1111-4111-8111-111111111111";
+  const tagsTable = Array.from({ length: 12 }, (_, i) => ({
+    id: i + 1,
+    user_id: userId,
+    name: `Tag ${i + 1}`,
+    normalized_name: `tag${i + 1}`,
+  }));
+
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      async text() {
+        return body === null ? "" : JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input, options = {}) => {
+    const method = options.method || "GET";
+    const url = new URL(String(input));
+    const path = url.pathname;
+
+    if (path === "/rest/v1/tags" && method === "GET") {
+      assert.equal(url.searchParams.has("limit"), false);
+      const scopedUserId = (url.searchParams.get("user_id") || "").replace(
+        "eq.",
+        "",
+      );
+      return jsonResponse(
+        200,
+        tagsTable.filter((tag) => tag.user_id === scopedUserId),
+      );
+    }
+
+    throw new Error(`Unhandled fetch: ${method} ${path}`);
+  };
+
+  try {
+    const { getUserTags } = await importFresh(
+      "../../lib/db.js",
+      "user-tags-all",
+    );
+    const tags = await getUserTags(userId, "token");
+    assert.equal(tags.length, 12);
+    assert.equal(tags[0], "Tag 1");
+    assert.equal(tags[11], "Tag 12");
   } finally {
     global.fetch = originalFetch;
     process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;

@@ -1,6 +1,5 @@
 export const CATEGORIES = ["reminder", "todo", "thought", "note"];
 export const MAX_ENTRY_TAGS = 3;
-export const MAX_USER_TAGS = 10;
 
 export const GLOBALLY_PERMISSIVE_TAGS = ["openbrain", "secondbrain"];
 

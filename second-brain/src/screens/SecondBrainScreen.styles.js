@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
   markdownLink: { color: "#86b7ff", textDecorationLine: "underline" },
   markdownCodeBlock: {
     borderRadius: 8,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
     padding: 10,
     minWidth: 0,
   },

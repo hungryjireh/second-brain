@@ -10,77 +10,105 @@ import { theme } from "../theme";
 import SecondBrainEntryCard from "./SecondBrainEntryCard";
 import SwipeToDeleteRow from "./SwipeToDeleteRow";
 
-const ListSectionHeader = memo(function ListSectionHeader({
-  group,
-  count,
-  styles,
-}) {
-  return <Text style={styles.sectionHeaderText}>{`${group} · ${count}`}</Text>;
-});
+const ListSectionHeader = memo(
+  function ListSectionHeader({ group, count, styles }) {
+    return (
+      <Text style={styles.sectionHeaderText}>{`${group} · ${count}`}</Text>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.group === nextProps.group &&
+    prevProps.count === nextProps.count &&
+    prevProps.styles === nextProps.styles,
+);
 
-const ListEntryRow = memo(function ListEntryRow({
-  entry,
-  styles,
-  item,
-  isBusy,
-  isWeb,
-  isSwipeOpen,
-  isActionDrawerActive,
-  hasOpenActionDrawer,
-  closeSwipe,
-  openEntry,
-  startEdit,
-  toggleArchiveWithConfirmation,
-  downloadIcs,
-  requestDelete,
-  handleActionDrawerChange,
-  closeAnyActionDrawer,
-  setOpenSwipeId,
-  swipeActionWidth,
-}) {
-  const handleDelete = useCallback(() => {
-    requestDelete(entry.id);
-  }, [entry.id, requestDelete]);
+const ListEntryRow = memo(
+  function ListEntryRow({
+    entry,
+    styles,
+    displayDate,
+    displayRemindAt,
+    isBusy,
+    isWeb,
+    isSwipeOpen,
+    isActionDrawerActive,
+    hasOpenActionDrawer,
+    closeSwipe,
+    openEntry,
+    startEdit,
+    toggleArchiveWithConfirmation,
+    downloadIcs,
+    requestDelete,
+    handleActionDrawerChange,
+    closeAnyActionDrawer,
+    setOpenSwipeId,
+    swipeActionWidth,
+  }) {
+    const handleDelete = useCallback(() => {
+      requestDelete(entry.id);
+    }, [entry.id, requestDelete]);
 
-  const cardContent = (
-    <SecondBrainEntryCard
-      entry={entry}
-      styles={styles}
-      theme={theme}
-      isBusy={isBusy}
-      isSwipeOpen={isSwipeOpen}
-      isDeleteConfirm={false}
-      displayDate={item.displayDate}
-      displayRemindAt={item.displayRemindAt}
-      onOpenEntry={openEntry}
-      onCloseSwipe={closeSwipe}
-      onStartEdit={startEdit}
-      onToggleArchive={toggleArchiveWithConfirmation}
-      onDownloadIcs={downloadIcs}
-      onRequestDelete={requestDelete}
-      onActionDrawerChange={handleActionDrawerChange}
-      isActionDrawerActive={isActionDrawerActive}
-      hasOpenActionDrawer={hasOpenActionDrawer}
-      onCloseAnyActionDrawer={closeAnyActionDrawer}
-    />
-  );
-  if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
+    const cardContent = (
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={isBusy}
+        isSwipeOpen={isSwipeOpen}
+        isDeleteConfirm={false}
+        displayDate={displayDate}
+        displayRemindAt={displayRemindAt}
+        onOpenEntry={openEntry}
+        onCloseSwipe={closeSwipe}
+        onStartEdit={startEdit}
+        onToggleArchive={toggleArchiveWithConfirmation}
+        onDownloadIcs={downloadIcs}
+        onRequestDelete={requestDelete}
+        onActionDrawerChange={handleActionDrawerChange}
+        isActionDrawerActive={isActionDrawerActive}
+        hasOpenActionDrawer={hasOpenActionDrawer}
+        onCloseAnyActionDrawer={closeAnyActionDrawer}
+      />
+    );
+    if (isWeb) return <View style={styles.webEntryRow}>{cardContent}</View>;
 
-  return (
-    <SwipeToDeleteRow
-      id={entry.id}
-      isOpen={isSwipeOpen}
-      isRaised={isActionDrawerActive}
-      onOpen={setOpenSwipeId}
-      actionLabel={isBusy ? "..." : "Delete"}
-      onActionPress={handleDelete}
-      actionWidth={swipeActionWidth}
-      styles={styles}
-    >
-      {cardContent}
-    </SwipeToDeleteRow>
-  );
-});
+    return (
+      <SwipeToDeleteRow
+        id={entry.id}
+        isOpen={isSwipeOpen}
+        isRaised={isActionDrawerActive}
+        onOpen={setOpenSwipeId}
+        actionLabel={isBusy ? "..." : "Delete"}
+        onActionPress={handleDelete}
+        actionWidth={swipeActionWidth}
+        styles={styles}
+      >
+        {cardContent}
+      </SwipeToDeleteRow>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.entry === nextProps.entry &&
+    prevProps.styles === nextProps.styles &&
+    prevProps.displayDate === nextProps.displayDate &&
+    prevProps.displayRemindAt === nextProps.displayRemindAt &&
+    prevProps.isBusy === nextProps.isBusy &&
+    prevProps.isWeb === nextProps.isWeb &&
+    prevProps.isSwipeOpen === nextProps.isSwipeOpen &&
+    prevProps.isActionDrawerActive === nextProps.isActionDrawerActive &&
+    prevProps.hasOpenActionDrawer === nextProps.hasOpenActionDrawer &&
+    prevProps.closeSwipe === nextProps.closeSwipe &&
+    prevProps.openEntry === nextProps.openEntry &&
+    prevProps.startEdit === nextProps.startEdit &&
+    prevProps.toggleArchiveWithConfirmation ===
+      nextProps.toggleArchiveWithConfirmation &&
+    prevProps.downloadIcs === nextProps.downloadIcs &&
+    prevProps.requestDelete === nextProps.requestDelete &&
+    prevProps.handleActionDrawerChange === nextProps.handleActionDrawerChange &&
+    prevProps.closeAnyActionDrawer === nextProps.closeAnyActionDrawer &&
+    prevProps.setOpenSwipeId === nextProps.setOpenSwipeId &&
+    prevProps.swipeActionWidth === nextProps.swipeActionWidth,
+);
 
 export default function SecondBrainFlatList({
   groupedRows,
@@ -130,7 +158,8 @@ export default function SecondBrainFlatList({
         <ListEntryRow
           entry={entry}
           styles={styles}
-          item={item}
+          displayDate={item.displayDate}
+          displayRemindAt={item.displayRemindAt}
           isBusy={busyId === entry.id}
           isWeb={isWeb}
           isSwipeOpen={openSwipeId === entry.id}
