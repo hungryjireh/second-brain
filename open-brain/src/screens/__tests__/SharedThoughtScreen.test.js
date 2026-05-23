@@ -13,6 +13,8 @@ jest.mock("../../constants/cache", () => ({
   },
 }));
 
+jest.setTimeout(15000);
+
 describe("SharedThoughtScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();

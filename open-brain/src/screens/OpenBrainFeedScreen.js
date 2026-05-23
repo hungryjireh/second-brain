@@ -245,6 +245,12 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
 
   const renderThoughtItem = useCallback(
     ({ item }) => {
+      const isFollowBusy = Boolean(
+        followBusyUserId && followBusyUserId === item.item.user_id,
+      );
+      const reactionBusyType = reactingKey.startsWith(`${item.item.id}-`)
+        ? reactingKey.slice(`${item.item.id}-`.length)
+        : "";
       return (
         <OpenBrainThoughtCard
           item={item.item}
@@ -253,9 +259,9 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
           onReact={handleReact}
           onShare={shareThought}
           onAddToSecondBrain={addToSecondBrain}
-          reactingKey={reactingKey}
+          reactionBusyType={reactionBusyType}
           onToggleFollow={handleToggleFollow}
-          followBusyUserId={followBusyUserId}
+          isFollowBusy={isFollowBusy}
           onOpenProfile={openProfile}
         />
       );

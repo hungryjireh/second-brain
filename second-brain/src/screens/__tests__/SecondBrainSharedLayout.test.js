@@ -23,6 +23,26 @@ jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
 
+jest.mock("../../utils/brainstormSessions", () => ({
+  createBrainstormSession: jest.fn(async () => ({
+    id: "shared-layout-session",
+    lifecycle: "active",
+    updatedAt: new Date().toISOString(),
+    finalizeGuards: { ended: false, wipSaved: false },
+    messages: [],
+  })),
+  getLinkedBrainstormSessionId: jest.fn(async () => ""),
+  linkEntryToBrainstormSession: jest.fn(async () => {}),
+  readBrainstormSession: jest.fn(async () => null),
+  toBrainstormTranscript: jest.fn((messages) =>
+    (Array.isArray(messages) ? messages : [])
+      .map((message) => String(message?.content || ""))
+      .filter(Boolean)
+      .join("\n"),
+  ),
+  writeBrainstormSession: jest.fn(async () => {}),
+}));
+
 describe("Second Brain shared layout", () => {
   it("renders brainstorm screen inside shared entry page layout", async () => {
     const view = render(

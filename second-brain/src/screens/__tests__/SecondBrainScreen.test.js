@@ -25,6 +25,7 @@ describe("SecondBrainScreen", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     useAudioRecorderState.mockReturnValue({ isRecording: false });
     apiRequest.mockImplementation(async () => ({}));
     isLikelyOfflineError.mockImplementation(() => false);
@@ -35,6 +36,10 @@ describe("SecondBrainScreen", () => {
   });
 
   afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
     global.fetch = originalFetch;
     global.prompt = originalPrompt;
     Object.defineProperty(Platform, "OS", {

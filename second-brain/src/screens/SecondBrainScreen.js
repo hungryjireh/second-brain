@@ -439,7 +439,15 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     setShowArchived(false);
   }, []);
   const closeOpenActionDrawer = useCallback(() => {
-    setOpenActionDrawerId(null);
+    let didClose = false;
+    setOpenActionDrawerId((current) => {
+      if (current !== null) {
+        didClose = true;
+        return null;
+      }
+      return current;
+    });
+    return didClose;
   }, []);
   const setFilterDropdownOpenedAtMs = useCallback((value) => {
     filterDropdownOpenedAtMsRef.current = value;

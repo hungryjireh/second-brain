@@ -1,17 +1,25 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import OpenBrainThoughtCard from "../OpenBrainThoughtCard";
 
-function pressAddToSecondBrain(screen) {
+async function pressAddToSecondBrain(screen) {
   const directButton =
     screen.queryByLabelText("Add to SecondBrain") ||
     screen.queryByLabelText("Added to SecondBrain");
   if (directButton) {
-    fireEvent.press(directButton);
+    await act(async () => {
+      fireEvent.press(directButton);
+    });
     return;
   }
-  fireEvent.press(screen.getByLabelText("Thought actions"));
-  fireEvent.press(screen.getByText(/Add to SecondBrain|Added to SecondBrain/));
+  await act(async () => {
+    fireEvent.press(screen.getByLabelText("Thought actions"));
+  });
+  await act(async () => {
+    fireEvent.press(
+      screen.getByText(/Add to SecondBrain|Added to SecondBrain/),
+    );
+  });
 }
 
 describe("OpenBrainThoughtCard", () => {
@@ -89,14 +97,16 @@ describe("OpenBrainThoughtCard", () => {
       />,
     );
 
-    pressAddToSecondBrain(screen);
+    await pressAddToSecondBrain(screen);
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
 
     await waitFor(() =>
       expect(screen.getByLabelText("Added to SecondBrain")).toBeTruthy(),
     );
     expect(screen.getByText("Added to SecondBrain.")).toBeTruthy();
-    fireEvent.press(screen.getByLabelText("Added to SecondBrain"));
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText("Added to SecondBrain"));
+    });
     expect(alertSpy).toHaveBeenCalledWith(
       "Add to SecondBrain again?",
       "This thought is already in your SecondBrain.",
@@ -104,7 +114,9 @@ describe("OpenBrainThoughtCard", () => {
     );
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(1);
     const [, addAgainAction] = alertSpy.mock.calls[0][2];
-    addAgainAction.onPress();
+    await act(async () => {
+      addAgainAction.onPress();
+    });
     expect(onAddToSecondBrain).toHaveBeenCalledTimes(2);
     alertSpy.mockRestore();
   });
@@ -149,7 +161,7 @@ describe("OpenBrainThoughtCard", () => {
     expect(getByText("0")).toBeTruthy();
   });
 
-  it("shows confirmation when viewer has already saved the thought", () => {
+  it("shows confirmation when viewer has already saved the thought", async () => {
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const onAddToSecondBrain = jest.fn();
     const item = {
@@ -166,7 +178,7 @@ describe("OpenBrainThoughtCard", () => {
       />,
     );
 
-    pressAddToSecondBrain(screen);
+    await pressAddToSecondBrain(screen);
     expect(alertSpy).toHaveBeenCalledWith(
       "Add to SecondBrain again?",
       "This thought is already in your SecondBrain.",
@@ -174,7 +186,9 @@ describe("OpenBrainThoughtCard", () => {
     );
     expect(onAddToSecondBrain).not.toHaveBeenCalled();
     const [, addAgainAction] = alertSpy.mock.calls[0][2];
-    addAgainAction.onPress();
+    await act(async () => {
+      addAgainAction.onPress();
+    });
     expect(onAddToSecondBrain).toHaveBeenCalledWith(item);
     alertSpy.mockRestore();
   });

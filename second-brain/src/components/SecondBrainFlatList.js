@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -32,7 +32,6 @@ const ListEntryRow = memo(
     isWeb,
     isSwipeOpen,
     isActionDrawerActive,
-    hasOpenActionDrawer,
     closeSwipe,
     openEntry,
     startEdit,
@@ -43,6 +42,8 @@ const ListEntryRow = memo(
     closeAnyActionDrawer,
     setOpenSwipeId,
     swipeActionWidth,
+    onSwipeGestureStart,
+    onSwipeGestureEnd,
   }) {
     const handleDelete = useCallback(() => {
       requestDelete(entry.id);
@@ -66,7 +67,6 @@ const ListEntryRow = memo(
         onRequestDelete={requestDelete}
         onActionDrawerChange={handleActionDrawerChange}
         isActionDrawerActive={isActionDrawerActive}
-        hasOpenActionDrawer={hasOpenActionDrawer}
         onCloseAnyActionDrawer={closeAnyActionDrawer}
       />
     );
@@ -81,6 +81,8 @@ const ListEntryRow = memo(
         actionLabel={isBusy ? "..." : "Delete"}
         onActionPress={handleDelete}
         actionWidth={swipeActionWidth}
+        onSwipeGestureStart={onSwipeGestureStart}
+        onSwipeGestureEnd={onSwipeGestureEnd}
         styles={styles}
       >
         {cardContent}
@@ -96,7 +98,6 @@ const ListEntryRow = memo(
     prevProps.isWeb === nextProps.isWeb &&
     prevProps.isSwipeOpen === nextProps.isSwipeOpen &&
     prevProps.isActionDrawerActive === nextProps.isActionDrawerActive &&
-    prevProps.hasOpenActionDrawer === nextProps.hasOpenActionDrawer &&
     prevProps.closeSwipe === nextProps.closeSwipe &&
     prevProps.openEntry === nextProps.openEntry &&
     prevProps.startEdit === nextProps.startEdit &&
@@ -107,7 +108,9 @@ const ListEntryRow = memo(
     prevProps.handleActionDrawerChange === nextProps.handleActionDrawerChange &&
     prevProps.closeAnyActionDrawer === nextProps.closeAnyActionDrawer &&
     prevProps.setOpenSwipeId === nextProps.setOpenSwipeId &&
-    prevProps.swipeActionWidth === nextProps.swipeActionWidth,
+    prevProps.swipeActionWidth === nextProps.swipeActionWidth &&
+    prevProps.onSwipeGestureStart === nextProps.onSwipeGestureStart &&
+    prevProps.onSwipeGestureEnd === nextProps.onSwipeGestureEnd,
 );
 
 export default function SecondBrainFlatList({
@@ -135,10 +138,17 @@ export default function SecondBrainFlatList({
   pullRefreshing = false,
 }) {
   const isWeb = Platform.OS === "web";
+  const [isSwipeInteracting, setIsSwipeInteracting] = useState(false);
 
   const closeSwipe = useCallback(() => {
     setOpenSwipeId(null);
   }, [setOpenSwipeId]);
+  const handleSwipeGestureStart = useCallback(() => {
+    setIsSwipeInteracting(true);
+  }, []);
+  const handleSwipeGestureEnd = useCallback(() => {
+    setIsSwipeInteracting(false);
+  }, []);
 
   const renderListItem = useCallback(
     ({ item }) => {
@@ -164,7 +174,6 @@ export default function SecondBrainFlatList({
           isWeb={isWeb}
           isSwipeOpen={openSwipeId === entry.id}
           isActionDrawerActive={openActionDrawerId === entry.id}
-          hasOpenActionDrawer={openActionDrawerId !== null}
           closeSwipe={closeSwipe}
           openEntry={openEntry}
           startEdit={startEdit}
@@ -175,6 +184,8 @@ export default function SecondBrainFlatList({
           closeAnyActionDrawer={closeAnyActionDrawer}
           setOpenSwipeId={setOpenSwipeId}
           swipeActionWidth={swipeActionWidth}
+          onSwipeGestureStart={handleSwipeGestureStart}
+          onSwipeGestureEnd={handleSwipeGestureEnd}
         />
       );
     },
@@ -182,7 +193,6 @@ export default function SecondBrainFlatList({
       busyId,
       closeAnyActionDrawer,
       closeSwipe,
-      closeOpenActionDrawer,
       downloadIcs,
       handleActionDrawerChange,
       isWeb,
@@ -191,6 +201,8 @@ export default function SecondBrainFlatList({
       openSwipeId,
       requestDelete,
       setOpenSwipeId,
+      handleSwipeGestureStart,
+      handleSwipeGestureEnd,
       startEdit,
       styles,
       swipeActionWidth,
@@ -277,7 +289,7 @@ export default function SecondBrainFlatList({
           onScrollBeginDrag={closeOpenActionDrawer}
           onRefresh={onRefresh}
           refreshing={loadingEntries && !pullRefreshing}
-          scrollEnabled={!pullRefreshing}
+          scrollEnabled={!pullRefreshing && !isSwipeInteracting}
         />
       </View>
     </View>

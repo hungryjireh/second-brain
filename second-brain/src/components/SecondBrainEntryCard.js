@@ -102,7 +102,7 @@ function SecondBrainEntryCard({
   onRequestDelete,
   onActionDrawerChange,
   isActionDrawerActive,
-  hasOpenActionDrawer,
+  hasOpenActionDrawer = false,
   onCloseAnyActionDrawer,
   displayRemindAt,
   displayDate,
@@ -182,9 +182,15 @@ function SecondBrainEntryCard({
         if (Date.now() < ignoreCardPressUntilRef.current) {
           return;
         }
-        if (hasOpenActionDrawer && !isActionDrawerActive) {
-          onCloseAnyActionDrawer?.();
-          return;
+        if (!isActionDrawerActive) {
+          if (hasOpenActionDrawer) {
+            onCloseAnyActionDrawer?.();
+            return;
+          }
+          const closeResult = onCloseAnyActionDrawer?.();
+          if (closeResult === true) {
+            return;
+          }
         }
         if (showInlineActions) {
           closeActionDrawer();

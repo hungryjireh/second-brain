@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as ReactNative from "react-native";
 import { Alert } from "react-native";
 import SecondBrainEntryDetailsScreen from "../SecondBrainEntryDetailsScreen";
@@ -12,6 +12,14 @@ jest.mock("../../api", () => ({
 describe("SecondBrainEntryDetailsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
   });
 
   it("renders entry details content", () => {
@@ -310,6 +318,9 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Edit")).toBeTruthy();
 
     fireEvent.press(getByTestId("entry-actions-dismiss-overlay"));
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
     await waitFor(() => {
       expect(queryByTestId("entry-actions-dismiss-overlay")).toBeNull();
     });

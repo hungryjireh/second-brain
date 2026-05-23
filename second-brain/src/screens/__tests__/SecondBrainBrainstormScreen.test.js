@@ -8,16 +8,60 @@ jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
 
-describe("SecondBrainBrainstormScreen", () => {
-  async function readStoredSession() {
-    const keys = await AsyncStorage.getAllKeys();
-    const sessionKey = keys.find((key) =>
-      key.startsWith("brainstorm:session:"),
-    );
-    const raw = sessionKey ? await AsyncStorage.getItem(sessionKey) : "";
-    return raw ? JSON.parse(raw) : null;
+jest.mock("../../utils/brainstormSessions", () => {
+  let counter = 0;
+  const sessionsById = new Map();
+  const linkedEntryById = new Map();
+
+  function cloneSession(session) {
+    return session ? JSON.parse(JSON.stringify(session)) : session;
   }
 
+  return {
+    createBrainstormSession: jest.fn(async ({ entryId = null, seedText = "" } = {}) => {
+      counter += 1;
+      const session = {
+        id: `session-${counter}`,
+        entryId,
+        lifecycle: "active",
+        updatedAt: new Date().toISOString(),
+        finalizeGuards: { ended: false, wipSaved: false },
+        messages: seedText
+          ? [
+              {
+                id: `seed-${counter}`,
+                role: "assistant",
+                content: String(seedText),
+                createdAt: new Date().toISOString(),
+              },
+            ]
+          : [],
+      };
+      sessionsById.set(session.id, cloneSession(session));
+      return cloneSession(session);
+    }),
+    getLinkedBrainstormSessionId: jest.fn(async (entryId) => {
+      return linkedEntryById.get(Number(entryId)) || "";
+    }),
+    linkEntryToBrainstormSession: jest.fn(async (entryId, sessionId) => {
+      linkedEntryById.set(Number(entryId), sessionId);
+    }),
+    readBrainstormSession: jest.fn(async (sessionId) => {
+      return cloneSession(sessionsById.get(sessionId) || null);
+    }),
+    toBrainstormTranscript: jest.fn((messages) =>
+      (Array.isArray(messages) ? messages : [])
+        .map((message) => String(message?.content || ""))
+        .filter(Boolean)
+        .join("\n"),
+    ),
+    writeBrainstormSession: jest.fn(async (session) => {
+      sessionsById.set(session.id, cloneSession(session));
+    }),
+  };
+});
+
+describe("SecondBrainBrainstormScreen", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await AsyncStorage.clear();
@@ -41,10 +85,12 @@ describe("SecondBrainBrainstormScreen", () => {
     fireEvent.changeText(input, "Brainstorm this");
     fireEvent.press(getByLabelText("Enter note"));
 
-    await waitFor(async () => {
-      const stored = await readStoredSession();
-      expect(Array.isArray(stored?.messages)).toBe(true);
-      expect(stored.messages.length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      const brainstormCalls = apiRequest.mock.calls.filter(
+        ([path, options]) =>
+          path === "/brainstorm" && options?.method === "POST",
+      );
+      expect(brainstormCalls.length).toBeGreaterThanOrEqual(1);
     });
   });
 

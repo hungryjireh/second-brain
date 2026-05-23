@@ -74,8 +74,8 @@ function OpenBrainThoughtCard({
   onShare,
   onAddToSecondBrain,
   addToSecondBrainPayload = null,
-  reactingKey = "",
-  followBusyUserId = "",
+  reactionBusyType = "",
+  isFollowBusy = false,
   largeBody = false,
   feedBody = false,
   transparentCard = false,
@@ -300,7 +300,7 @@ function OpenBrainThoughtCard({
     const saveCount = getThoughtSaveCount(item);
     const isSelf = item.profile?.is_self === true;
     const isFollowing = item.profile?.is_following === true;
-    const followBusy = followBusyUserId === item.user_id;
+    const followBusy = isFollowBusy;
     const formattedTime = date || topMeta || "";
 
     return (
@@ -458,7 +458,7 @@ function OpenBrainThoughtCard({
           {REACTIONS.map((reaction) => {
             const active = Boolean(item.reactions?.mine?.[reaction.key]);
             const count = Number(item.reactions?.[reaction.key] || 0);
-            const busy = reactingKey === `${item.id}-${reaction.key}`;
+            const busy = reactionBusyType === reaction.key;
             return (
               <Pressable
                 key={reaction.key}
@@ -979,22 +979,8 @@ function areThoughtCardPropsEqual(prevProps, nextProps) {
   const nextItemId = nextProps.item?.id;
   if (prevItemId !== nextItemId) return false;
 
-  // Ignore global busy-key churn when it does not target this specific card.
-  const prevReactionBusy = prevItemId
-    ? prevProps.reactingKey.startsWith(`${prevItemId}-`)
-    : false;
-  const nextReactionBusy = nextItemId
-    ? nextProps.reactingKey.startsWith(`${nextItemId}-`)
-    : false;
-  if (prevReactionBusy !== nextReactionBusy) return false;
-
-  const prevFollowBusy = prevProps.item?.user_id
-    ? prevProps.followBusyUserId === prevProps.item.user_id
-    : false;
-  const nextFollowBusy = nextProps.item?.user_id
-    ? nextProps.followBusyUserId === nextProps.item.user_id
-    : false;
-  if (prevFollowBusy !== nextFollowBusy) return false;
+  if (prevProps.reactionBusyType !== nextProps.reactionBusyType) return false;
+  if (prevProps.isFollowBusy !== nextProps.isFollowBusy) return false;
 
   return true;
 }

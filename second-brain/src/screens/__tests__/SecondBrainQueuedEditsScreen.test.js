@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react-native";
+import { act, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SecondBrainQueuedEditsScreen from "../SecondBrainQueuedEditsScreen";
 
@@ -102,9 +102,12 @@ describe("SecondBrainQueuedEditsScreen", () => {
     });
 
     const latestProps = mockQueuedPanel.mock.calls.at(-1)[0];
-    const result = await latestProps.onSaveQueuedEntry({
-      queueId: "q-1",
-      description: "Updated queued draft",
+    let result;
+    await act(async () => {
+      result = await latestProps.onSaveQueuedEntry({
+        queueId: "q-1",
+        description: "Updated queued draft",
+      });
     });
 
     expect(result).toEqual({ ok: true });
@@ -147,7 +150,10 @@ describe("SecondBrainQueuedEditsScreen", () => {
     });
 
     const latestProps = mockQueuedPanel.mock.calls.at(-1)[0];
-    const result = await latestProps.onDeleteQueuedEntry("q-1");
+    let result;
+    await act(async () => {
+      result = await latestProps.onDeleteQueuedEntry("q-1");
+    });
 
     expect(result).toEqual({ ok: true });
     expect(setItemSpy).toHaveBeenCalledWith(
@@ -188,7 +194,10 @@ describe("SecondBrainQueuedEditsScreen", () => {
     });
 
     const latestProps = mockQueuedPanel.mock.calls.at(-1)[0];
-    const result = await latestProps.onDeleteQueuedEntry("queued-1");
+    let result;
+    await act(async () => {
+      result = await latestProps.onDeleteQueuedEntry("queued-1");
+    });
 
     expect(result).toEqual({ ok: true });
     expect(setItemSpy).toHaveBeenCalledWith(
@@ -230,7 +239,10 @@ describe("SecondBrainQueuedEditsScreen", () => {
     const initialProps = mockQueuedPanel.mock.calls.at(-1)[0];
     expect(initialProps.queuedEntries).toHaveLength(2);
 
-    const result = await initialProps.onDeleteQueuedEntry("q-1");
+    let result;
+    await act(async () => {
+      result = await initialProps.onDeleteQueuedEntry("q-1");
+    });
     expect(result).toEqual({ ok: true });
 
     await waitFor(() => {

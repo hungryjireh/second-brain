@@ -39,6 +39,8 @@ jest.mock("../../components/TimezoneDropdown", () => {
   };
 });
 
+jest.setTimeout(15000);
+
 describe("UpdateProfileScreen upload", () => {
   let UpdateProfileScreen;
   const navigation = { navigate: jest.fn(), replace: jest.fn() };

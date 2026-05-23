@@ -121,7 +121,9 @@ describe("SecondBrainQueuedEntriesPanel", () => {
     });
 
     fireEvent.changeText(getByTestId("queued-edit-input-q-create"), "Updated");
-    fireEvent.press(getByTestId("queued-save-button-q-create"));
+    await act(async () => {
+      fireEvent.press(getByTestId("queued-save-button-q-create"));
+    });
 
     expect(onSaveQueuedEntry).toHaveBeenCalledWith({
       queueId: "q-create",
@@ -157,7 +159,9 @@ describe("SecondBrainQueuedEntriesPanel", () => {
     });
 
     fireEvent.changeText(getByTestId("queued-edit-input-q-create"), "   ");
-    fireEvent.press(getByTestId("queued-save-button-q-create"));
+    await act(async () => {
+      fireEvent.press(getByTestId("queued-save-button-q-create"));
+    });
 
     expect(onSaveQueuedEntry).not.toHaveBeenCalled();
     expect(getByText("Description is required.")).toBeTruthy();
@@ -189,10 +193,14 @@ describe("SecondBrainQueuedEntriesPanel", () => {
     });
 
     fireEvent.changeText(getByTestId("queued-edit-input-q-create"), "   ");
-    fireEvent.press(getByTestId("queued-save-button-q-create"));
+    await act(async () => {
+      fireEvent.press(getByTestId("queued-save-button-q-create"));
+    });
     expect(getByText("Description is required.")).toBeTruthy();
 
-    fireEvent.press(getByText("Cancel"));
+    await act(async () => {
+      fireEvent.press(getByText("Cancel"));
+    });
     expect(queryByTestId("queued-edit-input-q-create")).toBeNull();
     expect(queryByTestId("queued-save-button-q-create")).toBeNull();
   });

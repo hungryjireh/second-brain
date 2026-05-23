@@ -24,12 +24,30 @@ jest.mock("../SecondBrainEntryCard", () => {
 
 jest.mock("../SwipeToDeleteRow", () => {
   const { Pressable, Text, View } = require("react-native");
-  return function MockSwipeToDeleteRow({ children, id, onActionPress }) {
+  return function MockSwipeToDeleteRow({
+    children,
+    id,
+    onActionPress,
+    onSwipeGestureStart,
+    onSwipeGestureEnd,
+  }) {
     return (
       <View>
         {children}
         <Pressable testID={`swipe-delete-${id}`} onPress={onActionPress}>
           <Text>Delete</Text>
+        </Pressable>
+        <Pressable
+          testID={`swipe-start-${id}`}
+          onPress={() => onSwipeGestureStart?.()}
+        >
+          <Text>Swipe start</Text>
+        </Pressable>
+        <Pressable
+          testID={`swipe-end-${id}`}
+          onPress={() => onSwipeGestureEnd?.()}
+        >
+          <Text>Swipe end</Text>
         </Pressable>
       </View>
     );
@@ -195,6 +213,33 @@ describe("SecondBrainFlatList", () => {
         )
       : false;
     expect(hasTopPadding).toBe(true);
+  });
+
+  it("disables FlatList scrolling while swipe gesture is active and re-enables after gesture end", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId } = render(
+      <SecondBrainFlatList {...createBaseProps({ groupedRows })} />,
+    );
+
+    const list = getByTestId("second-brain-flat-list");
+    expect(list.props.scrollEnabled).toBe(true);
+
+    fireEvent.press(getByTestId("swipe-start-1"));
+    expect(getByTestId("second-brain-flat-list").props.scrollEnabled).toBe(
+      false,
+    );
+
+    fireEvent.press(getByTestId("swipe-end-1"));
+    expect(getByTestId("second-brain-flat-list").props.scrollEnabled).toBe(
+      true,
+    );
   });
 
   it("wires swipe delete action to requestDelete for entry rows", () => {
