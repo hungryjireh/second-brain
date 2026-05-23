@@ -1,0 +1,11 @@
+# Keep deployment upload small when project root is `second-brain`
+node_modules
+ios
+android
+.expo
+dist-test
+coverage
+.DS_Store
+.env
+.env.*
+!.env.example

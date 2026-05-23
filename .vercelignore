@@ -1,0 +1,57 @@
+# Dependencies
+**/node_modules
+node_modules
+second-brain/node_modules
+open-brain/node_modules
+webapp/node_modules
+
+# VCS / local metadata
+.git
+.git/**
+.vercel
+.vercel/**
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# macOS / editor noise
+.DS_Store
+**/.DS_Store
+.idea
+.vscode
+
+# Local build artifacts and caches
+**/dist
+**/dist-test
+**/.expo
+**/.expo/**
+**/.next
+**/.next/**
+**/.cache
+**/.cache/**
+**/coverage
+**/coverage/**
+
+# Expo native/mobile folders not needed for web export deploy
+second-brain/ios
+second-brain/android
+open-brain/ios
+open-brain/android
+
+# Exclude sibling apps/workspaces unrelated to this Vercel target
+open-brain
+webapp
+sample
+tests
+scripts
+.agents
+.codex
+.pnpm-store
+
+# Project-internal planning/docs not needed at runtime
+openspec
+PLAN.md
+PLAN-POC.md
+second_brain_webapp_mockup.html
