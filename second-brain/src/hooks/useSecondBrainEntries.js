@@ -4,6 +4,7 @@ import { apiRequest, isLikelyOfflineError } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import { normalizeTagValue } from "../utils/secondBrainTagUtils";
 import { sortEntriesByUpdatedAt } from "../utils/secondBrainEntryUtils";
+import { resolveStorageOwnerSegmentFromToken } from "../utils/jwt";
 
 const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 const OFFLINE_QUEUE_VERSION = 1;
@@ -46,11 +47,39 @@ export function useSecondBrainEntries({ token, onError }) {
   }, []);
 
   const buildOfflineStorageKey = useCallback(() => {
+    const ownerSegment = resolveStorageOwnerSegmentFromToken(token);
+    if (ownerSegment) {
+      return `${OFFLINE_STORAGE_PREFIX}${ownerSegment}`;
+    }
     return `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
   }, [token]);
 
+  const buildLegacyOfflineStorageKey = useCallback(() => {
+    return `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
+  }, [token]);
+
+  const migrateLegacyOfflineStateIfNeeded = useCallback(async () => {
+    const ownerSegment = resolveStorageOwnerSegmentFromToken(token);
+    if (!ownerSegment) return;
+    const currentKey = buildOfflineStorageKey();
+    const legacyKey = buildLegacyOfflineStorageKey();
+    if (currentKey === legacyKey) return;
+    try {
+      const [currentRaw, legacyRaw] = await Promise.all([
+        AsyncStorage.getItem(currentKey),
+        AsyncStorage.getItem(legacyKey),
+      ]);
+      if (currentRaw || !legacyRaw) return;
+      await AsyncStorage.setItem(currentKey, legacyRaw);
+      await AsyncStorage.removeItem(legacyKey);
+    } catch {
+      // Migration is best-effort and should never block runtime behavior.
+    }
+  }, [buildLegacyOfflineStorageKey, buildOfflineStorageKey, token]);
+
   const readOfflineState = useCallback(async () => {
     try {
+      await migrateLegacyOfflineStateIfNeeded();
       const raw = await AsyncStorage.getItem(buildOfflineStorageKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
@@ -59,7 +88,7 @@ export function useSecondBrainEntries({ token, onError }) {
     } catch {
       return null;
     }
-  }, [buildOfflineStorageKey]);
+  }, [buildOfflineStorageKey, migrateLegacyOfflineStateIfNeeded]);
 
   const writeOfflineState = useCallback(
     async (nextState) => {

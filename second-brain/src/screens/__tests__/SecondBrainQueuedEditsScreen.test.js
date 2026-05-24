@@ -12,8 +12,21 @@ jest.mock("../../components/SecondBrainQueuedEntriesPanel", () => {
 });
 
 describe("SecondBrainQueuedEditsScreen", () => {
-  beforeEach(() => {
+  const encodeSegment = (value) =>
+    Buffer.from(value, "utf8")
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  const createTokenForUser = (userId) =>
+    `header.${encodeSegment(JSON.stringify({ sub: userId }))}.signature`;
+
+  beforeEach(async () => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
+    if (typeof AsyncStorage?.clear === "function") {
+      await AsyncStorage.clear();
+    }
   });
 
   it("shows empty state when there are no queued entries", async () => {
@@ -250,5 +263,51 @@ describe("SecondBrainQueuedEditsScreen", () => {
       expect(latestProps.queuedEntries).toHaveLength(1);
       expect(latestProps.queuedEntries[0].queueId).toBe("q-2");
     });
+  });
+
+  it("migrates legacy token-keyed queue to stable user-keyed queue", async () => {
+    const oldToken = createTokenForUser("user-123");
+    const newToken = createTokenForUser("user-123");
+    const legacyStorageKey = `secondBrainOffline:${oldToken}`;
+    const stableStorageKey = "secondBrainOffline:user-123";
+    const storageMap = new Map([
+      [
+        legacyStorageKey,
+        JSON.stringify({
+          version: 1,
+          entries: [],
+          userTags: [],
+          queue: [
+            { type: "create", description: "Queued draft", queue_id: "q-1" },
+          ],
+        }),
+      ],
+    ]);
+    jest.spyOn(AsyncStorage, "getItem").mockImplementation(async (key) => {
+      return storageMap.has(key) ? storageMap.get(key) : null;
+    });
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async (key, val) => {
+      storageMap.set(key, val);
+    });
+    jest.spyOn(AsyncStorage, "removeItem").mockImplementation(async (key) => {
+      storageMap.delete(key);
+    });
+
+    render(<SecondBrainQueuedEditsScreen token={newToken} />);
+
+    await waitFor(() => {
+      expect(mockQueuedPanel).toHaveBeenCalled();
+    });
+
+    const latestProps = mockQueuedPanel.mock.calls.at(-1)[0];
+    expect(latestProps.queuedEntries).toEqual([
+      expect.objectContaining({
+        queueId: "q-1",
+        summary: "Queued draft",
+      }),
+    ]);
+
+    expect(storageMap.get(stableStorageKey)).toBeTruthy();
+    expect(storageMap.has(legacyStorageKey)).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import SecondBrainStatsGrid from "../SecondBrainStatsGrid";
+import { theme } from "../../theme";
 
 const styles = {
   statsGrid: {},
@@ -76,5 +77,32 @@ describe("SecondBrainStatsGrid", () => {
 
     const setNext = props.setActiveCategory.mock.calls[0][0];
     expect(setNext("todo")).toBe("note");
+  });
+
+  it("keeps active stat symbol/count/label in light text color", () => {
+    const { getByText } = renderGrid({
+      activeCategory: "todo",
+      counts: { reminder: 2, todo: 3, thought: 4, note: 5 },
+    });
+
+    const todoLabelStyle = getByText("TODOs").props.style;
+    const todoCountStyle = getByText("3").props.style;
+    const todoSymbolStyle = getByText("◻").props.style;
+
+    expect(todoLabelStyle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: theme.colors.textLight }),
+      ]),
+    );
+    expect(todoCountStyle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: theme.colors.textLight }),
+      ]),
+    );
+    expect(todoSymbolStyle).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: theme.colors.textLight }),
+      ]),
+    );
   });
 });

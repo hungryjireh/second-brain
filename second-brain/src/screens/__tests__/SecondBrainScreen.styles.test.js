@@ -5,18 +5,29 @@ describe("SecondBrainScreen responsive styles", () => {
   it("defines a non-wrapping stats grid variant for small screens", () => {
     const smallGrid = StyleSheet.flatten(styles.statsGridSmall);
     expect(smallGrid.flexWrap).toBe("nowrap");
+    expect(smallGrid.justifyContent).toBe("flex-start");
   });
 
-  it("centers the stats grid horizontally on regular screens", () => {
+  it("lays out the stats grid from the left edge on regular screens", () => {
     const statsGrid = StyleSheet.flatten(styles.statsGrid);
     expect(statsGrid.width).toBe("100%");
-    expect(statsGrid.justifyContent).toBe("center");
+    expect(statsGrid.justifyContent).toBe("flex-start");
   });
 
   it("defines compact stat card sizing for small screens", () => {
     const smallCard = StyleSheet.flatten(styles.statCardSmall);
-    expect(smallCard.width).toBe("24%");
+    expect(smallCard.flexBasis).toBe(0);
+    expect(smallCard.flexGrow).toBe(1);
+    expect(smallCard.flexShrink).toBe(1);
     expect(smallCard.minWidth).toBe(0);
+  });
+
+  it("uses equal-width stat cards on regular screens", () => {
+    const regularCard = StyleSheet.flatten(styles.statCard);
+    expect(regularCard.flexBasis).toBe(0);
+    expect(regularCard.flexGrow).toBe(1);
+    expect(regularCard.flexShrink).toBe(1);
+    expect(regularCard.minWidth).toBe(0);
   });
 
   it("defines a full-width painted swipe delete background", () => {
@@ -99,5 +110,33 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(micWrap.right + micButton.width / 2).toBe(
       plusWrap.right + plusButton.width / 2,
     );
+  });
+
+  it("matches yellow banner sync button text size to offline message text", () => {
+    const offlineBannerText = StyleSheet.flatten(styles.offlineBannerText);
+    const syncButtonText = StyleSheet.flatten(styles.offlineBannerSyncButtonText);
+
+    expect(syncButtonText.fontSize).toBe(offlineBannerText.fontSize);
+    expect(syncButtonText.lineHeight).toBe(offlineBannerText.lineHeight);
+  });
+
+  it("keeps the yellow offline banner visual tokens for background, border, and sync button", () => {
+    const offlineBanner = StyleSheet.flatten(styles.offlineBanner);
+    const offlineBannerDot = StyleSheet.flatten(styles.offlineBannerDot);
+    const syncButton = StyleSheet.flatten(styles.offlineBannerSyncButton);
+
+    expect(offlineBanner.backgroundColor).toBe("#F2EFE4");
+    expect(offlineBanner.borderColor).toBe("#E5BC58");
+    expect(offlineBanner.borderRadius).toBe(16);
+    expect(offlineBannerDot.backgroundColor).toBe("#E59E0C");
+    expect(syncButton.backgroundColor).toBe("#F4E9C5");
+    expect(syncButton.borderColor).toBe("#E5BC58");
+  });
+
+  it("keeps filter section bottom spacing aligned with status stack spacing", () => {
+    const filterSection = StyleSheet.flatten(styles.filterSection);
+    const filterStatusStackItem = StyleSheet.flatten(styles.filterStatusStackItem);
+
+    expect(filterSection.marginBottom).toBe(filterStatusStackItem.marginTop);
   });
 });

@@ -13,6 +13,14 @@ describe("useSecondBrainEntries", () => {
   let latestValue = null;
   const token = "token";
   const onError = jest.fn();
+  const encodeSegment = (value) =>
+    Buffer.from(value, "utf8")
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  const createTokenForUser = (userId) =>
+    `header.${encodeSegment(JSON.stringify({ sub: userId }))}.signature`;
 
   function Harness({ authToken, onUpdate, onHookError }) {
     const value = useSecondBrainEntries({
@@ -347,6 +355,69 @@ describe("useSecondBrainEntries", () => {
         code: "immutable_entry",
         message: "Only queued create entries can be edited.",
       },
+    });
+  });
+
+  it("retains queued offline actions across token rotation for the same user", async () => {
+    const oldToken = createTokenForUser("user-123");
+    const newToken = createTokenForUser("user-123");
+    const legacyStorageKey = `secondBrainOffline:${oldToken}`;
+    const stableStorageKey = "secondBrainOffline:user-123";
+
+    await AsyncStorage.setItem(
+      legacyStorageKey,
+      JSON.stringify({
+        version: 1,
+        entries: [{ id: 1001, description: "Queued cache entry", created_at: 1 }],
+        userTags: ["work"],
+        queue: [
+          {
+            type: "create",
+            description: "Queued while offline",
+            queue_id: "q-retain-1",
+            queued_at: 100,
+          },
+        ],
+      }),
+    );
+
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network down");
+    });
+    isLikelyOfflineError.mockReturnValue(true);
+
+    render(
+      <Harness
+        authToken={newToken}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries();
+    });
+
+    await waitFor(() => {
+      expect(latestValue.offlineQueueSize).toBe(1);
+      expect(latestValue.queuedEntries).toEqual([
+        expect.objectContaining({
+          queueId: "q-retain-1",
+          summary: "Queued while offline",
+        }),
+      ]);
+      expect(onError).toHaveBeenCalledWith(
+        "Offline mode: showing saved entries.",
+      );
+    });
+
+    await waitFor(async () => {
+      const migrated = await AsyncStorage.getItem(stableStorageKey);
+      const legacy = await AsyncStorage.getItem(legacyStorageKey);
+      expect(migrated).toBeTruthy();
+      expect(legacy).toBeNull();
     });
   });
 

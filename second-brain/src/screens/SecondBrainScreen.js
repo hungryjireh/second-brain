@@ -84,6 +84,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const [isTypebarExpanded, setIsTypebarExpanded] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
+  const [syncInProgress, setSyncInProgress] = useState(false);
   const {
     entries,
     setEntries,
@@ -141,6 +142,16 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
       setPullRefreshing(false);
     }
   }, [loadEntries]);
+  const handleOfflineSync = useCallback(async () => {
+    if (syncInProgress) return;
+    setSyncInProgress(true);
+    setError("");
+    try {
+      await loadEntries({ bypassCache: true });
+    } finally {
+      setSyncInProgress(false);
+    }
+  }, [loadEntries, syncInProgress]);
   const {
     voiceBusy,
     voiceStarting,
@@ -168,6 +179,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const listBottomPadding = typebarBottom + typebarInputHeight + 20;
   const isWeb = Platform.OS === "web";
   const isNativeOfflineMode = !isWeb && offlineMode;
+  const displayError = error.startsWith("Offline mode:") ? "" : error;
   const hasDraftText = draft.trim().length > 0;
   const hideTypebarSideActions =
     (typebarFocused || (isWeb && hasDraftText)) && !recording;
@@ -528,12 +540,14 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
         <SecondBrainOfflineBanner
           styles={styles}
           offlineQueueSize={offlineQueueSize}
-          onPress={() => navigation.navigate("SecondBrainQueuedEdits")}
+          onBannerPress={() => navigation.navigate("SecondBrainQueuedEdits")}
+          onSyncPress={handleOfflineSync}
+          syncInProgress={syncInProgress}
         />
       </View>
     ) : null,
-    errorBanner: error ? (
-      <Text style={styles.error}>{error}</Text>
+    errorBanner: displayError ? (
+      <Text style={styles.error}>{displayError}</Text>
     ) : importError ? (
       <Text style={styles.error}>{importError}</Text>
     ) : null,

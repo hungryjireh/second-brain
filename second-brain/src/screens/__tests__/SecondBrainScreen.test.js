@@ -216,7 +216,9 @@ describe("SecondBrainScreen", () => {
       <SecondBrainScreen token={token} navigation={{ navigate }} />,
     );
 
-    await waitFor(() => expect(getByText("Offline mode")).toBeTruthy());
+    await waitFor(() =>
+      expect(getByText("Offline · no changes queued")).toBeTruthy(),
+    );
     fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.changeText(
       getByPlaceholderText("Type a note, reminder or thought..."),
@@ -308,7 +310,7 @@ describe("SecondBrainScreen", () => {
     );
 
     await waitFor(() =>
-      expect(getByText("1 change queued for sync.")).toBeTruthy(),
+      expect(getByText("Offline · 1 change queued")).toBeTruthy(),
     );
     expect(queryByText("Queued edits")).toBeNull();
     expect(queryByText("Queued draft entry")).toBeNull();
@@ -912,8 +914,44 @@ describe("SecondBrainScreen", () => {
 
     await waitFor(() => expect(getByText("Offline note")).toBeTruthy());
     expect(getByTestId("offline-banner")).toBeTruthy();
-    expect(getByText("Offline mode")).toBeTruthy();
-    expect(getByText("2 changes queued for sync.")).toBeTruthy();
+    expect(getByText("Offline · 2 changes queued")).toBeTruthy();
+  });
+
+  it("hides offline-mode error banner copy while preserving the yellow offline banner", async () => {
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByText, queryByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    await waitFor(() => expect(getByText("Offline note")).toBeTruthy());
+    expect(getByText("Offline · no changes queued")).toBeTruthy();
+    expect(queryByText("Offline mode: showing saved entries.")).toBeNull();
   });
 
   it("shows ChatGPT share import timeout on SecondBrainScreen after modal closes", async () => {

@@ -67,12 +67,13 @@ export default function SecondBrainStatsGrid({
           <Pressable
             key={stat.key}
             testID={`stat-card-${stat.key}`}
-            style={[
+            style={({ pressed }) => [
               styles.statCard,
               isSmallScreen && styles.statCardSmall,
               {
                 borderColor: stat.borderColor,
-                backgroundColor: stat.cardBackgroundColor,
+                backgroundColor:
+                  pressed || isActive ? stat.color : stat.cardBackgroundColor,
               },
               isActive && styles.statCardActive,
             ]}
@@ -81,32 +82,45 @@ export default function SecondBrainStatsGrid({
               setActiveCategory((prev) => (prev === stat.key ? "" : stat.key));
             }}
           >
-            <Text style={[styles.statSymbol, { color: stat.color }]}>
-              {stat.symbol}
-            </Text>
-            <Text
-              style={[
-                styles.statCount,
-                getStatCountTextStyle(styles, count),
-                { color: stat.color },
-              ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-            >
-              {count}
-            </Text>
-            <Text
-              style={[
-                styles.statLabel,
-                { color: stat.labelColor },
-                isSmallScreen && styles.statLabelSmall,
-                isActive && styles.statLabelActive,
-              ]}
-              numberOfLines={1}
-            >
-              {stat.label}
-            </Text>
+            {({ pressed }) => {
+              const activeTextColor =
+                pressed || isActive ? theme.colors.textLight : null;
+              return (
+                <>
+                  <Text
+                    style={[
+                      styles.statSymbol,
+                      { color: activeTextColor ?? stat.color },
+                    ]}
+                  >
+                    {stat.symbol}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statCount,
+                      getStatCountTextStyle(styles, count),
+                      { color: activeTextColor ?? stat.color },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {count}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statLabel,
+                      { color: activeTextColor ?? stat.labelColor },
+                      isSmallScreen && styles.statLabelSmall,
+                      isActive && styles.statLabelActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {stat.label}
+                  </Text>
+                </>
+              );
+            }}
           </Pressable>
         );
       })}

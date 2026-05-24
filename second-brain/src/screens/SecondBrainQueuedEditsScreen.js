@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import SecondBrainQueuedEntriesPanel from "../components/SecondBrainQueuedEntriesPanel";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
+import { resolveStorageOwnerSegmentFromToken } from "../utils/jwt";
 
 const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 
@@ -46,12 +47,32 @@ export default function SecondBrainQueuedEditsScreen({
   const [savingQueueEntryId, setSavingQueueEntryId] = useState("");
   const [queueError, setQueueError] = useState("");
 
-  const storageKey = `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
+  const ownerSegment = resolveStorageOwnerSegmentFromToken(token);
+  const storageKey = `${OFFLINE_STORAGE_PREFIX}${
+    ownerSegment || String(token || "").trim()
+  }`;
+  const legacyStorageKey = `${OFFLINE_STORAGE_PREFIX}${String(token || "").trim()}`;
+
+  const migrateLegacyOfflineStateIfNeeded = useCallback(async () => {
+    if (!ownerSegment || storageKey === legacyStorageKey) return;
+    try {
+      const [currentRaw, legacyRaw] = await Promise.all([
+        AsyncStorage.getItem(storageKey),
+        AsyncStorage.getItem(legacyStorageKey),
+      ]);
+      if (currentRaw || !legacyRaw) return;
+      await AsyncStorage.setItem(storageKey, legacyRaw);
+      await AsyncStorage.removeItem(legacyStorageKey);
+    } catch {
+      // Migration is best-effort and should not block queued-entry UI.
+    }
+  }, [legacyStorageKey, ownerSegment, storageKey]);
 
   const loadQueuedEntries = useCallback(async () => {
     setLoading(true);
     setQueueError("");
     try {
+      await migrateLegacyOfflineStateIfNeeded();
       const raw = await AsyncStorage.getItem(storageKey);
       if (!raw) {
         setQueuedEntries([]);
@@ -66,7 +87,7 @@ export default function SecondBrainQueuedEditsScreen({
     } finally {
       setLoading(false);
     }
-  }, [storageKey]);
+  }, [migrateLegacyOfflineStateIfNeeded, storageKey]);
 
   useEffect(() => {
     loadQueuedEntries();
