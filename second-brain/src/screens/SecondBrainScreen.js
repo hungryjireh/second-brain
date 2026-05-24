@@ -81,6 +81,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const [openSwipeId, setOpenSwipeId] = useState(null);
   const [actionTooltip, setActionTooltip] = useState("");
   const [typebarFocused, setTypebarFocused] = useState(false);
+  const [isTypebarExpanded, setIsTypebarExpanded] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const {
@@ -228,6 +229,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
       }
       setDraft("");
       setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
+      setIsTypebarExpanded(false);
       navigation.navigate("SecondBrainBrainstorm");
       return;
     }
@@ -239,6 +241,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     ]);
     setDraft("");
     setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
+    setIsTypebarExpanded(false);
     try {
       await apiRequest("/entries", {
         method: "POST",
@@ -460,6 +463,8 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     onSubmitDraft: createEntry,
     closeOpenActionDrawer,
     setTypebarFocused,
+    isTypebarExpanded,
+    setIsTypebarExpanded,
     isSmallScreen,
     inputHeight: typebarInputHeight,
     setInputHeight: setTypebarInputHeight,
@@ -495,6 +500,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     savingSettings,
     saveSettings,
     onLogout,
+    keepSettingsVisible: true,
   };
   const filterDropdownProps = {
     styles,

@@ -7,6 +7,12 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(smallGrid.flexWrap).toBe("nowrap");
   });
 
+  it("centers the stats grid horizontally on regular screens", () => {
+    const statsGrid = StyleSheet.flatten(styles.statsGrid);
+    expect(statsGrid.width).toBe("100%");
+    expect(statsGrid.justifyContent).toBe("center");
+  });
+
   it("defines compact stat card sizing for small screens", () => {
     const smallCard = StyleSheet.flatten(styles.statCardSmall);
     expect(smallCard.width).toBe("24%");
@@ -51,6 +57,21 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(searchInput.zIndex).toBeGreaterThan(overlay.zIndex);
   });
 
+  it("keeps the compact search bar and filter icon sizing", () => {
+    const searchRow = StyleSheet.flatten(styles.filterSearchRow);
+    const searchWrap = StyleSheet.flatten(styles.filterSearchInputWrap);
+    const searchInput = StyleSheet.flatten(styles.filterSearchInput);
+    const filterIconButton = StyleSheet.flatten(styles.filterDropdownIconButton);
+
+    expect(searchRow.gap).toBe(6);
+    expect(searchWrap.minHeight).toBe(40);
+    expect(searchWrap.borderRadius).toBe(14);
+    expect(searchInput.fontSize).toBe(14);
+    expect(filterIconButton.width).toBe(40);
+    expect(filterIconButton.height).toBe(40);
+    expect(filterIconButton.borderRadius).toBe(12);
+  });
+
   it("uses consistent, wider markdown table cell sizing", () => {
     const cell = StyleSheet.flatten(styles.markdownTableCell);
 
@@ -67,5 +88,16 @@ describe("SecondBrainScreen responsive styles", () => {
     const queuedEntriesList = StyleSheet.flatten(styles.queuedEntriesList);
 
     expect(queuedEntriesList.gap).toBe(swipeRow.marginVertical * 2);
+  });
+
+  it("centers the microphone button horizontally above the plus button", () => {
+    const micWrap = StyleSheet.flatten(styles.floatingMicWrap);
+    const micButton = StyleSheet.flatten(styles.floatingMicButton);
+    const plusWrap = StyleSheet.flatten(styles.plusButtonWrap);
+    const plusButton = StyleSheet.flatten(styles.plusButton);
+
+    expect(micWrap.right + micButton.width / 2).toBe(
+      plusWrap.right + plusButton.width / 2,
+    );
   });
 });

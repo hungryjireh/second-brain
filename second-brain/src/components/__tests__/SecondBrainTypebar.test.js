@@ -25,6 +25,13 @@ const styles = {
   typebarUploadButton: {},
   typebarUploadButtonIcon: {},
   voiceCaptureOverlay: {},
+  typebarDismissOverlay: {},
+  floatingMicWrap: {},
+  floatingMicButton: {},
+  floatingMicButtonIcon: {},
+  plusButtonWrap: {},
+  plusButton: {},
+  plusButtonIcon: {},
 };
 
 describe("SecondBrainTypebar", () => {
@@ -37,6 +44,8 @@ describe("SecondBrainTypebar", () => {
       onSubmitDraft: jest.fn(),
       closeOpenActionDrawer: jest.fn(),
       setTypebarFocused: jest.fn(),
+      isTypebarExpanded: true,
+      setIsTypebarExpanded: jest.fn(),
       isSmallScreen: false,
       inputHeight: 38,
       setInputHeight: jest.fn(),
@@ -130,6 +139,27 @@ describe("SecondBrainTypebar", () => {
     expect(queryByLabelText("Record voice note")).toBeNull();
     expect(queryByLabelText("Open settings")).toBeNull();
     expect(getByLabelText("Enter note")).toBeTruthy();
+  });
+
+  it("keeps settings visible when side actions are collapsed and keepSettingsVisible is enabled", () => {
+    const { queryByLabelText, getByLabelText } = renderTypebar({
+      hideTypebarSideActions: true,
+      keepSettingsVisible: true,
+    });
+
+    expect(queryByLabelText("Record voice note")).toBeNull();
+    expect(getByLabelText("Open settings")).toBeTruthy();
+    expect(getByLabelText("Enter note")).toBeTruthy();
+  });
+
+  it("renders collapsed plus button and expands on press", () => {
+    const { getByLabelText, queryByPlaceholderText, props } = renderTypebar({
+      isTypebarExpanded: false,
+    });
+
+    expect(queryByPlaceholderText("Type a note, reminder or thought...")).toBeNull();
+    fireEvent.press(getByLabelText("Expand typebar"));
+    expect(props.setIsTypebarExpanded).toHaveBeenCalledWith(true);
   });
 
   it("disables settings button while offline", () => {

@@ -41,14 +41,18 @@ open-brain/ios
 open-brain/android
 
 # Exclude sibling apps/workspaces unrelated to this Vercel target
-open-brain
-webapp
-sample
-tests
-scripts
-.agents
-.codex
-.pnpm-store
+/open-brain
+/webapp
+/sample
+/tests
+/scripts
+/.agents
+/.codex
+/.pnpm-store
+
+# Keep shared API helpers used by serverless functions
+!lib/open-brain
+!lib/open-brain/**
 
 # Project-internal planning/docs not needed at runtime
 openspec

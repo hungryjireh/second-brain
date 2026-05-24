@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -51,41 +51,21 @@ const CATEGORY_ICONS = {
   note: "edit-3",
 };
 
-function TwoLineClampText({ text, style, testID }) {
-  const sourceText = String(text || "").trim();
-  const [displayText, setDisplayText] = useState(sourceText);
-  const [didClamp, setDidClamp] = useState(false);
+const CATEGORY_SYMBOLS = {
+  reminder: "◷",
+  todo: "◻",
+  thought: "◈",
+  note: "◇",
+};
+const TAG_PILL_GAP = 6;
 
-  useEffect(() => {
-    setDisplayText(sourceText);
-    setDidClamp(false);
-  }, [sourceText]);
-
+const TwoLineClampText = memo(function TwoLineClampText({ text, style, testID }) {
   return (
-    <Text
-      testID={testID}
-      style={style}
-      numberOfLines={2}
-      onTextLayout={(event) => {
-        if (didClamp || !sourceText) return;
-        const lines = event?.nativeEvent?.lines;
-        if (!Array.isArray(lines) || lines.length <= 2) return;
-        const firstTwoLinesText = lines
-          .slice(0, 2)
-          .map((line) => String(line?.text || ""))
-          .join("")
-          .trimEnd();
-        const nextDisplayText = firstTwoLinesText
-          ? `${firstTwoLinesText}...`
-          : "...";
-        setDisplayText(nextDisplayText);
-        setDidClamp(true);
-      }}
-    >
-      {displayText}
+    <Text testID={testID} style={style} numberOfLines={2} ellipsizeMode="tail">
+      {String(text || "").trim()}
     </Text>
   );
-}
+});
 
 function SecondBrainEntryCard({
   entry,
@@ -114,9 +94,12 @@ function SecondBrainEntryCard({
   const ignoreCardPressUntilRef = useRef(0);
   const inlineActionsAnim = useRef(new Animated.Value(0)).current;
   const [isInlineActionsMounted, setIsInlineActionsMounted] = useState(false);
+  const [tagsRowWidth, setTagsRowWidth] = useState(0);
+  const [tagWidths, setTagWidths] = useState([]);
   const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? "edit-3";
+  const categorySymbol = CATEGORY_SYMBOLS[entry.category] ?? "◇";
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
   const archiveLabel =
     entry.category === "reminder"
@@ -161,6 +144,40 @@ function SecondBrainEntryCard({
     isInlineActionsMounted,
     isSmallScreen,
   ]);
+  const entryTags = Array.isArray(entry.tags) ? entry.tags : [];
+
+  useEffect(() => {
+    setTagWidths([]);
+    setTagsRowWidth(0);
+  }, [entryTags.join("|")]);
+
+  const hasMeasuredAllTags = useMemo(
+    () =>
+      entryTags.length > 0 &&
+      entryTags.every((_, index) => Number.isFinite(tagWidths[index])),
+    [entryTags, tagWidths],
+  );
+
+  const visibleTagCount = useMemo(() => {
+    if (!hasMeasuredAllTags || tagsRowWidth <= 0) {
+      return entryTags.length;
+    }
+    let consumedWidth = 0;
+    let fitCount = 0;
+    for (let index = 0; index < entryTags.length; index += 1) {
+      const tagWidth = tagWidths[index];
+      const nextWidth =
+        consumedWidth + (fitCount > 0 ? TAG_PILL_GAP : 0) + tagWidth;
+      if (nextWidth > tagsRowWidth) break;
+      consumedWidth = nextWidth;
+      fitCount += 1;
+    }
+    return fitCount;
+  }, [entryTags.length, hasMeasuredAllTags, tagWidths, tagsRowWidth]);
+
+  const visibleTags = hasMeasuredAllTags
+    ? entryTags.slice(0, visibleTagCount)
+    : entryTags;
 
   function closeActionDrawer(onClosed) {
     onActionDrawerChange?.(entry.id, false);
@@ -177,7 +194,14 @@ function SecondBrainEntryCard({
 
   return (
     <Pressable
-      style={styles.card}
+      testID={`entry-card-${entry.id}`}
+      style={[
+        styles.card,
+        {
+          borderLeftWidth: 4,
+          borderLeftColor: tag.color,
+        },
+      ]}
       onPress={() => {
         if (Date.now() < ignoreCardPressUntilRef.current) {
           return;
@@ -267,12 +291,11 @@ function SecondBrainEntryCard({
             ) : (
               <View style={styles.cardMetaRowMobile}>
                 <View style={styles.cardMetaLead}>
-                  <Feather
-                    name={icon}
-                    size={14}
-                    style={styles.cardIcon}
-                    color={theme.colors.brand}
-                  />
+                  <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
+                    <Text style={[styles.tagPillText, { color: tag.color }]}>
+                      {`${categorySymbol} ${tag.label}`}
+                    </Text>
+                  </View>
                   {hidePriority ? null : (
                     <Text
                       style={[
@@ -283,19 +306,8 @@ function SecondBrainEntryCard({
                       P{priority}
                     </Text>
                   )}
-                  <View style={styles.cardTitleBlock}>
-                    <TwoLineClampText
-                      style={styles.cardTitle}
-                      text={entry.title || "Untitled"}
-                    />
-                  </View>
                 </View>
                 <View style={styles.mobileTitleActionRow}>
-                  <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
-                    <Text style={[styles.tagPillText, { color: tag.color }]}>
-                      {tag.label}
-                    </Text>
-                  </View>
                   {hideMenuButton ? null : (
                     <View style={styles.mobileActionDrawerWrap}>
                       <Pressable
@@ -360,6 +372,13 @@ function SecondBrainEntryCard({
               </View>
             </View>
           )}
+          {isSmallScreen ? (
+            <TwoLineClampText
+              testID={`entry-title-${entry.id}`}
+              style={styles.cardTitle}
+              text={entry.title || "Untitled"}
+            />
+          ) : null}
           <TwoLineClampText
             style={styles.cardBody}
             text={entry.summary || getEntryBody(entry)}
@@ -441,33 +460,57 @@ function SecondBrainEntryCard({
           </View>
         ) : null}
       </View>
-      <View style={styles.metaInfoRow}>
-        {entry.remind_at ? (
-          <>
-            <View style={styles.reminderMetaPill}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Feather name="clock" size={12} color={theme.colors.brand} />
-                <Text style={styles.reminderMetaText}>
-                  {" "}
-                  {displayRemindAt || ""}
-                </Text>
+      <View style={styles.metaFooterRow}>
+        <View style={styles.metaInfoRow}>
+          {entry.remind_at ? (
+            <>
+              <View style={styles.reminderMetaPill}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Feather name="clock" size={12} color={theme.colors.brand} />
+                  <Text style={styles.reminderMetaText}>
+                    {" "}
+                    {displayRemindAt || ""}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.metaDot}>•</Text>
-          </>
-        ) : null}
-        <Text style={styles.metaText}>{displayDate || ""}</Text>
-      </View>
-
-      {Array.isArray(entry.tags) && entry.tags.length > 0 ? (
-        <View style={styles.tagsRow}>
-          {entry.tags.map((tagName) => (
-            <View key={tagName} style={styles.itemTagPill}>
-              <Text style={styles.itemTagText}>#{tagName}</Text>
-            </View>
-          ))}
+              <Text style={styles.metaDot}>•</Text>
+            </>
+          ) : null}
+          <Text style={styles.metaText}>{displayDate || ""}</Text>
         </View>
-      ) : null}
+
+        {entryTags.length > 0 ? (
+          <View
+            testID={`entry-tags-row-${entry.id}`}
+            style={styles.tagsRow}
+            onLayout={(event) => {
+              const nextWidth = event?.nativeEvent?.layout?.width;
+              if (!Number.isFinite(nextWidth) || nextWidth <= 0) return;
+              setTagsRowWidth(nextWidth);
+            }}
+          >
+            {visibleTags.map((tagName, index) => (
+              <View
+                key={`${tagName}-${index}`}
+                testID={`entry-tag-${entry.id}-${index}`}
+                style={styles.itemTagPill}
+                onLayout={(event) => {
+                  const nextWidth = event?.nativeEvent?.layout?.width;
+                  if (!Number.isFinite(nextWidth) || nextWidth <= 0) return;
+                  setTagWidths((current) => {
+                    if (current[index] === nextWidth) return current;
+                    const updated = [...current];
+                    updated[index] = nextWidth;
+                    return updated;
+                  });
+                }}
+              >
+                <Text style={styles.itemTagText}>#{tagName}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
     </Pressable>
   );
 }

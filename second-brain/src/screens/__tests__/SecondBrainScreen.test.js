@@ -171,6 +171,7 @@ describe("SecondBrainScreen", () => {
       <SecondBrainScreen token={token} navigation={{ navigate }} />,
     );
 
+    fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.changeText(
       getByPlaceholderText("Type a note, reminder or thought..."),
       "/brainstorm",
@@ -216,6 +217,7 @@ describe("SecondBrainScreen", () => {
     );
 
     await waitFor(() => expect(getByText("Offline mode")).toBeTruthy());
+    fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.changeText(
       getByPlaceholderText("Type a note, reminder or thought..."),
       "/brainstorm",
@@ -627,6 +629,7 @@ describe("SecondBrainScreen", () => {
       );
     });
 
+    fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.changeText(
       getByPlaceholderText("Type a note, reminder or thought..."),
       "  created from composer  ",
@@ -678,6 +681,7 @@ describe("SecondBrainScreen", () => {
       ),
     );
 
+    fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.changeText(
       getByPlaceholderText("Type a note, reminder or thought..."),
       "shows immediately",
@@ -935,6 +939,7 @@ describe("SecondBrainScreen", () => {
       <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
     );
 
+    fireEvent.press(getByLabelText("Expand typebar"));
     await waitFor(() => expect(getByLabelText("Open settings")).toBeTruthy());
     fireEvent.press(getByLabelText("Open settings"));
     await waitFor(() => expect(getByText("Settings")).toBeTruthy());
@@ -979,6 +984,7 @@ describe("SecondBrainScreen", () => {
     await waitFor(() =>
       expect(getByText("Failed to load entries")).toBeTruthy(),
     );
+    fireEvent.press(getByLabelText("Expand typebar"));
     fireEvent.press(getByLabelText("Open settings"));
     await waitFor(() => expect(getByText("Settings")).toBeTruthy());
 
@@ -992,5 +998,17 @@ describe("SecondBrainScreen", () => {
         ),
       ).toBeNull();
     });
+  });
+
+  it("keeps settings action visible while typebar input is focused", async () => {
+    const { getByLabelText, getByPlaceholderText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    fireEvent.press(getByLabelText("Expand typebar"));
+    const input = getByPlaceholderText("Type a note, reminder or thought...");
+    fireEvent(input, "focus");
+
+    expect(getByLabelText("Open settings")).toBeTruthy();
   });
 });

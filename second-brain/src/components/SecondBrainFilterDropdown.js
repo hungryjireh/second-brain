@@ -32,6 +32,17 @@ export default function SecondBrainFilterDropdown({
   offlineBanner,
   errorBanner,
 }) {
+  const toggleFilters = () => {
+    closeOpenActionDrawer();
+    setIsFilterDropdownOpen((prev) => {
+      const nextOpen = !prev;
+      if (nextOpen) {
+        setFilterDropdownOpenedAtMs(Date.now());
+      }
+      return nextOpen;
+    });
+  };
+
   return (
     <View
       style={[
@@ -39,38 +50,49 @@ export default function SecondBrainFilterDropdown({
         isFilterDropdownOpen && styles.filterSectionOpen,
       ]}
     >
+      <View style={styles.filterSearchRow}>
+        <View style={styles.filterSearchInputWrap}>
+          <Feather
+            name="search"
+            size={24}
+            style={styles.filterSearchIcon}
+          />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={closeOpenActionDrawer}
+            placeholder="Search entries..."
+            placeholderTextColor={theme.colors.textMuted}
+            style={styles.filterSearchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+        </View>
+        {isSmallScreen ? (
+          <Pressable
+            testID="filter-dropdown-toggle"
+            style={[
+              styles.filterDropdownIconButton,
+              isFilterDropdownOpen && styles.filterDropdownToggleOpen,
+            ]}
+            onPress={toggleFilters}
+          >
+            <Feather
+              name="sliders"
+              size={22}
+              style={styles.filterDropdownIconButtonIcon}
+            />
+          </Pressable>
+        ) : null}
+      </View>
       <View
         style={[
           styles.filterHeaderRow,
           !isSmallScreen && styles.filterHeaderRowWithSpacing,
         ]}
       >
-        {isSmallScreen ? (
-          <Pressable
-            testID="filter-dropdown-toggle"
-            style={[
-              styles.filterDropdownToggle,
-              isFilterDropdownOpen && styles.filterDropdownToggleOpen,
-            ]}
-            onPress={() => {
-              closeOpenActionDrawer();
-              setIsFilterDropdownOpen((prev) => {
-                const nextOpen = !prev;
-                if (nextOpen) {
-                  setFilterDropdownOpenedAtMs(Date.now());
-                }
-                return nextOpen;
-              });
-            }}
-          >
-            <Text style={styles.filterLabel}>FILTER</Text>
-            <Feather
-              name={isFilterDropdownOpen ? "chevron-up" : "chevron-down"}
-              size={12}
-              style={styles.filterDropdownChevronIcon}
-            />
-          </Pressable>
-        ) : null}
         {!isSmallScreen ? (
           <>
             <Text style={styles.filterLabel}>FILTER</Text>
@@ -201,18 +223,6 @@ export default function SecondBrainFilterDropdown({
           </View>
         </View>
       ) : null}
-      <TextInput
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        onFocus={closeOpenActionDrawer}
-        placeholder="Search entries..."
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.filterSearchInput}
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        clearButtonMode="while-editing"
-      />
       {offlineBanner ? (
         <View style={styles.filterStatusStackItem}>{offlineBanner}</View>
       ) : null}

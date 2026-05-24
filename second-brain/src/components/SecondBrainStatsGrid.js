@@ -6,23 +6,46 @@ const STATS = [
     key: "reminder",
     label: "Reminders",
     color: theme.colors.brand,
+    symbol: "◎",
+    cardBackgroundColor: "#DDEEE5",
+    borderColor: "#58D0A0",
+    labelColor: "#8B9AB2",
   },
   {
     key: "todo",
     label: "TODOs",
     color: theme.colors.todo,
+    symbol: "◻",
+    cardBackgroundColor: "#DCE7F6",
+    borderColor: "#7FB1F2",
+    labelColor: "#8494AE",
   },
   {
     key: "thought",
     label: "Thoughts",
     color: theme.colors.thought,
+    symbol: "◈",
+    cardBackgroundColor: "#E7E4F4",
+    borderColor: "#B1A2EE",
+    labelColor: "#8494AE",
   },
   {
     key: "note",
     label: "Notes",
     color: theme.colors.note,
+    symbol: "◇",
+    cardBackgroundColor: "#F1ECD9",
+    borderColor: "#E6BA35",
+    labelColor: "#8494AE",
   },
 ];
+
+function getStatCountTextStyle(styles, value) {
+  const digitCount = String(Math.abs(Number(value) || 0)).length;
+  if (digitCount >= 4) return styles.statCount4Digits;
+  if (digitCount >= 3) return styles.statCount3Digits;
+  return null;
+}
 
 export default function SecondBrainStatsGrid({
   styles,
@@ -39,6 +62,7 @@ export default function SecondBrainStatsGrid({
     >
       {STATS.map((stat) => {
         const isActive = activeCategory === stat.key;
+        const count = counts[stat.key] ?? 0;
         return (
           <Pressable
             key={stat.key}
@@ -46,6 +70,10 @@ export default function SecondBrainStatsGrid({
             style={[
               styles.statCard,
               isSmallScreen && styles.statCardSmall,
+              {
+                borderColor: stat.borderColor,
+                backgroundColor: stat.cardBackgroundColor,
+              },
               isActive && styles.statCardActive,
             ]}
             onPress={() => {
@@ -53,23 +81,25 @@ export default function SecondBrainStatsGrid({
               setActiveCategory((prev) => (prev === stat.key ? "" : stat.key));
             }}
           >
-            <View
-              style={[
-                styles.statGlow,
-                { backgroundColor: theme.colors.bgBase },
-              ]}
-            />
+            <Text style={[styles.statSymbol, { color: stat.color }]}>
+              {stat.symbol}
+            </Text>
             <Text
               style={[
                 styles.statCount,
-                { color: isActive ? theme.colors.brandText : stat.color },
+                getStatCountTextStyle(styles, count),
+                { color: stat.color },
               ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
             >
-              {counts[stat.key] ?? 0}
+              {count}
             </Text>
             <Text
               style={[
                 styles.statLabel,
+                { color: stat.labelColor },
                 isSmallScreen && styles.statLabelSmall,
                 isActive && styles.statLabelActive,
               ]}

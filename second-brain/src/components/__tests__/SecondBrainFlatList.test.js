@@ -203,7 +203,7 @@ describe("SecondBrainFlatList", () => {
     );
 
     const list = getByTestId("second-brain-flat-list");
-    expect(list.props.refreshing).toBe(false);
+    expect(list.props.refreshing).toBe(true);
     expect(list.props.scrollEnabled).toBe(false);
     expect(UNSAFE_getAllByType(ActivityIndicator)).toHaveLength(1);
 
@@ -213,6 +213,50 @@ describe("SecondBrainFlatList", () => {
         )
       : false;
     expect(hasTopPadding).toBe(true);
+  });
+
+  it("does not show native refresh spinner during non-pull background loads", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+    const { getByTestId } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          loadingEntries: true,
+          pullRefreshing: false,
+        })}
+      />,
+    );
+
+    const list = getByTestId("second-brain-flat-list");
+    expect(list.props.refreshing).toBe(false);
+  });
+
+  it("keeps native refresh spinner off when returning with rows during background reload", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+    const { getByTestId } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          loadingEntries: true,
+          pullRefreshing: false,
+        })}
+      />,
+    );
+
+    const list = getByTestId("second-brain-flat-list");
+    expect(list.props.refreshing).toBe(false);
   });
 
   it("disables FlatList scrolling while swipe gesture is active and re-enables after gesture end", () => {
@@ -344,5 +388,60 @@ describe("SecondBrainFlatList", () => {
     );
 
     expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(2);
+  });
+
+  it("only rerenders rows whose action drawer active state changes", () => {
+    const firstEntry = { id: 1, title: "First entry", is_archived: false };
+    const secondEntry = { id: 2, title: "Second entry", is_archived: false };
+    const stableProps = createBaseProps();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: firstEntry,
+        displayDate: "May 22",
+        displayRemindAt: "09:30",
+      },
+      {
+        type: "entry",
+        key: "entry-2",
+        entry: secondEntry,
+        displayDate: "May 22",
+        displayRemindAt: "10:30",
+      },
+    ];
+
+    const { rerender } = render(
+      <SecondBrainFlatList
+        {...stableProps}
+        groupedRows={groupedRows}
+        openActionDrawerId={null}
+      />,
+    );
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <SecondBrainFlatList
+        {...stableProps}
+        groupedRows={groupedRows}
+        openActionDrawerId={1}
+      />,
+    );
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(3);
+    expect(mockSecondBrainEntryCard).toHaveBeenLastCalledWith(1);
+
+    rerender(
+      <SecondBrainFlatList
+        {...stableProps}
+        groupedRows={groupedRows}
+        openActionDrawerId={2}
+      />,
+    );
+
+    expect(mockSecondBrainEntryCard).toHaveBeenCalledTimes(5);
+    expect(mockSecondBrainEntryCard).toHaveBeenNthCalledWith(4, 1);
+    expect(mockSecondBrainEntryCard).toHaveBeenNthCalledWith(5, 2);
   });
 });

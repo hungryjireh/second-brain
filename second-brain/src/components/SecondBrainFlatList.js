@@ -274,7 +274,6 @@ export default function SecondBrainFlatList({
         <FlatList
           testID="second-brain-flat-list"
           data={groupedRows}
-          extraData={openActionDrawerId}
           style={styles.list}
           contentContainerStyle={listContentContainerStyle}
           keyExtractor={keyExtractor}
@@ -288,7 +287,7 @@ export default function SecondBrainFlatList({
           removeClippedSubviews={!isWeb}
           onScrollBeginDrag={closeOpenActionDrawer}
           onRefresh={onRefresh}
-          refreshing={loadingEntries && !pullRefreshing}
+          refreshing={pullRefreshing}
           scrollEnabled={!pullRefreshing && !isSwipeInteracting}
         />
       </View>

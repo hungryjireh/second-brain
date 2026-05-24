@@ -1,5 +1,6 @@
 import { fireEvent, render } from "@testing-library/react-native";
 import SecondBrainEntryCard from "../SecondBrainEntryCard";
+import { theme as appTheme } from "../../theme";
 
 const styles = {
   card: {},
@@ -281,5 +282,177 @@ describe("SecondBrainEntryCard", () => {
     );
 
     expect(queryByTestId("entry-action-trigger-41")).toBeNull();
+  });
+
+  it("applies category-colored left border on the entry card", () => {
+    const entry = {
+      id: 51,
+      category: "note",
+      title: "Border test",
+      summary: "Check left border color",
+      priority: 0,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByTestId } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    expect(getByTestId("entry-card-51")).toHaveStyle({
+      borderLeftWidth: 4,
+      borderLeftColor: appTheme.colors.noteTagText,
+    });
+  });
+
+  it("shows only the maximum number of tags that fit one row", () => {
+    const entry = {
+      id: 61,
+      category: "note",
+      title: "Tag fitting",
+      summary: "Tag fitting summary",
+      priority: 0,
+      tags: ["one", "two", "three"],
+      is_archived: false,
+    };
+
+    const { getByTestId, queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    fireEvent(getByTestId("entry-tags-row-61"), "layout", {
+      nativeEvent: { layout: { width: 74 } },
+    });
+    fireEvent(getByTestId("entry-tag-61-0"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-61-1"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-61-2"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+
+    expect(queryByText("#one")).toBeTruthy();
+    expect(queryByText("#two")).toBeTruthy();
+    expect(queryByText("#three")).toBeNull();
+  });
+
+  it("keeps all tags visible when all fit on one row", () => {
+    const entry = {
+      id: 62,
+      category: "note",
+      title: "All tags fit",
+      summary: "All tags fit summary",
+      priority: 0,
+      tags: ["one", "two", "three"],
+      is_archived: false,
+    };
+
+    const { getByTestId, queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    fireEvent(getByTestId("entry-tags-row-62"), "layout", {
+      nativeEvent: { layout: { width: 120 } },
+    });
+    fireEvent(getByTestId("entry-tag-62-0"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-62-1"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-62-2"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+
+    expect(queryByText("#one")).toBeTruthy();
+    expect(queryByText("#two")).toBeTruthy();
+    expect(queryByText("#three")).toBeTruthy();
+  });
+
+  it("shows only one tag when only one can fit", () => {
+    const entry = {
+      id: 63,
+      category: "note",
+      title: "One tag fits",
+      summary: "One tag fits summary",
+      priority: 0,
+      tags: ["one", "two", "three"],
+      is_archived: false,
+    };
+
+    const { getByTestId, queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    fireEvent(getByTestId("entry-tags-row-63"), "layout", {
+      nativeEvent: { layout: { width: 35 } },
+    });
+    fireEvent(getByTestId("entry-tag-63-0"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-63-1"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+    fireEvent(getByTestId("entry-tag-63-2"), "layout", {
+      nativeEvent: { layout: { width: 30 } },
+    });
+
+    expect(queryByText("#one")).toBeTruthy();
+    expect(queryByText("#two")).toBeNull();
+    expect(queryByText("#three")).toBeNull();
   });
 });

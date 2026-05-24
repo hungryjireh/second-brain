@@ -1,5 +1,6 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FlatList } from "react-native";
 import SecondBrainBrainstormScreen from "../SecondBrainBrainstormScreen";
 import { apiRequest } from "../../api";
 import { createBrainstormSession } from "../../utils/brainstormSessions";
@@ -419,6 +420,30 @@ describe("SecondBrainBrainstormScreen", () => {
     });
 
     expect(getByLabelText("Enter note")).toBeTruthy();
+  });
+
+  it("keeps FlatList renderItem stable across input-driven rerenders", async () => {
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const initialRenderItem =
+      view.UNSAFE_getByType(FlatList).props.renderItem;
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "Typing updates local state only",
+    );
+
+    const nextRenderItem = view.UNSAFE_getByType(FlatList).props.renderItem;
+    expect(nextRenderItem).toBe(initialRenderItem);
   });
 
   it("uses a multiline expanding typebar input", async () => {

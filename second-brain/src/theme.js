@@ -21,9 +21,9 @@ export const theme = {
     },
   },
   colors: {
-    bgBase: "#F3EEE4",
-    bgSurface: "#EAE3D9",
-    bgRaised: "#EAE3D9",
+    bgBase: "#FFF",
+    bgSurface: "#f8fafc",
+    bgRaised: "#f8fafc",
     typebarSurface: "#E4DCCF",
     border: "rgba(255,255,255,0.07)",
     textPrimary: "#4A4540",

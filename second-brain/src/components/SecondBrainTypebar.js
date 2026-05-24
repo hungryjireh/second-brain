@@ -17,6 +17,8 @@ export default function SecondBrainTypebar({
   onSubmitDraft,
   closeOpenActionDrawer,
   setTypebarFocused,
+  isTypebarExpanded,
+  setIsTypebarExpanded,
   isSmallScreen,
   inputHeight,
   setInputHeight,
@@ -52,6 +54,8 @@ export default function SecondBrainTypebar({
   savingSettings,
   saveSettings,
   onLogout,
+  alwaysExpanded = false,
+  keepSettingsVisible = false,
 }) {
   const isWeb = Platform.OS === "web";
   const typebarPlaceholder = isSmallScreen
@@ -65,6 +69,9 @@ export default function SecondBrainTypebar({
     () => formatElapsedTime(voiceMaxDurationMs),
     [voiceMaxDurationMs],
   );
+  const showMicControl = !hideTypebarSideActions || recording;
+  const showSettingsControl = !hideTypebarSideActions || keepSettingsVisible;
+  const showExpandedComposer = alwaysExpanded || isTypebarExpanded;
 
   return (
     <>
@@ -101,47 +108,26 @@ export default function SecondBrainTypebar({
         onSave={saveSettings}
         onLogout={onLogout}
       />
-      <View style={[styles.typebarRow, { bottom }]}>
-        <TextInput
-          value={draft}
-          onChangeText={onChangeDraft}
-          onSubmitEditing={onSubmitDraft}
-          onFocus={() => {
-            closeOpenActionDrawer();
-            setTypebarFocused(true);
-          }}
-          onBlur={() => setTypebarFocused(false)}
-          placeholder={placeholder || typebarPlaceholder}
-          placeholderTextColor={theme.colors.textSecondary}
-          style={[
-            styles.typebarInput,
-            isSmallScreen && styles.typebarInputSmall,
-            { height: inputHeight },
-          ]}
-          multiline
-          returnKeyType="send"
-          enablesReturnKeyAutomatically
-          scrollEnabled={false}
-          textAlignVertical="top"
-          onContentSizeChange={(event) => {
-            const contentHeight =
-              event?.nativeEvent?.contentSize?.height ?? TYPEBAR_MIN_HEIGHT;
-            const nextHeight = Math.max(
-              TYPEBAR_MIN_HEIGHT,
-              Math.ceil(contentHeight),
-            );
-            setInputHeight((prev) => (prev === nextHeight ? prev : nextHeight));
-          }}
+      {isTypebarExpanded && !alwaysExpanded ? (
+        <Pressable
+          style={styles.typebarDismissOverlay}
+          onPress={() => setIsTypebarExpanded(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Collapse typebar"
         />
-        {!hideTypebarSideActions ? (
+      ) : null}
+      {showMicControl ? (
+        <View style={[styles.floatingMicWrap, { bottom: bottom + 74 }]}>
           <View style={styles.typebarActionWrap}>
             {actionTooltip === "mic" && !recording ? (
-              <View style={styles.typebarTooltip}>
+              <View style={[styles.typebarTooltip, styles.micTooltipLeft]}>
                 <Text style={styles.typebarTooltipText}>Record voice note</Text>
               </View>
             ) : null}
             {recording ? (
-              <View style={styles.typebarRecordingMeta}>
+              <View
+                style={[styles.typebarRecordingMeta, styles.micRecordingMetaLeft]}
+              >
                 <View style={styles.typebarRecordingTimerBadge}>
                   <Text
                     style={styles.typebarRecordingTimer}
@@ -175,6 +161,7 @@ export default function SecondBrainTypebar({
             <Pressable
               style={[
                 styles.typebarButton,
+                styles.floatingMicButton,
                 (voiceBusy || voiceStarting || loadingTelegramLinkKey) &&
                   styles.typebarButtonDisabled,
               ]}
@@ -204,90 +191,136 @@ export default function SecondBrainTypebar({
             >
               <Feather
                 name={voiceStarting ? "loader" : recording ? "square" : "mic"}
-                size={15}
+                size={24}
                 style={[
-                  styles.typebarButtonIcon,
+                  styles.floatingMicButtonIcon,
                   (voiceBusy || voiceStarting) &&
                     styles.typebarButtonIconDisabled,
                 ]}
               />
             </Pressable>
           </View>
-        ) : null}
-        <View style={styles.typebarActionWrap}>
-          {actionTooltip === "enter" ? (
-            <View style={styles.typebarTooltip}>
-              <Text style={styles.typebarTooltipText}>Enter note</Text>
-            </View>
-          ) : null}
+        </View>
+      ) : null}
+      {!showExpandedComposer ? (
+        <View style={[styles.plusButtonWrap, { bottom }]}>
           <Pressable
-            style={[
-              styles.typebarButton,
-              !draft.trim() && styles.typebarButtonDisabled,
-            ]}
-            onPress={() => {
-              closeOpenActionDrawer();
-              onSubmitDraft();
-            }}
-            disabled={!draft.trim()}
+            style={styles.plusButton}
+            onPress={() => setIsTypebarExpanded(true)}
             accessibilityRole="button"
-            accessibilityLabel="Enter note"
-            onHoverIn={() => setActionTooltip("enter")}
-            onHoverOut={() => setActionTooltip("")}
-            onLongPress={() => setActionTooltip("enter")}
-            onPressOut={() => {
-              if (!isWeb) setActionTooltip("");
-            }}
+            accessibilityLabel="Expand typebar"
           >
-            <Feather
-              name="arrow-up-right"
-              size={15}
-              style={[
-                styles.typebarButtonIcon,
-                !draft.trim() && styles.typebarButtonIconDisabled,
-              ]}
-            />
+            <Feather name="plus" size={34} style={styles.plusButtonIcon} />
           </Pressable>
         </View>
-        {!hideTypebarSideActions ? (
+      ) : (
+        <View style={[styles.typebarRow, { bottom }]}> 
+          <TextInput
+            value={draft}
+            onChangeText={onChangeDraft}
+            onSubmitEditing={onSubmitDraft}
+            onFocus={() => {
+              closeOpenActionDrawer();
+              setTypebarFocused(true);
+            }}
+            onBlur={() => setTypebarFocused(false)}
+            placeholder={placeholder || typebarPlaceholder}
+            placeholderTextColor={theme.colors.textSecondary}
+            style={[
+              styles.typebarInput,
+              isSmallScreen && styles.typebarInputSmall,
+              { height: inputHeight },
+            ]}
+            multiline
+            returnKeyType="send"
+            enablesReturnKeyAutomatically
+            scrollEnabled={false}
+            textAlignVertical="top"
+            onContentSizeChange={(event) => {
+              const contentHeight =
+                event?.nativeEvent?.contentSize?.height ?? TYPEBAR_MIN_HEIGHT;
+              const nextHeight = Math.max(
+                TYPEBAR_MIN_HEIGHT,
+                Math.ceil(contentHeight),
+              );
+              setInputHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+            }}
+          />
           <View style={styles.typebarActionWrap}>
-            {actionTooltip === "settings" ? (
+            {actionTooltip === "enter" ? (
               <View style={styles.typebarTooltip}>
-                <Text style={styles.typebarTooltipText}>Open settings</Text>
+                <Text style={styles.typebarTooltipText}>Enter note</Text>
               </View>
             ) : null}
             <Pressable
               style={[
                 styles.typebarButton,
-                styles.typebarUploadButton,
-                offlineMode && styles.typebarButtonDisabled,
+                !draft.trim() && styles.typebarButtonDisabled,
               ]}
               onPress={() => {
                 closeOpenActionDrawer();
-                openSettings();
+                onSubmitDraft();
               }}
-              disabled={offlineMode}
+              disabled={!draft.trim()}
               accessibilityRole="button"
-              accessibilityLabel="Open settings"
-              onHoverIn={() => setActionTooltip("settings")}
+              accessibilityLabel="Enter note"
+              onHoverIn={() => setActionTooltip("enter")}
               onHoverOut={() => setActionTooltip("")}
-              onLongPress={() => setActionTooltip("settings")}
+              onLongPress={() => setActionTooltip("enter")}
               onPressOut={() => {
                 if (!isWeb) setActionTooltip("");
               }}
             >
               <Feather
-                name="settings"
-                style={[
-                  styles.typebarUploadButtonIcon,
-                  offlineMode && styles.typebarButtonIconDisabled,
-                ]}
+                name="arrow-up-right"
                 size={15}
+                style={[
+                  styles.typebarButtonIcon,
+                  !draft.trim() && styles.typebarButtonIconDisabled,
+                ]}
               />
             </Pressable>
           </View>
-        ) : null}
-      </View>
+          {showSettingsControl ? (
+            <View style={styles.typebarActionWrap}>
+              {actionTooltip === "settings" ? (
+                <View style={styles.typebarTooltip}>
+                  <Text style={styles.typebarTooltipText}>Open settings</Text>
+                </View>
+              ) : null}
+              <Pressable
+                style={[
+                  styles.typebarButton,
+                  styles.typebarUploadButton,
+                  offlineMode && styles.typebarButtonDisabled,
+                ]}
+                onPress={() => {
+                  closeOpenActionDrawer();
+                  openSettings();
+                }}
+                disabled={offlineMode}
+                accessibilityRole="button"
+                accessibilityLabel="Open settings"
+                onHoverIn={() => setActionTooltip("settings")}
+                onHoverOut={() => setActionTooltip("")}
+                onLongPress={() => setActionTooltip("settings")}
+                onPressOut={() => {
+                  if (!isWeb) setActionTooltip("");
+                }}
+              >
+                <Feather
+                  name="settings"
+                  style={[
+                    styles.typebarUploadButtonIcon,
+                    offlineMode && styles.typebarButtonIconDisabled,
+                  ]}
+                  size={15}
+                />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      )}
     </>
   );
 }

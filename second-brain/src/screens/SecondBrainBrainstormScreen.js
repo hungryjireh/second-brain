@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import styles from "./SecondBrainBrainstormScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import { apiRequest } from "../api";
@@ -27,18 +29,35 @@ function prefixedWipTitle(title) {
   return `[BRAINSTORMING] ${clean}`;
 }
 
+const BrainstormMessageRow = memo(function BrainstormMessageRow({ item }) {
+  const isUser = item.role === "user";
+  return (
+    <View
+      style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}
+    >
+      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+        <Text style={styles.roleLabel}>{isUser ? "You" : "Assistant"}</Text>
+        <Text style={styles.messageText}>{item.content}</Text>
+      </View>
+    </View>
+  );
+});
+
 export default function SecondBrainBrainstormScreen({
   route,
   navigation,
   token,
 }) {
+  const insets = useSafeAreaInsets();
   const COMPOSER_MIN_HEIGHT = 42;
   const COMPOSER_MAX_HEIGHT = 160;
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
   const [session, setSession] = useState(null);
   const [draft, setDraft] = useState("");
+  const [isTypebarExpanded, setIsTypebarExpanded] = useState(true);
   const [inputHeight, setInputHeight] = useState(COMPOSER_MIN_HEIGHT);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const finalizedRef = useRef(false);
@@ -51,6 +70,12 @@ export default function SecondBrainBrainstormScreen({
   const initialMessageCountRef = useRef(null);
 
   const messages = useMemo(() => session?.messages || [], [session?.messages]);
+  const isWeb = Platform.OS === "web";
+  const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
+  const renderMessageItem = useCallback(
+    ({ item }) => <BrainstormMessageRow item={item} />,
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -253,6 +278,32 @@ export default function SecondBrainBrainstormScreen({
     };
   }, []);
 
+  useEffect(() => {
+    if (isWeb) return undefined;
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const handleKeyboardShow = (event) => {
+      const keyboardHeight = event?.endCoordinates?.height ?? 0;
+      const nextOffset = Math.max(
+        0,
+        keyboardHeight - Math.max(insets.bottom, 0),
+      );
+      setKeyboardOffset(nextOffset);
+    };
+    const handleKeyboardHide = () => {
+      setKeyboardOffset(0);
+    };
+    const showSub = Keyboard.addListener(showEvent, handleKeyboardShow);
+    const hideSub = Keyboard.addListener(hideEvent, handleKeyboardHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom, isWeb]);
+
   return (
     <SecondBrainEntryPageLayout panelStyle={styles.fullScreenPanel}>
       <KeyboardAvoidingView
@@ -262,7 +313,7 @@ export default function SecondBrainBrainstormScreen({
       >
         <SecondBrainTypebar
           styles={secondBrainScreenStyles}
-          bottom={10}
+          bottom={typebarBottom}
           placeholder="Share your thought, or type /end"
           draft={draft}
           onChangeDraft={(value) => {
@@ -272,6 +323,8 @@ export default function SecondBrainBrainstormScreen({
           onSubmitDraft={sendMessage}
           closeOpenActionDrawer={noop}
           setTypebarFocused={noop}
+          isTypebarExpanded={isTypebarExpanded}
+          setIsTypebarExpanded={setIsTypebarExpanded}
           isSmallScreen={false}
           inputHeight={inputHeight}
           setInputHeight={(nextValue) => {
@@ -318,6 +371,7 @@ export default function SecondBrainBrainstormScreen({
           savingSettings={false}
           saveSettings={noop}
           onLogout={noop}
+          alwaysExpanded
         >
           <View style={styles.container}>
             <FlatList
@@ -325,29 +379,7 @@ export default function SecondBrainBrainstormScreen({
               data={messages}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.messagesWrap}
-              renderItem={({ item }) => {
-                const isUser = item.role === "user";
-                return (
-                  <View
-                    style={[
-                      styles.messageRow,
-                      isUser ? styles.userRow : styles.assistantRow,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.bubble,
-                        isUser ? styles.userBubble : styles.assistantBubble,
-                      ]}
-                    >
-                      <Text style={styles.roleLabel}>
-                        {isUser ? "You" : "Assistant"}
-                      </Text>
-                      <Text style={styles.messageText}>{item.content}</Text>
-                    </View>
-                  </View>
-                );
-              }}
+              renderItem={renderMessageItem}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>
