@@ -183,6 +183,31 @@ describe("SecondBrainScreen", () => {
     });
   });
 
+  it("renders the main typebar without inline height state", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    fireEvent.press(getByLabelText("Expand typebar"));
+    const input = getByPlaceholderText("Type a note, reminder or thought...");
+
+    expect(input.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ minHeight: 38 })]),
+    );
+    expect(input.props.style).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ height: expect.any(Number) }),
+      ]),
+    );
+  });
+
   it("does not route /brainstorm input while offline", async () => {
     const navigate = jest.fn();
     const nowTs = Math.floor(Date.now() / 1000);

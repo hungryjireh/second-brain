@@ -76,8 +76,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const [activeTag, setActiveTag] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [creatingEntries, setCreatingEntries] = useState([]);
-  const [typebarInputHeight, setTypebarInputHeight] =
-    useState(TYPEBAR_MIN_HEIGHT);
   const [openSwipeId, setOpenSwipeId] = useState(null);
   const [actionTooltip, setActionTooltip] = useState("");
   const [typebarFocused, setTypebarFocused] = useState(false);
@@ -176,7 +174,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     },
   });
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
-  const listBottomPadding = typebarBottom + typebarInputHeight + 20;
+  const listBottomPadding = typebarBottom + TYPEBAR_MIN_HEIGHT + 20;
   const isWeb = Platform.OS === "web";
   const isNativeOfflineMode = !isWeb && offlineMode;
   const displayError = error.startsWith("Offline mode:") ? "" : error;
@@ -240,7 +238,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
         return;
       }
       setDraft("");
-      setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
       setIsTypebarExpanded(false);
       navigation.navigate("SecondBrainBrainstorm");
       return;
@@ -252,7 +249,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
       { id: creatingId, title: creatingTitle },
     ]);
     setDraft("");
-    setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
     setIsTypebarExpanded(false);
     try {
       await apiRequest("/entries", {
@@ -267,7 +263,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
         return;
       }
       setDraft((prev) => (prev.trim() ? prev : description));
-      setTypebarInputHeight(TYPEBAR_MIN_HEIGHT);
       setError(err.message);
     } finally {
       setCreatingEntries((prev) =>
@@ -479,8 +474,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     isTypebarExpanded,
     setIsTypebarExpanded,
     isSmallScreen,
-    inputHeight: typebarInputHeight,
-    setInputHeight: setTypebarInputHeight,
     hideTypebarSideActions,
     actionTooltip,
     setActionTooltip,

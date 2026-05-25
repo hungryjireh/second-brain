@@ -5,8 +5,6 @@ import { theme } from "../theme";
 import { formatElapsedTime } from "../utils/dateTimeUtils";
 import SecondBrainSettingsModal from "./SecondBrainSettingsModal";
 
-const TYPEBAR_MIN_HEIGHT = 38;
-
 export default function SecondBrainTypebar({
   styles,
   children,
@@ -20,8 +18,6 @@ export default function SecondBrainTypebar({
   isTypebarExpanded,
   setIsTypebarExpanded,
   isSmallScreen,
-  inputHeight,
-  setInputHeight,
   hideTypebarSideActions,
   actionTooltip,
   setActionTooltip,
@@ -232,24 +228,12 @@ export default function SecondBrainTypebar({
             style={[
               styles.typebarInput,
               isSmallScreen && styles.typebarInputSmall,
-              { height: inputHeight },
             ]}
             multiline
             returnKeyType="send"
             enablesReturnKeyAutomatically
             scrollEnabled={false}
             textAlignVertical="top"
-            onContentSizeChange={(event) => {
-              const contentHeight =
-                event?.nativeEvent?.contentSize?.height ?? TYPEBAR_MIN_HEIGHT;
-              const nextHeight = Math.max(
-                TYPEBAR_MIN_HEIGHT,
-                Math.ceil(contentHeight),
-              );
-              setInputHeight((prev) =>
-                prev === nextHeight ? prev : nextHeight,
-              );
-            }}
           />
           <View style={styles.typebarActionWrap}>
             {actionTooltip === "enter" ? (

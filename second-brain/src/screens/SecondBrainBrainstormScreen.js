@@ -11,7 +11,6 @@ import styles from "./SecondBrainBrainstormScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import SecondBrainConversationList from "../components/SecondBrainConversationList";
 import { apiRequest } from "../api";
-import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormTranscriptFromText } from "../utils/secondBrainConversationParsers";
 import {
@@ -85,13 +84,11 @@ export default function SecondBrainBrainstormScreen({
 }) {
   const insets = useSafeAreaInsets();
   const COMPOSER_MIN_HEIGHT = 38;
-  const COMPOSER_MAX_HEIGHT = 160;
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
   const [session, setSession] = useState(null);
   const [draft, setDraft] = useState("");
   const [isTypebarExpanded, setIsTypebarExpanded] = useState(true);
-  const [inputHeight, setInputHeight] = useState(COMPOSER_MIN_HEIGHT);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -117,7 +114,7 @@ export default function SecondBrainBrainstormScreen({
   );
   const isWeb = Platform.OS === "web";
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
-  const typebarHeight = Math.max(inputHeight + 12, 48);
+  const typebarHeight = Math.max(COMPOSER_MIN_HEIGHT + 12, 48);
   const messagesBottomPadding = typebarBottom + typebarHeight + 24;
 
   useEffect(() => {
@@ -387,89 +384,83 @@ export default function SecondBrainBrainstormScreen({
   }, [insets.bottom, isWeb]);
 
   return (
-    <SecondBrainEntryPageLayout panelStyle={styles.fullScreenPanel}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        enabled={Platform.OS !== "web"}
+    <View style={secondBrainScreenStyles.container}>
+      <View
+        style={[
+          secondBrainScreenStyles.entryPanel,
+          { maxWidth: "100%", maxHeight: "100%", flex: 1 },
+          styles.fullScreenPanel,
+        ]}
       >
-        <SecondBrainTypebar
-          styles={secondBrainScreenStyles}
-          bottom={typebarBottom}
-          placeholder="Share your thought, or type /end"
-          draft={draft}
-          onChangeDraft={(value) => {
-            if (busy) return;
-            setDraft(value);
-          }}
-          onSubmitDraft={sendMessage}
-          closeOpenActionDrawer={noop}
-          setTypebarFocused={noop}
-          isTypebarExpanded={isTypebarExpanded}
-          setIsTypebarExpanded={setIsTypebarExpanded}
-          isSmallScreen={false}
-          inputHeight={inputHeight}
-          setInputHeight={(nextValue) => {
-            setInputHeight((prev) => {
-              const rawNext =
-                typeof nextValue === "function" ? nextValue(prev) : nextValue;
-              const safeNext = Number(rawNext);
-              if (!Number.isFinite(safeNext)) return prev;
-              const clamped = Math.max(
-                COMPOSER_MIN_HEIGHT,
-                Math.min(COMPOSER_MAX_HEIGHT, Math.ceil(safeNext)),
-              );
-              return prev === clamped ? prev : clamped;
-            });
-          }}
-          hideTypebarSideActions
-          actionTooltip=""
-          setActionTooltip={noop}
-          recording={false}
-          isVoiceCaptureActive={false}
-          voiceBusy={busy}
-          voiceStarting={false}
-          loadingTelegramLinkKey={false}
-          startVoiceCapture={noop}
-          stopVoiceCaptureAndSubmit={noop}
-          cancelVoiceCapture={noop}
-          voiceElapsedMs={0}
-          voiceMaxDurationMs={0}
-          openSettings={noop}
-          settingsOpen={false}
-          closeSettings={noop}
-          timezoneDraft=""
-          handleTimezoneChange={noop}
-          timezoneError=""
-          generateTelegramLinkKey={noop}
-          telegramLinkKey=""
-          copyTelegramLinkKey={noop}
-          telegramCopyStatus=""
-          telegramLinkError=""
-          importingConversations={false}
-          importError=""
-          handleOpenImportDialog={noop}
-          handleImportChatGptShareUrl={noop}
-          savingSettings={false}
-          saveSettings={noop}
-          onLogout={noop}
-          alwaysExpanded
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          enabled={Platform.OS !== "web"}
         >
-          <View style={styles.container}>
-            <SecondBrainConversationList
-              messages={conversationMessages}
-              styles={secondBrainScreenStyles}
-              style={styles.messagesList}
-              contentContainerStyle={[
-                styles.messagesWrap,
-                { paddingBottom: messagesBottomPadding },
-                secondBrainScreenStyles.conversationWrap,
-              ]}
-            />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-          </View>
-        </SecondBrainTypebar>
-      </KeyboardAvoidingView>
-    </SecondBrainEntryPageLayout>
+          <SecondBrainTypebar
+            styles={secondBrainScreenStyles}
+            bottom={typebarBottom}
+            placeholder="Share your thought, or type /end"
+            draft={draft}
+            onChangeDraft={(value) => {
+              if (busy) return;
+              setDraft(value);
+            }}
+            onSubmitDraft={sendMessage}
+            closeOpenActionDrawer={noop}
+            setTypebarFocused={noop}
+            isTypebarExpanded={isTypebarExpanded}
+            setIsTypebarExpanded={setIsTypebarExpanded}
+            isSmallScreen={false}
+            hideTypebarSideActions
+            actionTooltip=""
+            setActionTooltip={noop}
+            recording={false}
+            isVoiceCaptureActive={false}
+            voiceBusy={busy}
+            voiceStarting={false}
+            loadingTelegramLinkKey={false}
+            startVoiceCapture={noop}
+            stopVoiceCaptureAndSubmit={noop}
+            cancelVoiceCapture={noop}
+            voiceElapsedMs={0}
+            voiceMaxDurationMs={0}
+            openSettings={noop}
+            settingsOpen={false}
+            closeSettings={noop}
+            timezoneDraft=""
+            handleTimezoneChange={noop}
+            timezoneError=""
+            generateTelegramLinkKey={noop}
+            telegramLinkKey=""
+            copyTelegramLinkKey={noop}
+            telegramCopyStatus=""
+            telegramLinkError=""
+            importingConversations={false}
+            importError=""
+            handleOpenImportDialog={noop}
+            handleImportChatGptShareUrl={noop}
+            savingSettings={false}
+            saveSettings={noop}
+            onLogout={noop}
+            alwaysExpanded
+          >
+            <View style={styles.container}>
+              <SecondBrainConversationList
+                messages={conversationMessages}
+                styles={secondBrainScreenStyles}
+                style={styles.messagesList}
+                contentContainerStyle={[
+                  styles.messagesWrap,
+                  { paddingBottom: messagesBottomPadding },
+                  secondBrainScreenStyles.conversationWrap,
+                ]}
+              />
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+            </View>
+          </SecondBrainTypebar>
+        </KeyboardAvoidingView>
+      </View>
+    </View>
   );
 }

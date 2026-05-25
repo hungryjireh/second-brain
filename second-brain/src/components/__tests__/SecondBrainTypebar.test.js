@@ -47,8 +47,6 @@ describe("SecondBrainTypebar", () => {
       isTypebarExpanded: true,
       setIsTypebarExpanded: jest.fn(),
       isSmallScreen: false,
-      inputHeight: 38,
-      setInputHeight: jest.fn(),
       hideTypebarSideActions: false,
       actionTooltip: "",
       setActionTooltip: jest.fn(),
@@ -100,9 +98,6 @@ describe("SecondBrainTypebar", () => {
     fireEvent.changeText(input, "New note");
     fireEvent(input, "focus");
     fireEvent(input, "blur");
-    fireEvent(input, "contentSizeChange", {
-      nativeEvent: { contentSize: { height: 54 } },
-    });
     fireEvent.press(getByLabelText("Record voice note"));
     fireEvent.press(getByLabelText("Enter note"));
     fireEvent.press(getByLabelText("Open settings"));
@@ -111,7 +106,6 @@ describe("SecondBrainTypebar", () => {
     expect(props.closeOpenActionDrawer).toHaveBeenCalledTimes(4);
     expect(props.setTypebarFocused).toHaveBeenCalledWith(true);
     expect(props.setTypebarFocused).toHaveBeenCalledWith(false);
-    expect(props.setInputHeight).toHaveBeenCalledTimes(1);
     expect(props.startVoiceCapture).toHaveBeenCalledTimes(1);
     expect(props.onSubmitDraft).toHaveBeenCalledTimes(1);
     expect(props.openSettings).toHaveBeenCalledTimes(1);
@@ -162,6 +156,16 @@ describe("SecondBrainTypebar", () => {
     ).toBeNull();
     fireEvent.press(getByLabelText("Expand typebar"));
     expect(props.setIsTypebarExpanded).toHaveBeenCalledWith(true);
+  });
+
+  it("collapses the expanded typebar when the dismiss overlay is pressed", () => {
+    const { getByLabelText, props } = renderTypebar({
+      draft: "",
+    });
+
+    fireEvent.press(getByLabelText("Collapse typebar"));
+
+    expect(props.setIsTypebarExpanded).toHaveBeenCalledWith(false);
   });
 
   it("disables settings button while offline", () => {
