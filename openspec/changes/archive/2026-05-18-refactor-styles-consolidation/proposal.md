@@ -13,9 +13,11 @@ Style definitions are currently duplicated across multiple files, which increase
 ## Capabilities
 
 ### New Capabilities
+
 - `style-system-consolidation`: Define and enforce reusable shared styling primitives so UI modules can consume consistent, centralized styles instead of duplicating declarations.
 
 ### Modified Capabilities
+
 - None.
 
 ## Impact

@@ -60,7 +60,7 @@ describe("Second Brain shared layout", () => {
     expect(view.getByTestId("shared-entry-page-layout")).toBeTruthy();
   });
 
-  it("renders edit entry screen inside shared entry page layout", () => {
+  it("renders edit entry screen without shared entry page layout", () => {
     const entry = {
       id: 42,
       title: "Ship tests",
@@ -79,10 +79,10 @@ describe("Second Brain shared layout", () => {
       />,
     );
 
-    expect(view.getByTestId("shared-entry-page-layout")).toBeTruthy();
+    expect(view.queryByTestId("shared-entry-page-layout")).toBeNull();
   });
 
-  it("renders entry details screen inside shared entry page layout", () => {
+  it("renders entry details screen without shared entry page layout", () => {
     const entry = {
       id: 7,
       title: "Entry",
@@ -95,6 +95,7 @@ describe("Second Brain shared layout", () => {
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
-    expect(view.getByTestId("shared-entry-page-layout")).toBeTruthy();
+    expect(view.queryByTestId("shared-entry-page-layout")).toBeNull();
+    expect(view.getByText("Entry")).toBeTruthy();
   });
 });

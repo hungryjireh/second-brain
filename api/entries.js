@@ -347,7 +347,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── PATCH /api/entries?id=X  { category?, title?, summary?, description?, remind_at?, priority?, is_archived?, tags? } ─
+  // ── PATCH /api/entries?id=X  { category?, title?, summary?, description?, rawText?, remind_at?, priority?, is_archived?, tags? } ─
   if (req.method === "PATCH") {
     const id = parseInt(req.query.id, 10);
     if (isNaN(id)) return json(res, 400, { error: "invalid id" });
@@ -358,6 +358,7 @@ export default async function handler(req, res) {
       summary,
       content,
       description,
+      rawText,
       remind_at,
       priority,
       is_archived,
@@ -373,7 +374,7 @@ export default async function handler(req, res) {
       updates.category = category;
     }
 
-    const nextDescriptionSource = description ?? content;
+    const nextDescriptionSource = description ?? rawText ?? content;
     if (nextDescriptionSource !== undefined) {
       if (!nextDescriptionSource?.trim())
         return json(res, 400, { error: "description is required" });

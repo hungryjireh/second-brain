@@ -10,7 +10,7 @@ Everything runs on Vercel: API routes as serverless functions and the bot as a w
 
 ### SecondBrain
 
-A website that acts as an extension of the human brain — searchable and less forgettable, but retaining brain-like behaviours like surfacing random memories. 
+A website that acts as an extension of the human brain — searchable and less forgettable, but retaining brain-like behaviours like surfacing random memories.
 
 ### OpenBrain
 
@@ -45,15 +45,15 @@ No backend polling: reminder notifications are handled by the user's calendar ap
 
 ## Tech stack
 
-| Layer | Technology |
-|---|---|
-| Hosting | Vercel (serverless) |
-| Bot transport | Telegram webhook → `/api/bot` |
-| Voice transcription | Groq Whisper (`whisper-large-v3-turbo`) |
-| AI classification | Groq LLaMA (`llama-3.3-70b-versatile`) |
-| Database | Supabase (Postgres + Auth + REST/RPC) |
-| Reminders | Calendar-based (`.ics` export via `/api/ics`) |
-| Frontend | React + Tailwind CSS (Vite) |
+| Layer               | Technology                                    |
+| ------------------- | --------------------------------------------- |
+| Hosting             | Vercel (serverless)                           |
+| Bot transport       | Telegram webhook → `/api/bot`                 |
+| Voice transcription | Groq Whisper (`whisper-large-v3-turbo`)       |
+| AI classification   | Groq LLaMA (`llama-3.3-70b-versatile`)        |
+| Database            | Supabase (Postgres + Auth + REST/RPC)         |
+| Reminders           | Calendar-based (`.ics` export via `/api/ics`) |
+| Frontend            | React + Tailwind CSS (Vite)                   |
 
 ---
 
@@ -69,11 +69,11 @@ npm run setup        # installs root + webapp deps
 
 ### 2. Create external services
 
-| Service | Steps |
-|---|---|
-| **Telegram bot** | Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token |
-| **Telegram chat ID** | Message [@userinfobot](https://t.me/userinfobot) → copy the id |
-| **Groq API key** | [console.groq.com/keys](https://console.groq.com/keys) |
+| Service              | Steps                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Telegram bot**     | Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy token                                                                                                                     |
+| **Telegram chat ID** | Message [@userinfobot](https://t.me/userinfobot) → copy the id                                                                                                                            |
+| **Groq API key**     | [console.groq.com/keys](https://console.groq.com/keys)                                                                                                                                    |
 | **Supabase project** | Create a project at [supabase.com/dashboard](https://supabase.com/dashboard), then copy `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from Project Settings → API |
 
 ### 3. Run the DB migration
@@ -101,19 +101,19 @@ vercel                    # follow prompts, links your repo
 
 Go to **Project → Settings → Environment Variables** and add every key from `.env.example`:
 
-| Variable | Where to get it |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | BotFather |
-| `TELEGRAM_CHAT_ID` | @userinfobot |
-| `TELEGRAM_WEBHOOK_SECRET` | Any random string, e.g. `openssl rand -hex 32` |
-| `GROQ_API_KEY` | console.groq.com |
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase Project Settings → API |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API |
-| `TELEGRAM_TOKEN_ENCRYPTION_KEY` | Random 32+ char secret (used to encrypt stored Telegram link auth tokens) |
-| `JWT_SECRET` | `openssl rand -hex 32` |
-| `AUTH_USERNAME` | Local fallback login username |
-| `AUTH_PASSWORD` | Local fallback login password |
-| `CRON_SECRET` | `openssl rand -hex 32` |
+| Variable                               | Where to get it                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `TELEGRAM_BOT_TOKEN`                   | BotFather                                                                 |
+| `TELEGRAM_CHAT_ID`                     | @userinfobot                                                              |
+| `TELEGRAM_WEBHOOK_SECRET`              | Any random string, e.g. `openssl rand -hex 32`                            |
+| `GROQ_API_KEY`                         | console.groq.com                                                          |
+| `EXPO_PUBLIC_SUPABASE_URL`             | Supabase Project Settings → API                                           |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Project Settings → API                                           |
+| `TELEGRAM_TOKEN_ENCRYPTION_KEY`        | Random 32+ char secret (used to encrypt stored Telegram link auth tokens) |
+| `JWT_SECRET`                           | `openssl rand -hex 32`                                                    |
+| `AUTH_USERNAME`                        | Local fallback login username                                             |
+| `AUTH_PASSWORD`                        | Local fallback login password                                             |
+| `CRON_SECRET`                          | `openssl rand -hex 32`                                                    |
 
 ### 6. Register the Telegram webhook
 
@@ -238,28 +238,30 @@ second-brain-poc/
 
 All protected routes require `Authorization: Bearer <token>`.
 
-| Method | Path | Body / Query | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/login` | `{ "username": "...", "password": "..." }` | Returns auth token for webapp session |
-| `GET` | `/api/entries` | `?category=<string>&cursor=<opaque>&limit=<1-100>` | List entries (optional category filter + cursor pagination) |
-| `POST` | `/api/entries` | `{ "description": "...", "category?": "reminder\|todo\|thought\|note", "priority?": 0-10, "tags?": ["..."] }` (also accepts `text` alias) | Classify and create one entry (`tags` in request override LLM-suggested tags) |
-| `PATCH` | `/api/entries?id=<number>` | `{ "category?": "...", "title?": "...", "summary?": "...", "description?": "...", "content?": "...", "remind_at?": <unix|null>, "priority?": 0-10, "is_archived?": boolean, "tags?": ["..."] }` | Update one entry |
-| `DELETE` | `/api/entries` | `?id=<number>` | Delete entry by ID |
-| `GET` | `/api/settings` | — | Fetch current user settings (currently timezone) |
-| `PATCH` | `/api/settings` | `{ "timezone": "Area/City" }` | Update timezone |
-| `GET` | `/api/telegram/link-key` | — | Generate short-lived Telegram link key for `/link` bot command |
-| `POST` | `/api/bot` | Telegram Update JSON | Telegram webhook receiver for text/voice ingestion |
-| `GET` | `/api/ics` | `?id=<number>` | Download `.ics` file for a reminder entry |
+| Method   | Path                       | Body / Query                                                                                                                              | Description                                                                   |
+| -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------- |
+| `POST`   | `/api/auth/login`          | `{ "username": "...", "password": "..." }`                                                                                                | Returns auth token for webapp session                                         |
+| `GET`    | `/api/entries`             | `?category=<string>&cursor=<opaque>&limit=<1-100>`                                                                                        | List entries (optional category filter + cursor pagination)                   |
+| `POST`   | `/api/entries`             | `{ "description": "...", "category?": "reminder\|todo\|thought\|note", "priority?": 0-10, "tags?": ["..."] }` (also accepts `text` alias) | Classify and create one entry (`tags` in request override LLM-suggested tags) |
+| `PATCH`  | `/api/entries?id=<number>` | `{ "category?": "...", "title?": "...", "summary?": "...", "description?": "...", "content?": "...", "remind_at?": <unix                  | null>, "priority?": 0-10, "is_archived?": boolean, "tags?": ["..."] }`        | Update one entry |
+| `DELETE` | `/api/entries`             | `?id=<number>`                                                                                                                            | Delete entry by ID                                                            |
+| `GET`    | `/api/settings`            | —                                                                                                                                         | Fetch current user settings (currently timezone)                              |
+| `PATCH`  | `/api/settings`            | `{ "timezone": "Area/City" }`                                                                                                             | Update timezone                                                               |
+| `GET`    | `/api/telegram/link-key`   | —                                                                                                                                         | Generate short-lived Telegram link key for `/link` bot command                |
+| `POST`   | `/api/bot`                 | Telegram Update JSON                                                                                                                      | Telegram webhook receiver for text/voice ingestion                            |
+| `GET`    | `/api/ics`                 | `?id=<number>`                                                                                                                            | Download `.ics` file for a reminder entry                                     |
 
 ---
 
 ## Migrating to the full plan (auth)
 
 Current state:
+
 1. Protected API routes already require bearer tokens and validate Supabase user identity.
 2. The webapp currently uses `POST /api/auth/login` (username/password fallback) for session bootstrap.
 
 Next migration steps:
+
 1. Add magic-link endpoints (`POST /api/auth/request`, `GET /api/auth/verify`) and issue short-lived login tokens after verification.
 2. Replace `webapp/src/Login.jsx` password form with email-first magic-link UX.
 3. Add email delivery config in Vercel (`RESEND_API_KEY`, sender/from address, optional templates).

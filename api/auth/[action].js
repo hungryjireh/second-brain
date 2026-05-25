@@ -6,6 +6,54 @@ import {
   verifyPlainCredential,
 } from "../../lib/auth.js";
 import { json } from "../../lib/open-brain/helpers.js";
+import { rateLimit, withIpRateLimit } from "../../lib/rate-limit.js";
+
+const AUTH_IP_RATE_LIMIT = {
+  scope: "auth-ip",
+  limit: 30,
+  windowMs: 60 * 1000,
+};
+
+const LOGIN_ID_RATE_LIMIT_LIMIT = 10;
+const LOGIN_ID_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+
+function applyAuthRateLimit(req) {
+  const ipLimit = withIpRateLimit(req, AUTH_IP_RATE_LIMIT);
+  if (!ipLimit.allowed) {
+    const retryAfterSeconds = Math.ceil(ipLimit.retryAfterMs / 1000);
+    return {
+      blocked: true,
+      status: 429,
+      body: {
+        error: "Too many requests. Please try again shortly.",
+        retryAfterSeconds,
+      },
+    };
+  }
+  return { blocked: false };
+}
+
+function applyLoginIdentifierRateLimit(identifier) {
+  const normalized = identifier.trim().toLowerCase();
+  const result = rateLimit({
+    key: `auth-id:${normalized}`,
+    limit: LOGIN_ID_RATE_LIMIT_LIMIT,
+    windowMs: LOGIN_ID_RATE_LIMIT_WINDOW_MS,
+  });
+  if (!result.allowed) {
+    const retryAfterSeconds = Math.ceil(result.retryAfterMs / 1000);
+    return {
+      blocked: true,
+      status: 429,
+      body: {
+        error:
+          "Too many login attempts for this account. Please try again later.",
+        retryAfterSeconds,
+      },
+    };
+  }
+  return { blocked: false };
+}
 
 async function login(req, res) {
   const username = String(req.body?.username || "").trim();
@@ -17,6 +65,11 @@ async function login(req, res) {
 
   if (!identifier || !password) {
     return json(res, 400, { error: "username and password are required" });
+  }
+
+  const identifierRateLimit = applyLoginIdentifierRateLimit(identifier);
+  if (identifierRateLimit.blocked) {
+    return json(res, identifierRateLimit.status, identifierRateLimit.body);
   }
 
   try {
@@ -118,6 +171,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST")
     return json(res, 405, { error: "Method not allowed" });
+
+  const authRateLimit = applyAuthRateLimit(req);
+  if (authRateLimit.blocked) {
+    return json(res, authRateLimit.status, authRateLimit.body);
+  }
 
   const action = String(req.query?.action || "")
     .trim()

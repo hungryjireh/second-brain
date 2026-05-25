@@ -5,12 +5,14 @@ The current codebase includes repeated utility logic and similar implementation 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Identify high-confidence duplicate logic worth consolidating.
 - Replace duplicate implementations with shared abstractions.
 - Preserve existing behavior through focused regression coverage.
 - Improve maintainability and consistency for future development.
 
 **Non-Goals:**
+
 - Large-scale architecture rewrites unrelated to duplication.
 - Public API redesigns.
 - Introducing new runtime dependencies solely for deduplication.
@@ -18,20 +20,20 @@ The current codebase includes repeated utility logic and similar implementation 
 ## Decisions
 
 1. Use an incremental consolidation strategy rather than a broad rewrite.
-Rationale: Incremental changes reduce regression risk and simplify review.
-Alternative considered: One-pass refactor of all duplicates. Rejected because blast radius is too large.
+   Rationale: Incremental changes reduce regression risk and simplify review.
+   Alternative considered: One-pass refactor of all duplicates. Rejected because blast radius is too large.
 
 2. Prioritize behaviorally identical duplication first.
-Rationale: Identical code paths can be consolidated safely with lower ambiguity.
-Alternative considered: Consolidating near-duplicate logic immediately. Deferred until identical cases are complete.
+   Rationale: Identical code paths can be consolidated safely with lower ambiguity.
+   Alternative considered: Consolidating near-duplicate logic immediately. Deferred until identical cases are complete.
 
 3. Require regression tests for each consolidated cluster.
-Rationale: Tests provide safety when replacing multiple implementations with a shared abstraction.
-Alternative considered: Relying on existing tests only. Rejected because current coverage may not exercise all duplicated branches.
+   Rationale: Tests provide safety when replacing multiple implementations with a shared abstraction.
+   Alternative considered: Relying on existing tests only. Rejected because current coverage may not exercise all duplicated branches.
 
 4. Keep consolidation abstractions close to current module boundaries.
-Rationale: Localized shared modules minimize import churn and avoid premature over-generalization.
-Alternative considered: Central "global utils" migration. Rejected to prevent creating a catch-all dependency sink.
+   Rationale: Localized shared modules minimize import churn and avoid premature over-generalization.
+   Alternative considered: Central "global utils" migration. Rejected to prevent creating a catch-all dependency sink.
 
 ## Risks / Trade-offs
 

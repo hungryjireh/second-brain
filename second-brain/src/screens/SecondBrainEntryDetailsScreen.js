@@ -1,20 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  FlatList,
   Platform,
   Pressable,
   ScrollView,
   Text,
-  useWindowDimensions,
+  TextInput,
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import MarkdownBody from "../components/MarkdownBody";
-import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import { apiRequest } from "../api";
 import { confirmAction } from "../utils/confirmAction";
 import { formatPublishedDateTime } from "../utils/dateTimeUtils";
+import {
+  getLinkedBrainstormSessionId,
+  readBrainstormSession,
+} from "../utils/brainstormSessions";
+import { normalizeTagValue, parseTagInput } from "../utils/secondBrainTagUtils";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
 
@@ -45,8 +55,63 @@ function parseImportedConversationFromEntry(entry) {
   }
 }
 
+function parseBrainstormConversationFromSession(session) {
+  if (!session || typeof session !== "object") return null;
+  if (!Array.isArray(session.messages) || session.messages.length === 0)
+    return null;
+
+  const messages = session.messages
+    .map((msg) => {
+      const sender = msg?.role === "assistant" ? "assistant" : "human";
+      const text = String(msg?.content ?? "").trim();
+      if (!text) return null;
+      return { sender, text, fileUrls: [] };
+    })
+    .filter(Boolean);
+
+  if (messages.length === 0) return null;
+  return { messages };
+}
+
+function parseBrainstormTranscriptFromEntry(entry) {
+  const source = String(entry?.description ?? entry?.raw_text ?? "").trim();
+  if (!source) return null;
+
+  const chunks = source
+    .split(/\n\s*\n+/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+  if (chunks.length === 0) return null;
+
+  const messages = chunks
+    .map((chunk) => {
+      const lines = chunk.split("\n");
+      const first = String(lines[0] ?? "").trim();
+      const match = first.match(/^(user|assistant|human)\s*:\s*(.*)$/i);
+      if (!match) return null;
+      const senderLabel = match[1].toLowerCase();
+      const sender = senderLabel === "assistant" ? "assistant" : "human";
+      const firstContent = String(match[2] ?? "").trim();
+      const restContent = lines
+        .slice(1)
+        .map((line) => String(line).trim())
+        .join("\n")
+        .trim();
+      const text = [firstContent, restContent]
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+      if (!text) return null;
+      return { sender, text, fileUrls: [] };
+    })
+    .filter(Boolean);
+
+  const hasAssistant = messages.some((msg) => msg.sender === "assistant");
+  if (messages.length < 2 || !hasAssistant) return null;
+  return { messages };
+}
+
 const MAX_WEB_RENDERED_MESSAGES = 200;
-const SMALL_SCREEN_BREAKPOINT = 720;
 const CATEGORY_TAG_STYLES = {
   reminder: {
     bg: theme.colors.reminderTagBg,
@@ -69,6 +134,41 @@ const CATEGORY_TAG_STYLES = {
     label: "Note",
   },
 };
+
+const ConversationMessageRow = memo(function ConversationMessageRow({
+  item,
+  styles,
+}) {
+  const fromHuman = item.sender === "human";
+  return (
+    <View
+      style={[
+        styles.conversationRow,
+        fromHuman
+          ? styles.conversationRowHuman
+          : styles.conversationRowAssistant,
+      ]}
+    >
+      <View
+        style={[
+          styles.conversationBubble,
+          fromHuman
+            ? styles.conversationBubbleHuman
+            : styles.conversationBubbleAssistant,
+        ]}
+      >
+        <Text style={styles.conversationSender}>
+          {fromHuman ? "You" : "Assistant"}
+        </Text>
+        <MarkdownBody
+          text={item.text}
+          fileUrls={item.fileUrls}
+          styles={styles}
+        />
+      </View>
+    </View>
+  );
+});
 
 async function confirmArchiveEntry(entry) {
   const isReminder = entry?.category === "reminder";
@@ -97,6 +197,38 @@ function formatEntryTimestamp(value) {
   return formatPublishedDateTime(parsedDate);
 }
 
+function formatEntryRelativeTimestamp(value) {
+  if (value === null || value === undefined || value === "") return "";
+  const parsedDate =
+    typeof value === "number" ? new Date(value * 1000) : new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return "";
+
+  const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 86400000);
+  const dayKey = dayKeyFormatter.format(parsedDate);
+  const todayKey = dayKeyFormatter.format(now);
+  const yesterdayKey = dayKeyFormatter.format(yesterday);
+  const time = timeFormatter.format(parsedDate);
+
+  if (dayKey === todayKey) return `Today · ${time}`;
+  if (dayKey === yesterdayKey) return `Yesterday · ${time}`;
+  return `${shortDateFormatter.format(parsedDate)} · ${time}`;
+}
+
 export default function SecondBrainEntryDetailsScreen({
   route,
   navigation,
@@ -106,28 +238,70 @@ export default function SecondBrainEntryDetailsScreen({
   const entryId = route?.params?.entryId ?? entryFromRoute?.id ?? null;
   const token = tokenFromProps ?? null;
   const [entry, setEntry] = useState(entryFromRoute);
+  const [brainstormConversation, setBrainstormConversation] = useState(null);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
-  const [isInlineActionsMounted, setIsInlineActionsMounted] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
-  const actionTriggerRef = useRef(null);
-  const inlineActionsAnim = useRef(new Animated.Value(0)).current;
-  const { width } = useWindowDimensions();
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagDraft, setNewTagDraft] = useState("");
+  const [isSavingTag, setIsSavingTag] = useState(false);
+  const [tagError, setTagError] = useState("");
   const importedConversation = useMemo(
     () => parseImportedConversationFromEntry(entry),
     [entry?.raw_text],
   );
+  const brainstormTranscriptConversation = useMemo(
+    () => parseBrainstormTranscriptFromEntry(entry),
+    [entry?.description, entry?.raw_text],
+  );
+  const displayedConversation =
+    importedConversation ||
+    brainstormConversation ||
+    brainstormTranscriptConversation;
   const isWeb = Platform.OS === "web";
   const renderedMessages = useMemo(() => {
-    if (!importedConversation?.messages) return [];
+    if (!displayedConversation?.messages) return [];
     if (
       !isWeb ||
-      importedConversation.messages.length <= MAX_WEB_RENDERED_MESSAGES
+      displayedConversation.messages.length <= MAX_WEB_RENDERED_MESSAGES
     )
-      return importedConversation.messages;
-    return importedConversation.messages.slice(0, MAX_WEB_RENDERED_MESSAGES);
-  }, [importedConversation, isWeb]);
+      return displayedConversation.messages;
+    return displayedConversation.messages.slice(0, MAX_WEB_RENDERED_MESSAGES);
+  }, [displayedConversation, isWeb]);
   const hasHiddenMessages = Boolean(
-    isWeb && importedConversation?.messages?.length > renderedMessages.length,
+    isWeb && displayedConversation?.messages?.length > renderedMessages.length,
+  );
+  const conversationData = useMemo(
+    () =>
+      hasHiddenMessages
+        ? [
+            ...renderedMessages,
+            {
+              id: "__hidden_messages_notice__",
+              sender: "assistant",
+              text: `Showing first ${MAX_WEB_RENDERED_MESSAGES} messages on web for performance.`,
+              fileUrls: [],
+              isNotice: true,
+            },
+          ]
+        : renderedMessages,
+    [hasHiddenMessages, renderedMessages],
+  );
+  const keyExtractor = useCallback(
+    (item, index) =>
+      item.id ||
+      (item.isNotice
+        ? "__hidden_messages_notice__"
+        : `${item.sender}-${index}`),
+    [],
+  );
+  const renderConversationItem = useCallback(
+    ({ item }) =>
+      item.isNotice ? (
+        <Text style={styles.entryPanelSummary}>{item.text}</Text>
+      ) : (
+        <ConversationMessageRow item={item} styles={styles} />
+      ),
+    [],
   );
   const categoryTag =
     CATEGORY_TAG_STYLES[entry?.category] ?? CATEGORY_TAG_STYLES.note;
@@ -136,8 +310,15 @@ export default function SecondBrainEntryDetailsScreen({
     entry?.content === null ? entry?.summary || "" : entry?.content || "";
   const body = entry?.description || entry?.raw_text || entry?.content || "";
   const createdLabel = formatEntryTimestamp(entry?.created_at);
-  const updatedLabel = formatEntryTimestamp(entry?.updated_at);
+  const updatedLabel = formatEntryRelativeTimestamp(entry?.updated_at);
   const reminderLabel = formatEntryTimestamp(entry?.remind_at);
+  const parsedEntryTags = useMemo(
+    () =>
+      parseTagInput(
+        Array.isArray(entry?.tags) ? entry.tags.join(",") : String(""),
+      ),
+    [entry?.tags],
+  );
   const archiveLabel =
     entry?.category === "reminder"
       ? entry?.is_archived
@@ -146,15 +327,36 @@ export default function SecondBrainEntryDetailsScreen({
       : entry?.is_archived
         ? "Unarchive"
         : "Archive";
-  const isSmallScreen = width < SMALL_SCREEN_BREAKPOINT;
-  const showInlineActions = isInlineActionsMounted;
-  const shouldReplaceTitleWithActions = isSmallScreen && showInlineActions;
-  const shouldShowInlineActionsBesideTitle =
-    !isSmallScreen && showInlineActions;
-
   useEffect(() => {
     setEntry(entryFromRoute);
   }, [entryFromRoute]);
+
+  useLayoutEffect(() => {
+    if (!navigation?.setOptions) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open entry actions"
+          onPress={() => {
+            if (isActionDrawerOpen) {
+              closeActionDrawer();
+              return;
+            }
+            openActionDrawer();
+          }}
+          disabled={isBusy}
+          style={styles.mobileActionTrigger}
+        >
+          <Feather
+            name="more-vertical"
+            size={18}
+            style={styles.mobileActionTriggerIcon}
+          />
+        </Pressable>
+      ),
+    });
+  }, [isActionDrawerOpen, isBusy, navigation]);
 
   useEffect(() => {
     async function loadEntryById() {
@@ -178,35 +380,41 @@ export default function SecondBrainEntryDetailsScreen({
     loadEntryById();
   }, [entry?.id, entryId, token]);
 
-  function closeActionDrawer(onClosed) {
-    if (!isInlineActionsMounted) {
-      setIsActionDrawerOpen(false);
-      onClosed?.();
-      return;
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBrainstormConversation() {
+      if (!entry?.id || importedConversation) {
+        if (!cancelled) setBrainstormConversation(null);
+        return;
+      }
+      try {
+        const sessionId = await getLinkedBrainstormSessionId(entry.id);
+        if (!sessionId) {
+          if (!cancelled) setBrainstormConversation(null);
+          return;
+        }
+        const session = await readBrainstormSession(sessionId);
+        if (cancelled) return;
+        setBrainstormConversation(
+          parseBrainstormConversationFromSession(session),
+        );
+      } catch {
+        if (!cancelled) setBrainstormConversation(null);
+      }
     }
+    loadBrainstormConversation();
+    return () => {
+      cancelled = true;
+    };
+  }, [entry?.id, importedConversation]);
+
+  function closeActionDrawer(onClosed) {
     setIsActionDrawerOpen(false);
-    Animated.timing(inlineActionsAnim, {
-      toValue: 0,
-      duration: 180,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => {
-      setIsInlineActionsMounted(false);
-      onClosed?.();
-    });
+    onClosed?.();
   }
 
   function openActionDrawer() {
-    if (isInlineActionsMounted) return;
     setIsActionDrawerOpen(true);
-    inlineActionsAnim.setValue(0);
-    setIsInlineActionsMounted(true);
-    Animated.timing(inlineActionsAnim, {
-      toValue: 1,
-      duration: 200,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
   }
 
   function handleEditEntry() {
@@ -258,255 +466,240 @@ export default function SecondBrainEntryDetailsScreen({
     }
   }
 
+  function openAddTagInput() {
+    setIsAddingTag(true);
+    setTagError("");
+  }
+
+  function cancelAddTagInput() {
+    setIsAddingTag(false);
+    setNewTagDraft("");
+    setTagError("");
+  }
+
+  async function handleAddTag() {
+    if (!entry?.id || !token || isSavingTag || isBusy) return;
+    const nextTag = normalizeTagValue(newTagDraft);
+    if (!nextTag) {
+      setTagError("Type a tag first.");
+      return;
+    }
+
+    const mergedTags = parseTagInput([...parsedEntryTags, nextTag].join(","));
+    if (mergedTags.length === parsedEntryTags.length) {
+      setTagError("Tag already exists.");
+      return;
+    }
+
+    setTagError("");
+    setIsSavingTag(true);
+    try {
+      const updated = await apiRequest(`/entries?id=${entry.id}`, {
+        method: "PATCH",
+        token,
+        body: { tags: mergedTags },
+      });
+      setEntry((prev) => ({
+        ...(prev ?? {}),
+        ...(updated && typeof updated === "object" ? updated : {}),
+        tags: mergedTags,
+      }));
+      cancelAddTagInput();
+    } catch (err) {
+      setTagError(err?.message || "Failed to add tag.");
+    } finally {
+      setIsSavingTag(false);
+    }
+  }
+
   return (
-    <SecondBrainEntryPageLayout>
-      {isActionDrawerOpen ? (
-        <Pressable
-          testID="entry-actions-dismiss-overlay"
-          style={styles.entryActionDismissOverlay}
-          onPress={() => closeActionDrawer()}
-        />
-      ) : null}
+    <View style={styles.container}>
       <View
-        testID="entry-category-pill"
-        style={[styles.tagPill, { backgroundColor: categoryTag.bg }]}
-      >
-        <Text style={[styles.tagPillText, { color: categoryTag.color }]}>
-          {categoryTag.label}
-        </Text>
-      </View>
-      <View
-        testID="entry-title-row"
         style={[
-          styles.entryPanelTitleRow,
-          !isSmallScreen && styles.entryPanelTitleRowLarge,
+          styles.entryPanel,
+          { maxWidth: "100%", maxHeight: "100%", flex: 1 },
+          styles.entryDetailsPanelNoBackground,
         ]}
       >
-        {shouldReplaceTitleWithActions ? (
-          <Animated.View
-            style={[
-              styles.mobileInlineActionsRow,
-              {
-                opacity: inlineActionsAnim,
-                transform: [
-                  {
-                    translateX: inlineActionsAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [16, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={handleEditEntry}
-              disabled={isBusy}
-            >
-              <Text style={styles.secondaryButtonText}>Edit</Text>
-            </Pressable>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={handleToggleArchive}
-              disabled={isBusy}
-            >
-              <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
-            </Pressable>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={handleContinueBrainstorming}
-              disabled={isBusy}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Continue Brainstorming
-              </Text>
-            </Pressable>
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={handleDeleteEntry}
-              disabled={isBusy}
-            >
-              <Text
-                style={[
-                  styles.secondaryButtonText,
-                  styles.mobileActionDrawerDeleteText,
-                ]}
-              >
-                Delete
-              </Text>
-            </Pressable>
-          </Animated.View>
-        ) : (
+        {isActionDrawerOpen ? (
           <>
-            <Text style={styles.entryPanelTitle}>{title}</Text>
-            {shouldShowInlineActionsBesideTitle ? (
-              <Animated.View
-                testID="entry-inline-actions-large"
-                style={[
-                  styles.mobileInlineActionsRow,
-                  styles.entryPanelInlineActionsLarge,
-                  {
-                    opacity: inlineActionsAnim,
-                    transform: [
-                      {
-                        translateX: inlineActionsAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [16, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
+            <Pressable
+              testID="entry-actions-dismiss-overlay"
+              style={styles.entryActionDismissOverlay}
+              onPress={() => closeActionDrawer()}
+            />
+            <View
+              testID="entry-actions-dropdown"
+              style={[
+                styles.mobileActionDrawer,
+                styles.mobileActionDrawerPortal,
+                { top: 8, right: 12 },
+              ]}
+            >
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={handleEditEntry}
+                disabled={isBusy}
               >
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleEditEntry}
-                  disabled={isBusy}
+                <Text style={styles.mobileActionDrawerText}>Edit</Text>
+              </Pressable>
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={handleToggleArchive}
+                disabled={isBusy}
+              >
+                <Text style={styles.mobileActionDrawerText}>
+                  {archiveLabel}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={handleContinueBrainstorming}
+                disabled={isBusy}
+              >
+                <Text style={styles.mobileActionDrawerText}>
+                  Continue Brainstorming
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.mobileActionDrawerItem}
+                onPress={handleDeleteEntry}
+                disabled={isBusy}
+              >
+                <Text
+                  style={[
+                    styles.mobileActionDrawerText,
+                    styles.mobileActionDrawerDeleteText,
+                  ]}
                 >
-                  <Text style={styles.secondaryButtonText}>Edit</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleToggleArchive}
-                  disabled={isBusy}
-                >
-                  <Text style={styles.secondaryButtonText}>{archiveLabel}</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleContinueBrainstorming}
-                  disabled={isBusy}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    Continue Brainstorming
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleDeleteEntry}
-                  disabled={isBusy}
-                >
-                  <Text
-                    style={[
-                      styles.secondaryButtonText,
-                      styles.mobileActionDrawerDeleteText,
-                    ]}
-                  >
-                    Delete
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            ) : (
-              <View style={styles.mobileActionDrawerWrap}>
-                <Pressable
-                  ref={actionTriggerRef}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open entry actions"
-                  onPress={() => {
-                    if (isActionDrawerOpen) {
-                      closeActionDrawer();
-                      return;
-                    }
-                    openActionDrawer();
-                  }}
-                  disabled={isBusy}
-                  style={styles.mobileActionTrigger}
-                >
-                  {isBusy ? (
-                    <Text style={styles.mobileActionTriggerText}>...</Text>
-                  ) : (
-                    <Text style={styles.mobileActionTriggerText}>...</Text>
-                  )}
-                </Pressable>
-              </View>
-            )}
+                  Delete
+                </Text>
+              </Pressable>
+            </View>
           </>
-        )}
-      </View>
-      <Text style={styles.entryPanelSummary}>{summary}</Text>
-      {createdLabel || updatedLabel ? (
-        <View style={styles.metaInfoRow}>
-          {createdLabel ? (
-            <Text style={styles.metaText}>{`Created ${createdLabel}`}</Text>
-          ) : null}
-          {createdLabel && updatedLabel ? (
-            <Text style={styles.metaDot}>•</Text>
-          ) : null}
+        ) : null}
+        <View style={styles.entryCategoryMetaRow}>
+          <View
+            testID="entry-category-pill"
+            style={[styles.tagPill, { backgroundColor: categoryTag.bg }]}
+          >
+            <Text style={[styles.tagPillText, { color: categoryTag.color }]}>
+              {categoryTag.label}
+            </Text>
+          </View>
           {updatedLabel ? (
-            <Text style={styles.metaText}>{`Updated ${updatedLabel}`}</Text>
+            <Text style={styles.entryLastUpdatedText}>{updatedLabel}</Text>
           ) : null}
         </View>
-      ) : null}
-      {entry?.category === "reminder" && reminderLabel ? (
-        <View style={styles.metaInfoRow}>
-          <View style={styles.reminderMetaPill}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Feather name="clock" size={12} color={theme.colors.brand} />
-              <Text style={styles.reminderMetaText}> {reminderLabel}</Text>
+        <View
+          testID="entry-title-row"
+          style={[styles.entryPanelTitleRow, styles.entryPanelTitleRowLarge]}
+        >
+          <Text style={styles.entryPanelTitle}>{title}</Text>
+        </View>
+        <Text style={styles.entryPanelSummary}>{summary}</Text>
+        {createdLabel ? (
+          <View style={styles.metaInfoRow}>
+            <Text style={styles.metaText}>{`Created ${createdLabel}`}</Text>
+          </View>
+        ) : null}
+        {entry?.category === "reminder" && reminderLabel ? (
+          <View style={styles.metaInfoRow}>
+            <View style={styles.reminderMetaPill}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Feather name="clock" size={12} color={theme.colors.brand} />
+                <Text style={styles.reminderMetaText}> {reminderLabel}</Text>
+              </View>
             </View>
           </View>
-        </View>
-      ) : null}
-      {Array.isArray(entry?.tags) && entry.tags.length > 0 ? (
+        ) : null}
         <View style={styles.entryPanelTags}>
-          {entry.tags.map((tagName) => (
-            <View key={tagName} style={styles.itemTagPill}>
+          {parsedEntryTags.map((tagName) => (
+            <View
+              key={tagName}
+              style={[styles.itemTagPill, styles.entryDetailsTagPill]}
+            >
               <Text style={styles.itemTagText}>#{tagName}</Text>
             </View>
           ))}
-        </View>
-      ) : null}
-      <View style={[styles.entryPanelBodyWrap, { flex: 1 }]}>
-        <ScrollView
-          style={styles.entryPanelBodyScroll}
-          contentContainerStyle={styles.entryPanelBodyContent}
-        >
-          {importedConversation ? (
-            <View style={styles.conversationWrap}>
-              {renderedMessages.map((msg, idx) => {
-                const fromHuman = msg.sender === "human";
-                return (
-                  <View
-                    key={`${msg.sender}-${idx}`}
-                    style={[
-                      styles.conversationRow,
-                      fromHuman
-                        ? styles.conversationRowHuman
-                        : styles.conversationRowAssistant,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.conversationBubble,
-                        fromHuman
-                          ? styles.conversationBubbleHuman
-                          : styles.conversationBubbleAssistant,
-                      ]}
-                    >
-                      <Text style={styles.conversationSender}>
-                        {fromHuman ? "You" : "Assistant"}
-                      </Text>
-                      <MarkdownBody
-                        text={msg.text}
-                        fileUrls={msg.fileUrls}
-                        styles={styles}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-              {hasHiddenMessages ? (
-                <Text style={styles.entryPanelSummary}>
-                  {`Showing first ${MAX_WEB_RENDERED_MESSAGES} messages on web for performance.`}
+          {isAddingTag ? (
+            <View style={styles.entryDetailsAddTagInputWrap}>
+              <View style={styles.tagInputRow}>
+                <TextInput
+                  accessibilityLabel="Tag input"
+                  value={newTagDraft}
+                  onChangeText={(value) => {
+                    setNewTagDraft(value);
+                    setTagError("");
+                  }}
+                  style={[styles.editField, styles.tagInput]}
+                  placeholder="Type a tag"
+                  placeholderTextColor={theme.colors.textSecondary}
+                />
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={handleAddTag}
+                  disabled={isSavingTag || isBusy}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {isSavingTag ? "Adding..." : "Add"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={styles.secondaryButton}
+                  onPress={cancelAddTagInput}
+                  disabled={isSavingTag}
+                >
+                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                </Pressable>
+              </View>
+              {tagError ? (
+                <Text
+                  style={[styles.tagCountText, { color: theme.colors.danger }]}
+                >
+                  {tagError}
                 </Text>
               ) : null}
             </View>
           ) : (
-            <MarkdownBody text={body} styles={styles} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add tag"
+              onPress={openAddTagInput}
+              style={[styles.itemTagPill, styles.entryDetailsAddTagPill]}
+            >
+              <Text style={[styles.itemTagText, styles.entryDetailsAddTagText]}>
+                + tag
+              </Text>
+            </Pressable>
           )}
-        </ScrollView>
+        </View>
+        <View style={[styles.entryPanelBodyWrap, { flex: 1 }]}>
+          {displayedConversation ? (
+            <FlatList
+              style={styles.entryPanelBodyScroll}
+              contentContainerStyle={[
+                styles.entryPanelBodyContent,
+                styles.conversationWrap,
+              ]}
+              data={conversationData}
+              keyExtractor={keyExtractor}
+              renderItem={renderConversationItem}
+              removeClippedSubviews={!isWeb}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={7}
+            />
+          ) : (
+            <ScrollView
+              style={styles.entryPanelBodyScroll}
+              contentContainerStyle={styles.entryPanelBodyContent}
+            >
+              <MarkdownBody text={body} styles={styles} />
+            </ScrollView>
+          )}
+        </View>
       </View>
-    </SecondBrainEntryPageLayout>
+    </View>
   );
 }

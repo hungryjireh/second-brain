@@ -5,12 +5,14 @@ The repository has a root-level `lib/` directory used for shared server and appl
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Establish explicit criteria for deciding whether a utility belongs in `mobile/` scope or shared `lib/` scope.
 - Define a safe migration workflow for any existing or newly identified `mobile/utils` modules that should be shared.
 - Preserve runtime behavior by requiring import migration validation and compatibility safeguards.
 - Produce a repeatable process that can be reused for future utility placement decisions.
 
 **Non-Goals:**
+
 - Reorganizing unrelated non-utility mobile modules.
 - Introducing new third-party dependencies.
 - Refactoring utility logic beyond what is required for consolidation and compatibility.
@@ -18,19 +20,23 @@ The repository has a root-level `lib/` directory used for shared server and appl
 ## Decisions
 
 1. Decision: Use a capability-driven inventory first, then migrate.
+
 - Rationale: Inventory avoids accidental moves and clarifies which modules are truly shared.
 - Alternative considered: Directly move folders and fix imports afterward; rejected because it increases break risk and obscures intent.
 
 2. Decision: Define placement rules based on runtime coupling.
+
 - Rule: Utilities that depend on mobile-only runtime APIs (e.g., React Native platform modules) stay in mobile-scoped folders; runtime-agnostic utilities move to `lib/`.
 - Rationale: Prevents shared code from implicitly depending on mobile-only primitives.
 - Alternative considered: Move everything to `lib/`; rejected because it can pollute shared layers with platform-coupled code.
 
 3. Decision: Use temporary compatibility re-exports for phased migration.
+
 - Rationale: Re-export stubs in legacy paths reduce large-bang refactors and unblock incremental updates.
 - Alternative considered: Immediate import rewrites with no compatibility layer; rejected due to higher coordination risk.
 
 4. Decision: Require verification through existing test suite and focused import checks.
+
 - Rationale: Behavioral parity must be confirmed with objective checks after path updates.
 - Alternative considered: Rely on code review only; rejected because import/path regressions can be subtle.
 
@@ -52,6 +58,7 @@ The repository has a root-level `lib/` directory used for shared server and appl
 7. Remove wrappers once all imports are migrated and verified.
 
 Rollback strategy:
+
 - If regressions appear, restore previous import paths and retain wrappers while completing missing call-site migrations.
 
 ## Open Questions

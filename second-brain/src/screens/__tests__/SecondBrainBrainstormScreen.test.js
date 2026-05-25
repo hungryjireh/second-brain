@@ -3,7 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlatList } from "react-native";
 import SecondBrainBrainstormScreen from "../SecondBrainBrainstormScreen";
 import { apiRequest } from "../../api";
-import { createBrainstormSession } from "../../utils/brainstormSessions";
+import {
+  createBrainstormSession,
+  readBrainstormSession,
+} from "../../utils/brainstormSessions";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
@@ -19,28 +22,30 @@ jest.mock("../../utils/brainstormSessions", () => {
   }
 
   return {
-    createBrainstormSession: jest.fn(async ({ entryId = null, seedText = "" } = {}) => {
-      counter += 1;
-      const session = {
-        id: `session-${counter}`,
-        entryId,
-        lifecycle: "active",
-        updatedAt: new Date().toISOString(),
-        finalizeGuards: { ended: false, wipSaved: false },
-        messages: seedText
-          ? [
-              {
-                id: `seed-${counter}`,
-                role: "assistant",
-                content: String(seedText),
-                createdAt: new Date().toISOString(),
-              },
-            ]
-          : [],
-      };
-      sessionsById.set(session.id, cloneSession(session));
-      return cloneSession(session);
-    }),
+    createBrainstormSession: jest.fn(
+      async ({ entryId = null, seedText = "" } = {}) => {
+        counter += 1;
+        const session = {
+          id: `session-${counter}`,
+          entryId,
+          lifecycle: "active",
+          updatedAt: new Date().toISOString(),
+          finalizeGuards: { ended: false, wipSaved: false },
+          messages: seedText
+            ? [
+                {
+                  id: `seed-${counter}`,
+                  role: "assistant",
+                  content: String(seedText),
+                  createdAt: new Date().toISOString(),
+                },
+              ]
+            : [],
+        };
+        sessionsById.set(session.id, cloneSession(session));
+        return cloneSession(session);
+      },
+    ),
     getLinkedBrainstormSessionId: jest.fn(async (entryId) => {
       return linkedEntryById.get(Number(entryId)) || "";
     }),
@@ -434,8 +439,7 @@ describe("SecondBrainBrainstormScreen", () => {
       await Promise.resolve();
     });
 
-    const initialRenderItem =
-      view.UNSAFE_getByType(FlatList).props.renderItem;
+    const initialRenderItem = view.UNSAFE_getByType(FlatList).props.renderItem;
 
     fireEvent.changeText(
       view.getByPlaceholderText("Share your thought, or type /end"),
@@ -517,5 +521,77 @@ describe("SecondBrainBrainstormScreen", () => {
     });
 
     expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("renders legacy resumed session messages with sender/text shape", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "legacy-1",
+      lifecycle: "active",
+      messages: [
+        { sender: "human", text: "Legacy user thought" },
+        { sender: "assistant", text: "Legacy assistant response" },
+      ],
+    });
+
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "legacy-1" } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Legacy user thought")).toBeTruthy();
+      expect(view.getByText("Legacy assistant response")).toBeTruthy();
+    });
+  });
+
+  it("filters empty legacy resumed messages and still renders valid ones", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "legacy-2",
+      lifecycle: "active",
+      messages: [
+        { sender: "human", text: "   " },
+        { sender: "assistant", text: "Useful reply" },
+      ],
+    });
+
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "legacy-2" } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Useful reply")).toBeTruthy();
+    });
+    expect(view.queryByText("   ")).toBeNull();
+  });
+
+  it("renders resumed messages when id and createdAt are missing", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "legacy-3",
+      lifecycle: "active",
+      messages: [
+        { role: "user", content: "No metadata user message" },
+        { role: "assistant", content: "No metadata assistant message" },
+      ],
+    });
+
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "legacy-3" } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("No metadata user message")).toBeTruthy();
+      expect(view.getByText("No metadata assistant message")).toBeTruthy();
+    });
   });
 });

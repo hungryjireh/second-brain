@@ -67,6 +67,7 @@ describe("useSecondBrainEntryFiltering", () => {
     });
     expect(latestValue.visibleEntries.map((entry) => entry.id)).toEqual([1]);
     expect(latestValue.hasActiveFilters).toBe(true);
+    expect(latestValue.activeFilterCount).toBe(4);
     expect(latestValue.tagUsageCounts.get("Work")).toBe(1);
     expect(latestValue.tagUsageCounts.get("work")).toBe(1);
     expect(latestValue.globalTags).toEqual(["work", "health", "ideas"]);
@@ -99,5 +100,6 @@ describe("useSecondBrainEntryFiltering", () => {
 
     expect(latestValue.globalTags).toEqual(["alpha", "zeta"]);
     expect(latestValue.hasActiveFilters).toBe(false);
+    expect(latestValue.activeFilterCount).toBe(0);
   });
 });

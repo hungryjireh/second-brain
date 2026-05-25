@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import styles from "../SecondBrainScreen.styles";
+import { theme } from "../../theme";
 
 describe("SecondBrainScreen responsive styles", () => {
   it("defines a non-wrapping stats grid variant for small screens", () => {
@@ -72,7 +73,9 @@ describe("SecondBrainScreen responsive styles", () => {
     const searchRow = StyleSheet.flatten(styles.filterSearchRow);
     const searchWrap = StyleSheet.flatten(styles.filterSearchInputWrap);
     const searchInput = StyleSheet.flatten(styles.filterSearchInput);
-    const filterIconButton = StyleSheet.flatten(styles.filterDropdownIconButton);
+    const filterIconButton = StyleSheet.flatten(
+      styles.filterDropdownIconButton,
+    );
 
     expect(searchRow.gap).toBe(6);
     expect(searchWrap.minHeight).toBe(40);
@@ -81,6 +84,23 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(filterIconButton.width).toBe(40);
     expect(filterIconButton.height).toBe(40);
     expect(filterIconButton.borderRadius).toBe(12);
+  });
+
+  it("uses brand active tokens for mobile filter button and badge", () => {
+    const buttonActive = StyleSheet.flatten(
+      styles.filterDropdownIconButtonActive,
+    );
+    const iconActive = StyleSheet.flatten(
+      styles.filterDropdownIconButtonIconActive,
+    );
+    const badge = StyleSheet.flatten(styles.filterDropdownCountBadge);
+    const badgeText = StyleSheet.flatten(styles.filterDropdownCountBadgeText);
+
+    expect(buttonActive.backgroundColor).toBe(theme.colors.brand);
+    expect(buttonActive.borderColor).toBe(theme.colors.brand);
+    expect(iconActive.color).toBe(theme.colors.textLight);
+    expect(badge.borderColor).toBe(theme.colors.brand);
+    expect(badgeText.color).toBe(theme.colors.brand);
   });
 
   it("uses consistent, wider markdown table cell sizing", () => {
@@ -114,7 +134,9 @@ describe("SecondBrainScreen responsive styles", () => {
 
   it("matches yellow banner sync button text size to offline message text", () => {
     const offlineBannerText = StyleSheet.flatten(styles.offlineBannerText);
-    const syncButtonText = StyleSheet.flatten(styles.offlineBannerSyncButtonText);
+    const syncButtonText = StyleSheet.flatten(
+      styles.offlineBannerSyncButtonText,
+    );
 
     expect(syncButtonText.fontSize).toBe(offlineBannerText.fontSize);
     expect(syncButtonText.lineHeight).toBe(offlineBannerText.lineHeight);
@@ -135,8 +157,63 @@ describe("SecondBrainScreen responsive styles", () => {
 
   it("keeps filter section bottom spacing aligned with status stack spacing", () => {
     const filterSection = StyleSheet.flatten(styles.filterSection);
-    const filterStatusStackItem = StyleSheet.flatten(styles.filterStatusStackItem);
+    const filterStatusStackItem = StyleSheet.flatten(
+      styles.filterStatusStackItem,
+    );
 
     expect(filterSection.marginBottom).toBe(filterStatusStackItem.marginTop);
+  });
+
+  it("uses brand background and light text for selected filter pills", () => {
+    const pillActive = StyleSheet.flatten(styles.pillActive);
+    const pillTextActive = StyleSheet.flatten(styles.pillTextActive);
+    const tagFilterCountTextActive = StyleSheet.flatten(
+      styles.tagFilterCountTextActive,
+    );
+
+    expect(pillActive.backgroundColor).toBe(theme.colors.brand);
+    expect(pillTextActive.color).toBe(theme.colors.textLight);
+    expect(tagFilterCountTextActive.color).toBe(theme.colors.textLight);
+  });
+
+  it("uses shared subtle tokens for filter dropdown pills", () => {
+    const filterDropdownPill = StyleSheet.flatten(styles.filterDropdownPill);
+
+    expect(filterDropdownPill.backgroundColor).toBe(theme.colors.bgSubtle);
+    expect(filterDropdownPill.borderColor).toBe(theme.colors.borderSubtle);
+  });
+
+  it("left-justifies edit-entry current tags row", () => {
+    const editTagsRow = StyleSheet.flatten(styles.editTagsRow);
+
+    expect(editTagsRow.justifyContent).toBe("flex-start");
+    expect(editTagsRow.flexWrap).toBe("wrap");
+  });
+
+  it("uses filter-dropdown subtle tokens for edit tag pills", () => {
+    const itemTagPill = StyleSheet.flatten(styles.itemTagPill);
+    const filterDropdownPill = StyleSheet.flatten(styles.filterDropdownPill);
+
+    expect(itemTagPill.backgroundColor).toBe(
+      filterDropdownPill.backgroundColor,
+    );
+    expect(itemTagPill.borderColor).toBe(filterDropdownPill.borderColor);
+  });
+
+  it("uses shared subtle tokens for entry details tag chip surface", () => {
+    const entryDetailsTagPill = StyleSheet.flatten(styles.entryDetailsTagPill);
+
+    expect(entryDetailsTagPill.backgroundColor).toBe(theme.colors.bgSubtle);
+    expect(entryDetailsTagPill.borderColor).toBe(theme.colors.borderSubtle);
+  });
+
+  it("uses bgSurface for assistant conversation bubbles", () => {
+    const conversationBubbleAssistant = StyleSheet.flatten(
+      styles.conversationBubbleAssistant,
+    );
+
+    expect(conversationBubbleAssistant.backgroundColor).toBe(
+      theme.colors.bgSurface,
+    );
   });
 });

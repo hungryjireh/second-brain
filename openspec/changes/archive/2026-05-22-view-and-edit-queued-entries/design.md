@@ -5,12 +5,14 @@ Second Brain supports queued entries, but users cannot reliably inspect and corr
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Provide a dedicated queued entries view that lists pending entries with essential metadata.
 - Allow users to edit queued entry content before processing.
 - Persist queued entry edits with validation and clear success/failure feedback.
 - Keep queue state consistent between client and backend after updates.
 
 **Non-Goals:**
+
 - Redesigning the entire entry creation pipeline.
 - Editing already-processed/non-queued entries through this feature.
 - Introducing collaborative or multi-user queue editing.
@@ -18,20 +20,20 @@ Second Brain supports queued entries, but users cannot reliably inspect and corr
 ## Decisions
 
 1. Add a queue-management surface in the existing Second Brain UI.
-Rationale: keeps flow discoverable and avoids forcing users into ad hoc edit pathways.
-Alternative considered: inline editing only from existing list tiles; rejected because it hides queue-specific actions and weakens overview.
+   Rationale: keeps flow discoverable and avoids forcing users into ad hoc edit pathways.
+   Alternative considered: inline editing only from existing list tiles; rejected because it hides queue-specific actions and weakens overview.
 
 2. Expose/update queue operations through existing application API patterns.
-Rationale: minimizes architectural churn and reuses auth/error conventions already in place.
-Alternative considered: adding a separate queue micro-endpoint namespace with different contracts; rejected as unnecessary complexity for current scope.
+   Rationale: minimizes architectural churn and reuses auth/error conventions already in place.
+   Alternative considered: adding a separate queue micro-endpoint namespace with different contracts; rejected as unnecessary complexity for current scope.
 
 3. Use optimistic UI only after local validation passes; otherwise block save and show actionable errors.
-Rationale: prevents invalid state from appearing saved and reduces rollback complexity.
-Alternative considered: always optimistic with server-side correction; rejected due to confusing user experience when frequent validation failures occur.
+   Rationale: prevents invalid state from appearing saved and reduces rollback complexity.
+   Alternative considered: always optimistic with server-side correction; rejected due to confusing user experience when frequent validation failures occur.
 
 4. Refresh queue list state after successful update and reconcile by stable entry ID.
-Rationale: guarantees deterministic synchronization even when ordering changes.
-Alternative considered: patching only local edited fields without revalidation; rejected because server-side normalization can differ from local assumptions.
+   Rationale: guarantees deterministic synchronization even when ordering changes.
+   Alternative considered: patching only local edited fields without revalidation; rejected because server-side normalization can differ from local assumptions.
 
 ## Risks / Trade-offs
 

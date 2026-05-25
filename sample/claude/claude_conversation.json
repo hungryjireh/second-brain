@@ -41,11 +41,7 @@
             "id": "[REDACTED]",
             "name": "search_mcp_registry",
             "input": {
-              "keywords": [
-                "reminders",
-                "ios",
-                "tasks"
-              ]
+              "keywords": ["reminders", "ios", "tasks"]
             },
             "message": "Searching connectors",
             "integration_name": null,

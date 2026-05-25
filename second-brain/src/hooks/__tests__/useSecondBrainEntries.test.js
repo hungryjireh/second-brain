@@ -368,7 +368,9 @@ describe("useSecondBrainEntries", () => {
       legacyStorageKey,
       JSON.stringify({
         version: 1,
-        entries: [{ id: 1001, description: "Queued cache entry", created_at: 1 }],
+        entries: [
+          { id: 1001, description: "Queued cache entry", created_at: 1 },
+        ],
         userTags: ["work"],
         queue: [
           {
@@ -483,5 +485,58 @@ describe("useSecondBrainEntries", () => {
     expect(entriesCall?.[1]?.cache?.staleOnError).toBe(true);
     expect(tagsCall?.[1]?.cache?.bypass).toBe(false);
     expect(tagsCall?.[1]?.cache?.staleOnError).toBe(true);
+  });
+
+  it("queues offline create without adding an optimistic entry to the feed", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") {
+        return {
+          entries: [{ id: 10, created_at: 100, updated_at: 100 }],
+        };
+      }
+      if (url === "/tags") return { tags: ["work"] };
+      return {};
+    });
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries({ bypassCache: true });
+    });
+
+    await act(async () => {
+      await latestValue.applyOfflineCreateFallback("Queued while offline");
+    });
+
+    const storedRaw = await AsyncStorage.getItem(`secondBrainOffline:${token}`);
+    const stored = JSON.parse(storedRaw);
+
+    expect(latestValue.entries.map((item) => item.id)).toEqual([10]);
+    expect(latestValue.offlineMode).toBe(true);
+    expect(latestValue.offlineQueueSize).toBe(1);
+    expect(latestValue.queuedEntries).toEqual([
+      expect.objectContaining({
+        type: "create",
+        summary: "Queued while offline",
+      }),
+    ]);
+    expect(stored.entries.map((item) => item.id)).toEqual([10]);
+    expect(stored.queue).toEqual([
+      expect.objectContaining({
+        type: "create",
+        description: "Queued while offline",
+      }),
+    ]);
+    expect(onError).toHaveBeenCalledWith(
+      "Offline mode: changes will sync automatically.",
+    );
   });
 });

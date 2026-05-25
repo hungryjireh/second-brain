@@ -242,8 +242,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  filterDropdownIconButtonActive: {
+    backgroundColor: theme.colors.brand,
+    borderColor: theme.colors.brand,
+  },
   filterDropdownIconButtonIcon: {
     color: theme.colors.textSecondary,
+  },
+  filterDropdownIconButtonIconActive: {
+    color: theme.colors.textLight,
+  },
+  filterDropdownCountBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: theme.colors.textLight,
+    borderWidth: 1,
+    borderColor: theme.colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterDropdownCountBadgeText: {
+    color: theme.colors.brand,
+    fontSize: 10,
+    fontWeight: "700",
+    lineHeight: 12,
   },
   filterDropdownChevron: {
     color: theme.colors.textMuted,
@@ -391,14 +418,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
+  filterDropdownPill: {
+    backgroundColor: theme.colors.bgSubtle,
+    borderColor: theme.colors.borderSubtle,
+  },
   pillActive: {
     borderColor: theme.colors.brand,
-    backgroundColor: theme.colors.brandDim,
+    backgroundColor: theme.colors.brand,
   },
   pillDisabled: { opacity: 0.55 },
   pillText: { fontSize: 11, color: theme.colors.textSecondary },
-  pillTextActive: { color: theme.colors.brandText },
+  pillTextActive: { color: theme.colors.textLight },
   pillTextDisabled: { color: theme.colors.textMuted },
+  tagFilterPillContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tagFilterCountBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 999,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.bgSurface,
+  },
+  tagFilterCountBadgeActive: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
+  tagFilterCountBadgeDisabled: {
+    backgroundColor: theme.colors.bgBase,
+  },
+  tagFilterCountText: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    lineHeight: 11,
+  },
+  tagFilterCountTextActive: {
+    color: theme.colors.textLight,
+  },
+  tagFilterCountTextDisabled: {
+    color: theme.colors.textMuted,
+  },
   statCard: {
     flexGrow: 1,
     flexShrink: 1,
@@ -567,11 +630,10 @@ const styles = StyleSheet.create({
     height: 62,
     borderRadius: 31,
     borderWidth: 1,
-    borderColor: "#6B31EA",
-    backgroundColor: "#6B31EA",
+    backgroundColor: theme.colors.brand,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6B31EA",
+    shadowColor: theme.colors.brand,
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
@@ -958,6 +1020,9 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
+  entryDetailsPanelNoBackground: {
+    backgroundColor: "transparent",
+  },
   entryDetailsSubmenuHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1023,6 +1088,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexShrink: 1,
   },
+  entryCategoryMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  entryLastUpdatedText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    textAlign: "right",
+    flexShrink: 1,
+  },
   entryPanelTags: {
     flexDirection: "row",
     alignItems: "center",
@@ -1034,7 +1111,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
-    backgroundColor: theme.colors.bgRaised,
+    backgroundColor: "transparent",
     maxHeight: "100%",
     overflow: "hidden",
   },
@@ -1042,7 +1119,8 @@ const styles = StyleSheet.create({
     maxHeight: "100%",
   },
   entryPanelBodyContent: {
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
   },
   markdownBody: { gap: 8 },
   markdownParagraph: {
@@ -1131,7 +1209,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.conversationBubbleHumanBorder,
   },
   conversationBubbleAssistant: {
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
     borderColor: theme.colors.conversationBubbleAssistantBorder,
   },
   conversationSender: {
@@ -1256,6 +1334,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
   },
+  metaInfoCol: {
+    minWidth: 0,
+    flexShrink: 1,
+    gap: 4,
+  },
   reminderMetaPill: {
     backgroundColor: theme.colors.brandDim,
     borderRadius: 10,
@@ -1267,7 +1350,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 14,
   },
-  metaDot: { color: theme.colors.textMuted, fontSize: 11 },
   metaText: { color: theme.colors.textMuted, fontSize: 11 },
   tagsRow: {
     flexDirection: "row",
@@ -1279,12 +1361,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTagPill: {
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSubtle,
     borderRadius: 999,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.borderSubtle,
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 2,
+  },
+  entryDetailsTagPill: {
+    backgroundColor: theme.colors.bgSubtle,
+    borderColor: theme.colors.borderSubtle,
+    borderWidth: 1,
+  },
+  entryDetailsAddTagPill: {
+    backgroundColor: "transparent",
+    borderStyle: "dashed",
+  },
+  entryDetailsAddTagText: {
+    color: theme.colors.textSecondary,
+  },
+  entryDetailsAddTagInputWrap: {
+    width: "100%",
   },
   itemTagText: { color: theme.colors.textMuted, fontSize: 11, lineHeight: 14 },
   error: {
@@ -1395,6 +1492,14 @@ const styles = StyleSheet.create({
   },
   tagInputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   tagInput: { flex: 1, marginBottom: 0 },
+  editTagsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    marginBottom: 8,
+  },
   editActionRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

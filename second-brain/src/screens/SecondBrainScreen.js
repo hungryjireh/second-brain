@@ -432,6 +432,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     tagUsageCounts,
     globalTags,
     hasActiveFilters,
+    activeFilterCount,
   } = useSecondBrainEntryFiltering({
     entries,
     activeCategory,
@@ -525,6 +526,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     showArchived,
     setShowArchived,
     hasActiveFilters,
+    activeFilterCount,
     clearFilters,
     activePriorityLevel,
     setActivePriorityLevel,

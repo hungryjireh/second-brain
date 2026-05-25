@@ -3,10 +3,11 @@
 ## Overview
 
 A personal "second brain" system with two interfaces:
+
 - **Telegram bot** — primary input via voice or text
 - **Web dashboard** — browse, search, and manage all entries
 
-You send a voice note saying *"Remind me tonight at 8pm to buy tomatoes"* and the system transcribes it, classifies it, stores it, and fires a Telegram message back to you at the right time.
+You send a voice note saying _"Remind me tonight at 8pm to buy tomatoes"_ and the system transcribes it, classifies it, stores it, and fires a Telegram message back to you at the right time.
 
 ---
 
@@ -35,16 +36,16 @@ Backend API (Node.js / Express)                     │
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Telegram bot | `node-telegram-bot-api` |
-| Voice transcription | OpenAI Whisper API (`whisper-1`) |
-| AI classification | Anthropic Claude API |
-| Backend | Node.js + Express |
-| Database | SQLite via `@libsql/client` |
-| Scheduler | `node-cron` (1-min DB poll, no Redis) |
-| Web frontend | React + Tailwind CSS (Vite) |
-| Auth | Magic-link via email (Resend + JWT) |
+| Layer               | Technology                            |
+| ------------------- | ------------------------------------- |
+| Telegram bot        | `node-telegram-bot-api`               |
+| Voice transcription | OpenAI Whisper API (`whisper-1`)      |
+| AI classification   | Anthropic Claude API                  |
+| Backend             | Node.js + Express                     |
+| Database            | SQLite via `@libsql/client`           |
+| Scheduler           | `node-cron` (1-min DB poll, no Redis) |
+| Web frontend        | React + Tailwind CSS (Vite)           |
+| Auth                | Magic-link via email (Resend + JWT)   |
 
 ---
 
@@ -52,26 +53,26 @@ Backend API (Node.js / Express)                     │
 
 ### `entries` table
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | TEXT (UUID) | Primary key |
-| `raw_text` | TEXT | Original transcribed or typed text |
-| `category` | TEXT | `reminder`, `todo`, `thought`, `note` |
-| `content` | TEXT | Cleaned/summarised content |
-| `remind_at` | INTEGER | Unix timestamp — nullable, reminders only |
-| `reminded` | INTEGER | 0 or 1 — has reminder been sent? |
-| `source` | TEXT | `voice` or `text` |
-| `created_at` | INTEGER | Unix timestamp |
+| Column       | Type        | Notes                                     |
+| ------------ | ----------- | ----------------------------------------- |
+| `id`         | TEXT (UUID) | Primary key                               |
+| `raw_text`   | TEXT        | Original transcribed or typed text        |
+| `category`   | TEXT        | `reminder`, `todo`, `thought`, `note`     |
+| `content`    | TEXT        | Cleaned/summarised content                |
+| `remind_at`  | INTEGER     | Unix timestamp — nullable, reminders only |
+| `reminded`   | INTEGER     | 0 or 1 — has reminder been sent?          |
+| `source`     | TEXT        | `voice` or `text`                         |
+| `created_at` | INTEGER     | Unix timestamp                            |
 
 ### `magic_links` table
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | TEXT (UUID) | Primary key |
-| `token` | TEXT | Random 64-char hex, hashed in DB |
-| `email` | TEXT | Owner email |
-| `expires_at` | INTEGER | Unix timestamp (15 min TTL) |
-| `used` | INTEGER | 0 or 1 |
+| Column       | Type        | Notes                            |
+| ------------ | ----------- | -------------------------------- |
+| `id`         | TEXT (UUID) | Primary key                      |
+| `token`      | TEXT        | Random 64-char hex, hashed in DB |
+| `email`      | TEXT        | Owner email                      |
+| `expires_at` | INTEGER     | Unix timestamp (15 min TTL)      |
+| `used`       | INTEGER     | 0 or 1                           |
 
 ---
 
@@ -153,7 +154,7 @@ WEBAPP_URL=http://localhost:5173
    - Returns `{ category, content, remind_at }` as JSON
 5. Entry is saved to SQLite
 6. If `remind_at` is set, no extra scheduling needed — `cron.js` will pick it up automatically
-7. Bot replies to user: *"Got it — I'll remind you to buy tomatoes at 8pm tonight."*
+7. Bot replies to user: _"Got it — I'll remind you to buy tomatoes at 8pm tonight."_
 
 ### 2. Reminder fires
 
@@ -206,23 +207,27 @@ Note: "{{RAW_TEXT}}"
 ## Build Phases
 
 ### Phase 1 — Core pipeline (week 1)
+
 - [ ] Telegram bot listens for text messages
 - [ ] Whisper transcription for voice messages
 - [ ] Claude classification + storage to SQLite
 - [ ] Bot sends confirmation reply
 
 ### Phase 2 — Reminders (week 1–2)
+
 - [ ] `node-cron` job polling SQLite every minute for due reminders
 - [ ] `notify.js` sends Telegram message when reminder is due
 - [ ] Mark entry as `reminded` in DB
 
 ### Phase 3 — Web dashboard (week 2–3)
+
 - [ ] Express API: `GET /entries`, `DELETE /entries/:id`
 - [ ] Magic-link auth (Resend + JWT)
 - [ ] React SPA: sidebar, entry cards, stats bar
 - [ ] Category filter + client-side search
 
 ### Phase 4 — Polish (week 3–4)
+
 - [ ] Snooze reminders from Telegram (inline keyboard buttons — updates `remind_at` in DB)
 - [ ] Edit / complete TODOs from webapp
 - [ ] Related entries linking (embeddings via Claude or OpenAI)
@@ -233,6 +238,6 @@ Note: "{{RAW_TEXT}}"
 ## Deployment Notes
 
 - The **bot**, **API**, and **cron scheduler** all run in the same Node.js process — just `require` `cron.js` from `api/index.js`. No separate worker process needed.
--- SQLite works fine for a single-user personal tool. No connection pooling needed — uses libSQL via `@libsql/client` (async client).
+  -- SQLite works fine for a single-user personal tool. No connection pooling needed — uses libSQL via `@libsql/client` (async client).
 - No Redis dependency — the entire backend is a single deployable service with zero infrastructure add-ons.
 - The webapp is a static build deployed to Vercel; it just needs the `VITE_API_URL` env var pointing at the backend.

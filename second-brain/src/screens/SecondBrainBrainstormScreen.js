@@ -29,13 +29,62 @@ function prefixedWipTitle(title) {
   return `[BRAINSTORMING] ${clean}`;
 }
 
+function normalizeSessionMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .map((message, index) => {
+      const legacySender =
+        message?.sender === "human" || message?.sender === "user"
+          ? "user"
+          : message?.sender === "assistant"
+            ? "assistant"
+            : "";
+      const role =
+        message?.role === "assistant"
+          ? "assistant"
+          : message?.role === "user"
+            ? "user"
+            : legacySender || "user";
+      const content = String(message?.content ?? message?.text ?? "").trim();
+      if (!content) return null;
+      const createdAt =
+        typeof message?.createdAt === "string" && message.createdAt.trim()
+          ? message.createdAt
+          : new Date().toISOString();
+      const id =
+        typeof message?.id === "string" && message.id.trim()
+          ? message.id
+          : `${createdAt}-${role}-${index}`;
+      return {
+        id,
+        role,
+        content,
+        createdAt,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeSession(session) {
+  if (!session || typeof session !== "object") return session;
+  return {
+    ...session,
+    messages: normalizeSessionMessages(session.messages),
+  };
+}
+
 const BrainstormMessageRow = memo(function BrainstormMessageRow({ item }) {
   const isUser = item.role === "user";
   return (
     <View
       style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}
     >
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+      <View
+        style={[
+          styles.bubble,
+          isUser ? styles.userBubble : styles.assistantBubble,
+        ]}
+      >
         <Text style={styles.roleLabel}>{isUser ? "You" : "Assistant"}</Text>
         <Text style={styles.messageText}>{item.content}</Text>
       </View>
@@ -102,11 +151,18 @@ export default function SecondBrainBrainstormScreen({
             "",
         });
       }
+      const normalizedSession = normalizeSession(nextSession);
       if (!cancelled) {
-        initialMessageCountRef.current = Array.isArray(nextSession?.messages)
-          ? nextSession.messages.length
+        initialMessageCountRef.current = Array.isArray(
+          normalizedSession?.messages,
+        )
+          ? normalizedSession.messages.length
           : 0;
-        setSession(nextSession);
+        setSession(normalizedSession);
+      }
+
+      if (normalizedSession?.id) {
+        await writeBrainstormSession(normalizedSession);
       }
     }
     bootstrap();

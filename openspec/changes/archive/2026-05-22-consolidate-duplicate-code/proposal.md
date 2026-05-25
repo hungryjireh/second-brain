@@ -12,9 +12,11 @@ The codebase has repeated logic and patterns across modules, which increases mai
 ## Capabilities
 
 ### New Capabilities
+
 - `duplicate-code-consolidation`: Standardized identification and consolidation workflow for repeated logic, with shared abstractions and regression safety checks.
 
 ### Modified Capabilities
+
 - None.
 
 ## Impact

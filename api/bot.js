@@ -15,12 +15,24 @@ import {
   MAX_VOICE_NOTE_DURATION_SECONDS,
   MIN_VOICE_NOTE_DURATION_SECONDS,
 } from "../lib/constants/voice.js";
+import crypto from "crypto";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const WEBHOOK_SECRET = String(process.env.TELEGRAM_WEBHOOK_SECRET || "");
 const DEFAULT_TIMEZONE = "Asia/Singapore";
 
 const LINK_USAGE_MESSAGE =
   "To use this bot, first link your account:\n1) Open secondbrain webapp settings\n2) Copy your Telegram link key\n3) Send: /link <your-key>";
+
+function hasValidWebhookSecret(req) {
+  if (!WEBHOOK_SECRET) return true;
+  const provided = req.headers["x-telegram-bot-api-secret-token"];
+  if (typeof provided !== "string") return false;
+  const expectedBuffer = Buffer.from(WEBHOOK_SECRET, "utf8");
+  const providedBuffer = Buffer.from(provided, "utf8");
+  if (expectedBuffer.length !== providedBuffer.length) return false;
+  return crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+}
 
 async function processText(rawText, chatId, userId, authToken) {
   const { textToClassify, finalCategory, normalizedContent, remindAt } =
@@ -131,6 +143,7 @@ async function resolveBotAuthToken({ chatId, userId, storedToken }) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
+  if (!hasValidWebhookSecret(req)) return res.status(401).end();
 
   const update = req.body;
   const msg = update?.message;

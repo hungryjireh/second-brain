@@ -31,9 +31,9 @@ const styles = {
   deleteText: {},
   deleteTextConfirm: {},
   metaInfoRow: {},
+  metaInfoCol: {},
   reminderMetaPill: {},
   reminderMetaText: {},
-  metaDot: {},
   metaText: {},
   tagsRow: {},
   itemTagPill: {},
@@ -454,5 +454,89 @@ describe("SecondBrainEntryCard", () => {
     expect(queryByText("#one")).toBeTruthy();
     expect(queryByText("#two")).toBeNull();
     expect(queryByText("#three")).toBeNull();
+  });
+
+  it("stacks reminder time above updated time in the same metadata column", () => {
+    const entry = {
+      id: 71,
+      category: "reminder",
+      title: "Stack metadata",
+      summary: "Reminder metadata layout",
+      priority: 0,
+      remind_at: 1715205600,
+      tags: ["home"],
+      is_archived: false,
+    };
+
+    const { getByTestId, toJSON } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        displayRemindAt="Wed, 20 May · 9:00 AM"
+        displayDate="22 May · 4:28 PM"
+      />,
+    );
+
+    expect(getByTestId("entry-meta-col-71")).toBeTruthy();
+    expect(getByTestId("entry-reminder-pill-71")).toBeTruthy();
+    expect(getByTestId("entry-updated-time-71")).toBeTruthy();
+
+    const tree = toJSON();
+    const cardRootChildren = tree?.children ?? [];
+    const footer = cardRootChildren[1];
+    const footerChildren = footer?.children ?? [];
+    const metaCol = footerChildren[0];
+    const metaColChildren = metaCol?.children ?? [];
+
+    expect(metaCol?.props?.testID).toBe("entry-meta-col-71");
+    expect(metaColChildren[0]?.props?.testID).toBe("entry-reminder-pill-71");
+    expect(metaColChildren[1]?.children?.[0]?.props?.testID).toBe(
+      "entry-updated-time-71",
+    );
+  });
+
+  it("keeps tags in the footer row for reminders", () => {
+    const entry = {
+      id: 72,
+      category: "reminder",
+      title: "Tags in footer",
+      summary: "Reminder tags alignment",
+      priority: 0,
+      remind_at: 1715205600,
+      tags: ["errand", "personal"],
+      is_archived: false,
+    };
+
+    const { getByTestId } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        displayRemindAt="Wed, 20 May · 9:00 AM"
+        displayDate="22 May · 4:28 PM"
+      />,
+    );
+
+    expect(getByTestId("entry-meta-col-72")).toBeTruthy();
+    expect(getByTestId("entry-tags-row-72")).toBeTruthy();
   });
 });

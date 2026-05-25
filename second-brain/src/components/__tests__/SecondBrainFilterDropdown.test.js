@@ -23,19 +23,43 @@ const styles = {
   filterRow: {},
   filterRowLabel: {},
   pill: {},
+  filterDropdownPill: {},
   pillActive: {},
   pillDisabled: {},
   pillText: {},
   pillTextActive: {},
   pillTextDisabled: {},
+  tagFilterPillContent: {},
+  tagFilterCountBadge: {},
+  tagFilterCountBadgeActive: {},
+  tagFilterCountBadgeDisabled: {},
+  tagFilterCountText: {},
+  tagFilterCountTextActive: {},
+  tagFilterCountTextDisabled: {},
   filterSearchInput: {},
   filterStatusStackItem: {},
   creatingStatusList: {},
   creatingStatusText: {},
   filterDropdownDismissOverlay: {},
+  filterDropdownIconButtonActive: {},
+  filterDropdownIconButtonIcon: {},
+  filterDropdownIconButtonIconActive: {},
+  filterDropdownCountBadge: {},
+  filterDropdownCountBadgeText: {},
 };
 
 describe("SecondBrainFilterDropdown", () => {
+  function hasStyleRef(node, styleRef) {
+    let current = node;
+    while (current) {
+      const style = current.props?.style;
+      if (Array.isArray(style) && style.includes(styleRef)) return true;
+      if (style === styleRef) return true;
+      current = current.parent;
+    }
+    return false;
+  }
+
   function renderDropdown(overrides = {}) {
     const props = {
       styles,
@@ -48,6 +72,7 @@ describe("SecondBrainFilterDropdown", () => {
       showArchived: false,
       setShowArchived: jest.fn(),
       hasActiveFilters: true,
+      activeFilterCount: 2,
       clearFilters: jest.fn(),
       activePriorityLevel: "",
       setActivePriorityLevel: jest.fn(),
@@ -84,6 +109,40 @@ describe("SecondBrainFilterDropdown", () => {
     expect(props.setFilterDropdownOpenedAtMs).toHaveBeenCalledTimes(1);
   });
 
+  it("shows active count badge and active background on small-screen filter button", () => {
+    const { getByTestId, getByText } = renderDropdown({
+      isSmallScreen: true,
+      isFilterDropdownOpen: false,
+      hasActiveFilters: true,
+      activeFilterCount: 3,
+    });
+
+    expect(getByText("3")).toBeTruthy();
+    expect(
+      hasStyleRef(
+        getByTestId("filter-dropdown-toggle"),
+        styles.filterDropdownIconButtonActive,
+      ),
+    ).toBe(true);
+  });
+
+  it("hides active count badge and inactive background when no filters are active", () => {
+    const { getByTestId, queryByText } = renderDropdown({
+      isSmallScreen: true,
+      isFilterDropdownOpen: false,
+      hasActiveFilters: false,
+      activeFilterCount: 0,
+    });
+
+    expect(queryByText("0")).toBeNull();
+    expect(
+      hasStyleRef(
+        getByTestId("filter-dropdown-toggle"),
+        styles.filterDropdownIconButtonActive,
+      ),
+    ).toBe(false);
+  });
+
   it("clears filters and closes drawers", () => {
     const { getByText, props } = renderDropdown();
 
@@ -108,6 +167,17 @@ describe("SecondBrainFilterDropdown", () => {
     expect(priorityFn("high")).toBe("");
   });
 
+  it("applies dropdown pill style to priority and tag pills", () => {
+    const { getByText, getByTestId } = renderDropdown();
+
+    expect(
+      hasStyleRef(getByText("High (8-10)"), styles.filterDropdownPill),
+    ).toBe(true);
+    expect(
+      hasStyleRef(getByTestId("tag-filter-work"), styles.filterDropdownPill),
+    ).toBe(true);
+  });
+
   it("toggles enabled tags and disables unavailable tags", () => {
     const { getByTestId, props } = renderDropdown({ activeTag: "work" });
 
@@ -118,6 +188,46 @@ describe("SecondBrainFilterDropdown", () => {
     const tagFn = props.setActiveTag.mock.calls[0][0];
     expect(tagFn("work")).toBe("");
     expect(tagFn("other")).toBe("work");
+  });
+
+  it("renders per-tag usage counts", () => {
+    const { getByTestId, getByText } = renderDropdown({
+      globalTags: ["work", "home"],
+      tagUsageCounts: new Map([
+        ["work", 2],
+        ["Home", 1],
+      ]),
+    });
+
+    expect(getByTestId("tag-filter-count-work")).toBeTruthy();
+    expect(getByTestId("tag-filter-count-home")).toBeTruthy();
+    expect(getByText("2")).toBeTruthy();
+    expect(getByText("1")).toBeTruthy();
+  });
+
+  it("disables tags with no usage count and renders 0 badge", () => {
+    const { getByTestId, getByText, props } = renderDropdown({
+      globalTags: ["work", "unused"],
+      tagUsageCounts: new Map([["work", 3]]),
+    });
+
+    fireEvent.press(getByTestId("tag-filter-unused"));
+
+    expect(props.setActiveTag).not.toHaveBeenCalled();
+    expect(getByTestId("tag-filter-count-unused")).toBeTruthy();
+    expect(getByText("0")).toBeTruthy();
+  });
+
+  it("uses case-insensitive usage counts for enabled tags", () => {
+    const { getByTestId, props, getByText } = renderDropdown({
+      globalTags: ["home"],
+      tagUsageCounts: new Map([["Home", 4]]),
+    });
+
+    fireEvent.press(getByTestId("tag-filter-home"));
+
+    expect(props.setActiveTag).toHaveBeenCalledTimes(1);
+    expect(getByText("4")).toBeTruthy();
   });
 
   it("renders TAGS label without a global count", () => {

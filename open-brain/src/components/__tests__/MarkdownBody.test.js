@@ -1,4 +1,5 @@
-import { render } from "@testing-library/react-native";
+import { fireEvent, render } from "@testing-library/react-native";
+import { Linking } from "react-native";
 import MarkdownBody from "../MarkdownBody";
 
 const styles = {
@@ -65,5 +66,57 @@ describe("MarkdownBody", () => {
     expect(getByText("Second")).toBeTruthy();
     expect(getByText("Quoted line")).toBeTruthy();
     expect(getByText("const x = 1;")).toBeTruthy();
+  });
+
+  it("opens URLs when markdown links are pressed", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody text="[Open](https://example.com/path)" styles={styles} />,
+    );
+
+    fireEvent.press(getByText("Open"));
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/path");
+    openUrlSpy.mockRestore();
+  });
+
+  it("opens bare URLs when pressed", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody text="Visit https://example.com/bare" styles={styles} />,
+    );
+
+    fireEvent.press(getByText("https://example.com/bare"));
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/bare");
+    openUrlSpy.mockRestore();
+  });
+
+  it("opens multiple links in one paragraph", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody
+        text="Links: [One](https://example.com/1) and https://example.com/2"
+        styles={styles}
+      />,
+    );
+
+    fireEvent.press(getByText("One"));
+    fireEvent.press(getByText("https://example.com/2"));
+    expect(openUrlSpy).toHaveBeenNthCalledWith(1, "https://example.com/1");
+    expect(openUrlSpy).toHaveBeenNthCalledWith(2, "https://example.com/2");
+    openUrlSpy.mockRestore();
+  });
+
+  it("renders links with accessibility role", () => {
+    const { getByText } = render(
+      <MarkdownBody text="[Open](https://example.com/path)" styles={styles} />,
+    );
+
+    expect(getByText("Open").props.accessibilityRole).toBe("link");
   });
 });

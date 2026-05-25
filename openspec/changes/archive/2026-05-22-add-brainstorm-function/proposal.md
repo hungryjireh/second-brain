@@ -16,9 +16,11 @@ Users need a dedicated way to brainstorm interactively inside Second Brain witho
 ## Capabilities
 
 ### New Capabilities
+
 - `brainstorm-chat-session`: Dedicated brainstorm route, session-based LLM chat loop, explicit and implicit session finalization behavior, WIP tagging on early exit, and resume/continue entry integration.
 
 ### Modified Capabilities
+
 - None.
 
 ## Impact

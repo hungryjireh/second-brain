@@ -9,15 +9,9 @@ const styles = StyleSheet.create({
   loadingIndicator: {
     flex: 1,
   },
-  headerBrandText: {
-    color: theme.colors.textPrimary,
-    fontSize: 26,
-    lineHeight: 30,
-    letterSpacing: -0.5,
-    fontFamily: theme.fonts.semibold,
-  },
-  headerBrandAccent: {
-    color: theme.colors.brand,
+  headerBrandLogo: {
+    width: 130,
+    height: 40,
   },
   headerLiveText: {
     color: theme.colors.textSecondary,
@@ -25,6 +19,12 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: theme.fonts.regular,
     paddingRight: 12,
+  },
+  headerBackButton: {
+    minWidth: 72,
+    paddingVertical: 6,
+    paddingLeft: 12,
+    justifyContent: "center",
   },
   headerLiveDot: {
     color: theme.colors.brand,

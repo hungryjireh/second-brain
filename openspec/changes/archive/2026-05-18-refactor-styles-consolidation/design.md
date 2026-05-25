@@ -5,12 +5,14 @@ The frontend currently contains repeated style declarations across multiple styl
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Establish a centralized shared style layer for commonly repeated tokens and patterns (for example spacing, typography, layout primitives, and common component variants).
 - Migrate duplicated style declarations in style files/components to references of shared definitions.
 - Preserve current UI appearance and interaction behavior while reducing style duplication.
 - Define clear naming and usage conventions so future style work extends shared definitions rather than reintroducing duplication.
 
 **Non-Goals:**
+
 - Rebranding, visual redesign, or broad UX restyling.
 - Replacing the existing styling technology stack.
 - Introducing new production dependencies for styling infrastructure.
@@ -19,22 +21,26 @@ The frontend currently contains repeated style declarations across multiple styl
 ## Decisions
 
 1. Create a shared style foundation module in the existing frontend structure.
+
 - Rationale: A single canonical location for common style primitives removes ambiguity and reduces repeated declarations.
 - Alternatives considered:
   - Keep styles local and rely on conventions only: rejected because duplication already exists and conventions alone are hard to enforce.
   - Introduce a third-party style system library: rejected because this change is focused on consolidation with minimal disruption and no new production dependencies.
 
 2. Consolidate duplicates by category (tokens first, then reusable composition patterns).
+
 - Rationale: Moving foundational values (spacing/typography/colors) first minimizes churn and makes higher-level style consolidation straightforward.
 - Alternatives considered:
   - Refactor file-by-file without categorization: rejected due to higher risk of inconsistent naming and partial duplication.
 
 3. Preserve rendered behavior through incremental migration and verification.
+
 - Rationale: Incremental replacement makes regressions easier to detect and rollback at smaller scope.
 - Alternatives considered:
   - Big-bang rewrite of all styles: rejected due to elevated regression risk and difficult reviewability.
 
 4. Add lightweight enforcement to prevent regression.
+
 - Rationale: Style duplication tends to recur; adding checks (linting conventions and/or review checklist) helps sustain improvements.
 - Alternatives considered:
   - No enforcement: rejected because the codebase would likely drift back toward duplication.

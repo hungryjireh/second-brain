@@ -8,6 +8,15 @@ const PRIORITY_LEVELS = [
   { key: "low", label: "Low (0-3)" },
 ];
 
+function getTagUsageCount(tagUsageCounts, tag) {
+  if (tagUsageCounts.has(tag)) return tagUsageCounts.get(tag);
+  const normalizedTag = tag.toLowerCase();
+  for (const [usageTag, count] of tagUsageCounts.entries()) {
+    if (usageTag.toLowerCase() === normalizedTag) return count;
+  }
+  return 0;
+}
+
 export default function SecondBrainFilterDropdown({
   styles,
   isSmallScreen,
@@ -19,6 +28,7 @@ export default function SecondBrainFilterDropdown({
   showArchived,
   setShowArchived,
   hasActiveFilters,
+  activeFilterCount,
   clearFilters,
   activePriorityLevel,
   setActivePriorityLevel,
@@ -52,11 +62,7 @@ export default function SecondBrainFilterDropdown({
     >
       <View style={styles.filterSearchRow}>
         <View style={styles.filterSearchInputWrap}>
-          <Feather
-            name="search"
-            size={24}
-            style={styles.filterSearchIcon}
-          />
+          <Feather name="search" size={24} style={styles.filterSearchIcon} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -75,6 +81,7 @@ export default function SecondBrainFilterDropdown({
             testID="filter-dropdown-toggle"
             style={[
               styles.filterDropdownIconButton,
+              hasActiveFilters && styles.filterDropdownIconButtonActive,
               isFilterDropdownOpen && styles.filterDropdownToggleOpen,
             ]}
             onPress={toggleFilters}
@@ -82,8 +89,18 @@ export default function SecondBrainFilterDropdown({
             <Feather
               name="sliders"
               size={22}
-              style={styles.filterDropdownIconButtonIcon}
+              style={[
+                styles.filterDropdownIconButtonIcon,
+                hasActiveFilters && styles.filterDropdownIconButtonIconActive,
+              ]}
             />
+            {activeFilterCount > 0 ? (
+              <View style={styles.filterDropdownCountBadge}>
+                <Text style={styles.filterDropdownCountBadgeText}>
+                  {activeFilterCount}
+                </Text>
+              </View>
+            ) : null}
           </Pressable>
         ) : null}
       </View>
@@ -170,7 +187,11 @@ export default function SecondBrainFilterDropdown({
               return (
                 <Pressable
                   key={level.key}
-                  style={[styles.pill, isActive && styles.pillActive]}
+                  style={[
+                    styles.pill,
+                    styles.filterDropdownPill,
+                    isActive && styles.pillActive,
+                  ]}
                   onPress={() => {
                     closeOpenActionDrawer();
                     setActivePriorityLevel((prev) =>
@@ -192,13 +213,15 @@ export default function SecondBrainFilterDropdown({
             <Text style={styles.filterRowLabel}>TAGS</Text>
             {globalTags.map((tag) => {
               const isActive = activeTag.toLowerCase() === tag.toLowerCase();
-              const isDisabled = !tagUsageCounts.has(tag);
+              const usageCount = getTagUsageCount(tagUsageCounts, tag);
+              const isDisabled = usageCount <= 0;
               return (
                 <Pressable
                   key={tag}
                   testID={`tag-filter-${tag.toLowerCase()}`}
                   style={[
                     styles.pill,
+                    styles.filterDropdownPill,
                     isActive && styles.pillActive,
                     isDisabled && styles.pillDisabled,
                   ]}
@@ -210,13 +233,33 @@ export default function SecondBrainFilterDropdown({
                     );
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      isActive && styles.pillTextActive,
-                      isDisabled && styles.pillTextDisabled,
-                    ]}
-                  >{`#${tag}`}</Text>
+                  <View style={styles.tagFilterPillContent}>
+                    <Text
+                      style={[
+                        styles.pillText,
+                        isActive && styles.pillTextActive,
+                        isDisabled && styles.pillTextDisabled,
+                      ]}
+                    >{`#${tag}`}</Text>
+                    <View
+                      testID={`tag-filter-count-${tag.toLowerCase()}`}
+                      style={[
+                        styles.tagFilterCountBadge,
+                        isActive && styles.tagFilterCountBadgeActive,
+                        isDisabled && styles.tagFilterCountBadgeDisabled,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tagFilterCountText,
+                          isActive && styles.tagFilterCountTextActive,
+                          isDisabled && styles.tagFilterCountTextDisabled,
+                        ]}
+                      >
+                        {usageCount}
+                      </Text>
+                    </View>
+                  </View>
                 </Pressable>
               );
             })}

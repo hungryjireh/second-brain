@@ -157,7 +157,9 @@ describe("SecondBrainTypebar", () => {
       isTypebarExpanded: false,
     });
 
-    expect(queryByPlaceholderText("Type a note, reminder or thought...")).toBeNull();
+    expect(
+      queryByPlaceholderText("Type a note, reminder or thought..."),
+    ).toBeNull();
     fireEvent.press(getByLabelText("Expand typebar"));
     expect(props.setIsTypebarExpanded).toHaveBeenCalledWith(true);
   });

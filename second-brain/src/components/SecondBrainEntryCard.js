@@ -59,7 +59,11 @@ const CATEGORY_SYMBOLS = {
 };
 const TAG_PILL_GAP = 6;
 
-const TwoLineClampText = memo(function TwoLineClampText({ text, style, testID }) {
+const TwoLineClampText = memo(function TwoLineClampText({
+  text,
+  style,
+  testID,
+}) {
   return (
     <Text testID={testID} style={style} numberOfLines={2} ellipsizeMode="tail">
       {String(text || "").trim()}
@@ -461,22 +465,29 @@ function SecondBrainEntryCard({
         ) : null}
       </View>
       <View style={styles.metaFooterRow}>
-        <View style={styles.metaInfoRow}>
+        <View testID={`entry-meta-col-${entry.id}`} style={styles.metaInfoCol}>
           {entry.remind_at ? (
-            <>
-              <View style={styles.reminderMetaPill}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Feather name="clock" size={12} color={theme.colors.brand} />
-                  <Text style={styles.reminderMetaText}>
-                    {" "}
-                    {displayRemindAt || ""}
-                  </Text>
-                </View>
+            <View
+              testID={`entry-reminder-pill-${entry.id}`}
+              style={styles.reminderMetaPill}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Feather name="clock" size={12} color={theme.colors.brand} />
+                <Text style={styles.reminderMetaText}>
+                  {" "}
+                  {displayRemindAt || ""}
+                </Text>
               </View>
-              <Text style={styles.metaDot}>•</Text>
-            </>
+            </View>
           ) : null}
-          <Text style={styles.metaText}>{displayDate || ""}</Text>
+          <View style={styles.metaInfoRow}>
+            <Text
+              testID={`entry-updated-time-${entry.id}`}
+              style={styles.metaText}
+            >
+              {displayDate || ""}
+            </Text>
+          </View>
         </View>
 
         {entryTags.length > 0 ? (

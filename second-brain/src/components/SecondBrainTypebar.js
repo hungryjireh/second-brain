@@ -126,7 +126,10 @@ export default function SecondBrainTypebar({
             ) : null}
             {recording ? (
               <View
-                style={[styles.typebarRecordingMeta, styles.micRecordingMetaLeft]}
+                style={[
+                  styles.typebarRecordingMeta,
+                  styles.micRecordingMetaLeft,
+                ]}
               >
                 <View style={styles.typebarRecordingTimerBadge}>
                   <Text
@@ -214,7 +217,7 @@ export default function SecondBrainTypebar({
           </Pressable>
         </View>
       ) : (
-        <View style={[styles.typebarRow, { bottom }]}> 
+        <View style={[styles.typebarRow, { bottom }]}>
           <TextInput
             value={draft}
             onChangeText={onChangeDraft}
@@ -243,7 +246,9 @@ export default function SecondBrainTypebar({
                 TYPEBAR_MIN_HEIGHT,
                 Math.ceil(contentHeight),
               );
-              setInputHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+              setInputHeight((prev) =>
+                prev === nextHeight ? prev : nextHeight,
+              );
             }}
           />
           <View style={styles.typebarActionWrap}>

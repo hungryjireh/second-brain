@@ -32,10 +32,12 @@ The first consolidation batch targets auth/profile form screens where the same d
 ## Usage boundaries
 
 Use shared primitives/compositions when:
+
 - A style appears in multiple screens.
 - A style is foundational (input/button/action layout) and should remain consistent.
 
 Keep local screen-specific styles when:
+
 - The style is unique to one interaction or view.
 - The style is tied to one-off media/layout behavior.
 

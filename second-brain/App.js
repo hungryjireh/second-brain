@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -15,13 +13,13 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
-import { Feather } from "@expo/vector-icons";
 import LoginScreen from "./src/screens/LoginScreen";
 import SecondBrainScreen from "./src/screens/SecondBrainScreen";
 import SecondBrainEntryDetailsScreen from "./src/screens/SecondBrainEntryDetailsScreen";
 import SecondBrainEditEntryScreen from "./src/screens/SecondBrainEditEntryScreen";
 import SecondBrainBrainstormScreen from "./src/screens/SecondBrainBrainstormScreen";
 import SecondBrainQueuedEditsScreen from "./src/screens/SecondBrainQueuedEditsScreen";
+import { buildSecondBrainHeaderOptions } from "./src/components/SecondBrainTopMenu";
 import { clearToken, getToken, setAuthExpiredHandler } from "./src/api";
 import { theme } from "./src/theme";
 import {
@@ -31,48 +29,6 @@ import {
 import styles from "./App.styles";
 
 const Stack = createNativeStackNavigator();
-
-function HeaderBrand() {
-  return (
-    <Text style={styles.headerBrandText}>
-      second<Text style={styles.headerBrandAccent}>brain</Text>
-    </Text>
-  );
-}
-
-function HeaderLiveStatus() {
-  const dateLabel = new Date().toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  return <Text style={styles.headerLiveText}>{dateLabel}</Text>;
-}
-
-function HeaderSecondBrainBack({ navigation }) {
-  return (
-    <Pressable
-      onPress={() => {
-        if (navigation?.canGoBack?.()) {
-          navigation.goBack();
-          return;
-        }
-        navigation?.navigate?.("SecondBrain");
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Back to Second Brain"
-      style={{
-        minWidth: 72,
-        paddingVertical: 6,
-        paddingLeft: 12,
-        justifyContent: "center",
-      }}
-    >
-      <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
-    </Pressable>
-  );
-}
 
 const navTheme = {
   ...DefaultTheme,
@@ -203,17 +159,10 @@ export default function App() {
               <>
                 <Stack.Screen
                   name="SecondBrain"
-                  options={{
-                    headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: "center",
-                    headerBackVisible: false,
-                    headerLeft: () => null,
-                    headerRight: hideSecondBrainHeaderDate
-                      ? undefined
-                      : () => <HeaderLiveStatus />,
-                    headerStyle: { backgroundColor: theme.colors.bgBase },
-                    headerShadowVisible: false,
-                  }}
+                  options={buildSecondBrainHeaderOptions({
+                    hideDate: hideSecondBrainHeaderDate,
+                    isRootScreen: true,
+                  })}
                 >
                   {(props) => (
                     <SecondBrainScreen
@@ -226,18 +175,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainEntryDetails"
-                  options={({ navigation }) => ({
-                    headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: "center",
-                    headerLeft: () => (
-                      <HeaderSecondBrainBack navigation={navigation} />
-                    ),
-                    headerRight: hideSecondBrainHeaderDate
-                      ? undefined
-                      : () => <HeaderLiveStatus />,
-                    headerStyle: { backgroundColor: theme.colors.bgBase },
-                    headerShadowVisible: false,
-                  })}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainEntryDetailsScreen {...props} token={token} />
@@ -246,18 +189,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainBrainstorm"
-                  options={({ navigation }) => ({
-                    headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: "center",
-                    headerLeft: () => (
-                      <HeaderSecondBrainBack navigation={navigation} />
-                    ),
-                    headerRight: hideSecondBrainHeaderDate
-                      ? undefined
-                      : () => <HeaderLiveStatus />,
-                    headerStyle: { backgroundColor: theme.colors.bgBase },
-                    headerShadowVisible: false,
-                  })}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainBrainstormScreen {...props} token={token} />
@@ -266,18 +203,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainQueuedEdits"
-                  options={({ navigation }) => ({
-                    headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: "center",
-                    headerLeft: () => (
-                      <HeaderSecondBrainBack navigation={navigation} />
-                    ),
-                    headerRight: hideSecondBrainHeaderDate
-                      ? undefined
-                      : () => <HeaderLiveStatus />,
-                    headerStyle: { backgroundColor: theme.colors.bgBase },
-                    headerShadowVisible: false,
-                  })}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainQueuedEditsScreen {...props} token={token} />
@@ -286,18 +217,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainEditEntry"
-                  options={({ navigation }) => ({
-                    headerTitle: () => <HeaderBrand />,
-                    headerTitleAlign: "center",
-                    headerLeft: () => (
-                      <HeaderSecondBrainBack navigation={navigation} />
-                    ),
-                    headerRight: hideSecondBrainHeaderDate
-                      ? undefined
-                      : () => <HeaderLiveStatus />,
-                    headerStyle: { backgroundColor: theme.colors.bgBase },
-                    headerShadowVisible: false,
-                  })}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainEditEntryScreen {...props} token={token} />

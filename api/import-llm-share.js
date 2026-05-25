@@ -43,7 +43,6 @@ export default async function handler(req, res) {
 
   try {
     const { html, estuaryUrls } = await scrapeLlmShareData(chatUrl);
-    console.log(html);
     const provider = getShareUrlProvider(chatUrl);
     const conversations =
       provider === "claude"

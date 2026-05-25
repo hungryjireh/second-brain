@@ -61,7 +61,10 @@ describe("SecondBrainEditEntryScreen", () => {
     await waitFor(() => {
       expect(apiRequest).toHaveBeenCalledWith(
         "/entries?id=42",
-        expect.objectContaining({ method: "PATCH" }),
+        expect.objectContaining({
+          method: "PATCH",
+          body: expect.objectContaining({ rawText: "Write behavior checks" }),
+        }),
       );
     });
     expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
@@ -72,6 +75,94 @@ describe("SecondBrainEditEntryScreen", () => {
         entry: expect.objectContaining({ id: 42 }),
       }),
     );
+  });
+
+  it("initializes description input from rawText when description is missing", () => {
+    const entryWithCamelRawText = {
+      ...entry,
+      description: "",
+      raw_text: "",
+      rawText: "Raw text from camelCase field",
+      content: "",
+    };
+
+    const { getByPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry: entryWithCamelRawText, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    expect(getByPlaceholderText("Description").props.value).toBe(
+      "Raw text from camelCase field",
+    );
+    expect(getByPlaceholderText("Raw text").props.value).toBe(
+      "Raw text from camelCase field",
+    );
+  });
+
+  it("renders a dedicated raw text input", () => {
+    const { getByPlaceholderText, getByTestId } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    expect(getByPlaceholderText("Raw text")).toBeTruthy();
+    expect(getByTestId("raw-text-input")).toBeTruthy();
+  });
+
+  it("sends rawText from the raw text field when saving", async () => {
+    const navigate = jest.fn();
+    apiRequest.mockResolvedValueOnce({
+      ...entry,
+      raw_text: "Updated payload text",
+    });
+
+    const { getByPlaceholderText, getByText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ navigate }}
+      />,
+    );
+
+    fireEvent.changeText(
+      getByPlaceholderText("Description"),
+      "Updated payload text",
+    );
+    fireEvent.changeText(getByPlaceholderText("Raw text"), "Saved raw field");
+    fireEvent.press(getByText("Save changes"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/entries?id=42",
+        expect.objectContaining({
+          method: "PATCH",
+          body: expect.objectContaining({
+            description: "Updated payload text",
+            rawText: "Saved raw field",
+            content: "Updated payload text",
+          }),
+        }),
+      );
+    });
+  });
+
+  it("keeps description and raw text values independent", () => {
+    const { getByPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ goBack: jest.fn() }}
+      />,
+    );
+
+    const descriptionInput = getByPlaceholderText("Description");
+    const rawTextInput = getByPlaceholderText("Raw text");
+
+    fireEvent.changeText(descriptionInput, "Description only");
+    expect(descriptionInput.props.value).toBe("Description only");
+    expect(rawTextInput.props.value).toBe("Write behavior checks");
   });
 
   it("saves all tags without a 3-tag cap", async () => {

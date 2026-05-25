@@ -130,11 +130,24 @@ export function useSecondBrainEntryFiltering({
     [activeCategory, activePriorityLevel, activeTag, searchQuery, showArchived],
   );
 
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        activeCategory,
+        activePriorityLevel,
+        activeTag,
+        searchQuery.trim(),
+        showArchived ? "archived" : "",
+      ].filter(Boolean).length,
+    [activeCategory, activePriorityLevel, activeTag, searchQuery, showArchived],
+  );
+
   return {
     counts,
     visibleEntries,
     tagUsageCounts,
     globalTags,
     hasActiveFilters,
+    activeFilterCount,
   };
 }

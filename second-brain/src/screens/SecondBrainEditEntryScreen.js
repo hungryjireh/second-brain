@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { apiRequest } from "../api";
-import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import MarkdownBody from "../components/MarkdownBody";
 import { CATEGORIES } from "../constants/tags";
 import { theme } from "../theme";
@@ -39,6 +38,7 @@ export default function SecondBrainEditEntryScreen({
   const [entry, setEntry] = useState(entryFromRoute);
   const initialEditText =
     entry?.description ||
+    entry?.rawText ||
     entry?.content ||
     entry?.raw_text ||
     entry?.summary ||
@@ -48,6 +48,9 @@ export default function SecondBrainEditEntryScreen({
   const [editTitle, setEditTitle] = useState(entry?.title || "");
   const [editSummary, setEditSummary] = useState(entry?.summary || "");
   const [editText, setEditText] = useState(initialEditText);
+  const [editRawText, setEditRawText] = useState(
+    entry?.rawText || entry?.raw_text || initialEditText,
+  );
   const [editRemindAt, setEditRemindAt] = useState(
     entry?.remind_at ? unixToDatetimeLocal(entry.remind_at) : "",
   );
@@ -109,8 +112,17 @@ export default function SecondBrainEditEntryScreen({
     setEditSummary(entry.summary || "");
     setEditText(
       entry.description ||
+        entry.rawText ||
         entry.content ||
         entry.raw_text ||
+        entry.summary ||
+        "",
+    );
+    setEditRawText(
+      entry.rawText ||
+        entry.raw_text ||
+        entry.description ||
+        entry.content ||
         entry.summary ||
         "",
     );
@@ -162,6 +174,7 @@ export default function SecondBrainEditEntryScreen({
     setError("");
     try {
       const normalizedDescription = editText.trim();
+      const normalizedRawText = editRawText.trim();
       const updatedEntry = await apiRequest(`/entries?id=${entryId}`, {
         method: "PATCH",
         token,
@@ -170,6 +183,7 @@ export default function SecondBrainEditEntryScreen({
           title: editTitle.trim(),
           summary: editSummary.trim(),
           description: normalizedDescription,
+          rawText: normalizedRawText,
           // Backward-compatible alias for older deployments expecting `content`.
           content: normalizedDescription,
           remind_at:
@@ -208,7 +222,7 @@ export default function SecondBrainEditEntryScreen({
   }
 
   return (
-    <SecondBrainEntryPageLayout>
+    <View style={styles.container}>
       <ScrollView
         style={styles.editScroll}
         contentContainerStyle={styles.editScrollContent}
@@ -310,6 +324,16 @@ export default function SecondBrainEditEntryScreen({
             placeholderTextColor={theme.colors.textSecondary}
           />
         )}
+        <Text style={styles.editLabel}>Raw text</Text>
+        <TextInput
+          testID="raw-text-input"
+          value={editRawText}
+          onChangeText={setEditRawText}
+          multiline
+          style={styles.editInput}
+          placeholder="Raw text"
+          placeholderTextColor={theme.colors.textSecondary}
+        />
         {editCategory === "reminder" ? (
           <>
             <Text style={styles.editLabel}>Reminder date and time</Text>
@@ -393,7 +417,7 @@ export default function SecondBrainEditEntryScreen({
             {editTagError}
           </Text>
         ) : null}
-        <View style={styles.tagsRow}>
+        <View style={styles.editTagsRow}>
           {parsedEditTags.map((tag) => (
             <Pressable
               key={tag}
@@ -419,6 +443,6 @@ export default function SecondBrainEditEntryScreen({
           </Pressable>
         </View>
       </ScrollView>
-    </SecondBrainEntryPageLayout>
+    </View>
   );
 }

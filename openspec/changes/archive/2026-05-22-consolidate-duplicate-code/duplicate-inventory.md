@@ -1,6 +1,7 @@
 ## Duplicate Inventory
 
 ### Cluster A: API JSON response helper (selected batch)
+
 - Confidence: High (identical implementation)
 - Duplicate implementation:
   - `api/settings.js`
@@ -18,6 +19,7 @@
   - Bug risk from divergence: medium
 
 ### Cluster B: Test request/response harness helpers
+
 - Confidence: High (similar helpers in multiple tests)
 - Candidate files:
   - `tests/api/handlers.test.js`
@@ -28,6 +30,7 @@
 - Status: Deferred to follow-up batch
 
 ### Cluster C: Local host / transport normalization helpers
+
 - Confidence: Medium (similar, not strictly identical)
 - Candidate files:
   - `mobile/src/api.js`
@@ -36,4 +39,5 @@
 - Status: Deferred due subtle behavior differences
 
 ## First Batch Selection
+
 Selected Cluster A only, because implementations are behaviorally equivalent and safest for incremental consolidation.

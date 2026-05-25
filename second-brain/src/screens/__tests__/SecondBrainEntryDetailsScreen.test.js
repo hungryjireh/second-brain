@@ -4,15 +4,62 @@ import { Alert } from "react-native";
 import SecondBrainEntryDetailsScreen from "../SecondBrainEntryDetailsScreen";
 import { apiRequest } from "../../api";
 import { theme } from "../../theme";
+import {
+  getLinkedBrainstormSessionId,
+  readBrainstormSession,
+} from "../../utils/brainstormSessions";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
+jest.mock("../../utils/brainstormSessions", () => ({
+  getLinkedBrainstormSessionId: jest.fn(),
+  readBrainstormSession: jest.fn(),
+}));
+
+function renderWithHeaderAction({
+  entry,
+  routeParams,
+  navigationOverrides,
+  token,
+}) {
+  const setOptions = jest.fn();
+  const navigation = {
+    setOptions,
+    ...navigationOverrides,
+  };
+  const route = routeParams ? { params: routeParams } : { params: { entry } };
+  const utils = render(
+    <SecondBrainEntryDetailsScreen
+      route={route}
+      navigation={navigation}
+      token={token}
+    />,
+  );
+
+  const pressHeaderActionButton = () => {
+    const latestOptions = setOptions.mock.calls.at(-1)?.[0];
+    const HeaderRight = latestOptions?.headerRight;
+    const headerButton = HeaderRight();
+    act(() => {
+      headerButton.props.onPress();
+    });
+  };
+
+  return {
+    ...utils,
+    pressHeaderActionButton,
+    navigation,
+    setOptions,
+  };
+}
 
 describe("SecondBrainEntryDetailsScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+    readBrainstormSession.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -33,7 +80,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       tags: ["work"],
     };
 
-    const { getByText } = render(
+    const { getByText, getAllByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -42,6 +89,101 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Write behavior checks")).toBeTruthy();
     expect(getByText("Full detail content")).toBeTruthy();
     expect(getByText("#work")).toBeTruthy();
+    expect(getByText("+ tag")).toBeTruthy();
+  });
+
+  it("adds a tag inline when pressing the + tag flow", async () => {
+    const entry = {
+      id: 76,
+      title: "Taggable",
+      summary: "Can add tags",
+      raw_text: "Body",
+      tags: ["design"],
+    };
+    const navigation = {
+      setOptions: jest.fn(),
+      replace: jest.fn(),
+      navigate: jest.fn(),
+    };
+    apiRequest.mockResolvedValueOnce({
+      ...entry,
+      tags: ["design", "imported"],
+    });
+
+    const { getByLabelText, getByText, queryByDisplayValue } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entry, entryId: entry.id } }}
+        navigation={navigation}
+        token="token"
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Add tag"));
+    fireEvent.changeText(getByLabelText("Tag input"), "imported");
+    fireEvent.press(getByText("Add"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith("/entries?id=76", {
+        method: "PATCH",
+        token: "token",
+        body: { tags: ["design", "imported"] },
+      });
+    });
+    expect(getByText("#imported")).toBeTruthy();
+    expect(queryByDisplayValue("imported")).toBeNull();
+  });
+
+  it("opens inline tag input and does not navigate away when + tag is pressed", () => {
+    const entry = {
+      id: 77,
+      title: "Inline tag edit",
+      summary: "Should stay on details",
+      raw_text: "Body",
+      tags: ["design"],
+    };
+    const navigation = {
+      setOptions: jest.fn(),
+      replace: jest.fn(),
+      navigate: jest.fn(),
+    };
+
+    const { getByLabelText, getByText } = render(
+      <SecondBrainEntryDetailsScreen
+        route={{ params: { entry, entryId: entry.id } }}
+        navigation={navigation}
+        token="token"
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Add tag"));
+
+    expect(getByLabelText("Tag input")).toBeTruthy();
+    expect(getByText("Add")).toBeTruthy();
+    expect(getByText("Cancel")).toBeTruthy();
+    expect(navigation.replace).not.toHaveBeenCalledWith(
+      "SecondBrainEditEntry",
+      expect.anything(),
+    );
+    expect(navigation.navigate).not.toHaveBeenCalledWith(
+      "SecondBrainEditEntry",
+      expect.anything(),
+    );
+  });
+
+  it("shows + tag even when entry has no tags", () => {
+    const entry = {
+      id: 78,
+      title: "No tags yet",
+      summary: "Start tagging",
+      raw_text: "Body",
+      tags: [],
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(getByText("+ tag")).toBeTruthy();
   });
 
   it("prefers content over summary when content is present", () => {
@@ -54,7 +196,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       category: "note",
     };
 
-    const { getByText, queryByText } = render(
+    const { getByText, getAllByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -80,7 +222,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Pay internet bill")).toBeTruthy();
   });
 
-  it("shows created and updated timestamps below the summary", () => {
+  it("shows created timestamp below summary and last updated in the category row", () => {
     const entry = {
       id: 101,
       title: "Timestamped entry",
@@ -90,12 +232,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
       updated_at: 1710003600,
     };
 
-    const { getByText } = render(
+    const { getByText, getAllByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     expect(getByText(/Created /)).toBeTruthy();
-    expect(getByText(/Updated /)).toBeTruthy();
+    expect(getByText(/ · /)).toBeTruthy();
   });
 
   it("does not render the in-page back button", () => {
@@ -124,19 +266,44 @@ describe("SecondBrainEntryDetailsScreen", () => {
       }),
     };
 
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
-    expect(getByText("You")).toBeTruthy();
     expect(getByText("Assistant")).toBeTruthy();
+    expect(queryByText(/^You$/)).toBeTruthy();
     expect(getByText("Please summarize this")).toBeTruthy();
     expect(getByText("Here is a summary.")).toBeTruthy();
     expect(getByText("Attachments:")).toBeTruthy();
     expect(getByText("Attachment 1")).toBeTruthy();
   });
 
-  it("renders assistant conversation bubble with bgBase background", () => {
+  it("renders conversation in FlatList with virtualization tuning props", () => {
+    const entry = {
+      title: "Virtualized conversation",
+      raw_text: JSON.stringify({
+        _format: "chat_conversation_v1",
+        messages: [
+          { sender: "human", text: "Message one" },
+          { sender: "assistant", text: "Message two" },
+        ],
+      }),
+    };
+
+    const view = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    const conversationList = view.UNSAFE_getByType(ReactNative.FlatList);
+    expect(conversationList.props.initialNumToRender).toBe(10);
+    expect(conversationList.props.maxToRenderPerBatch).toBe(10);
+    expect(conversationList.props.windowSize).toBe(7);
+    expect(conversationList.props.removeClippedSubviews).toBe(true);
+    expect(typeof conversationList.props.renderItem).toBe("function");
+    expect(typeof conversationList.props.keyExtractor).toBe("function");
+  });
+
+  it("renders assistant conversation bubble with bgSurface background", () => {
     const entry = {
       title: "Claude thread",
       raw_text: JSON.stringify({
@@ -154,7 +321,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
 
     const assistantLabel = getByText("Assistant");
     let node = assistantLabel.parent;
-    let foundBgBase = false;
+    let foundBgSurface = false;
     while (node) {
       const styleProp = node.props?.style;
       const flattened = Array.isArray(styleProp)
@@ -165,16 +332,16 @@ describe("SecondBrainEntryDetailsScreen", () => {
           (part) =>
             part &&
             typeof part === "object" &&
-            part.backgroundColor === theme.colors.bgBase,
+            part.backgroundColor === theme.colors.bgSurface,
         )
       ) {
-        foundBgBase = true;
+        foundBgSurface = true;
         break;
       }
       node = node.parent;
     }
 
-    expect(foundBgBase).toBe(true);
+    expect(foundBgSurface).toBe(true);
   });
 
   it("falls back to raw body rendering when imported conversation JSON is invalid", () => {
@@ -183,7 +350,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       raw_text: "{not-valid-json",
     };
 
-    const { getByText, queryByText } = render(
+    const { getByText, getAllByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -192,17 +359,304 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(queryByText("Assistant")).toBeNull();
   });
 
+  it("caps web conversation rendering and shows hidden-message notice", () => {
+    const originalPlatform = ReactNative.Platform.OS;
+    Object.defineProperty(ReactNative.Platform, "OS", {
+      configurable: true,
+      value: "web",
+    });
+    try {
+      const messages = Array.from({ length: 205 }, (_, index) => ({
+        sender: index % 2 === 0 ? "human" : "assistant",
+        text: `Conversation message ${index}`,
+      }));
+      const entry = {
+        title: "Large web conversation",
+        raw_text: JSON.stringify({
+          _format: "chat_conversation_v1",
+          messages,
+        }),
+      };
+
+      const view = render(
+        <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+      );
+      const { getByText, queryByText } = view;
+      const conversationList = view.UNSAFE_getByType(ReactNative.FlatList);
+      const noticeRow = conversationList.props.data.find(
+        (item) => item.isNotice,
+      );
+
+      expect(getByText("Conversation message 0")).toBeTruthy();
+      expect(queryByText("Conversation message 204")).toBeNull();
+      expect(conversationList.props.data).toHaveLength(201);
+      expect(
+        conversationList.props.data.some(
+          (item) => item.text === "Conversation message 199",
+        ),
+      ).toBe(true);
+      expect(noticeRow?.text).toBe(
+        "Showing first 200 messages on web for performance.",
+      );
+    } finally {
+      Object.defineProperty(ReactNative.Platform, "OS", {
+        configurable: true,
+        value: originalPlatform,
+      });
+    }
+  });
+
+  it("renders brainstorm conversation messages when entry has a linked session", async () => {
+    const entry = {
+      id: 88,
+      title: "Brainstorm WIP",
+      raw_text: "User: old transcript text",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-1");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-1",
+      messages: [
+        { role: "user", content: "Help me brainstorm launch ideas." },
+        { role: "assistant", content: "Start with 3 launch themes." },
+      ],
+    });
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("Help me brainstorm launch ideas.")).toBeTruthy();
+    });
+    expect(getByText("Start with 3 launch themes.")).toBeTruthy();
+    expect(getByText("You")).toBeTruthy();
+    expect(getByText("Assistant")).toBeTruthy();
+    expect(queryByText("User: old transcript text")).toBeNull();
+  });
+
+  it("prefers imported chat payload over linked brainstorm session messages", async () => {
+    const entry = {
+      id: 501,
+      title: "Imported chat wins",
+      raw_text: JSON.stringify({
+        _format: "chat_conversation_v1",
+        messages: [
+          { sender: "human", text: "Imported human message" },
+          { sender: "assistant", text: "Imported assistant message" },
+        ],
+      }),
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-ignored");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-ignored",
+      messages: [
+        { role: "user", content: "Brainstorm user message" },
+        { role: "assistant", content: "Brainstorm assistant message" },
+      ],
+    });
+
+    const { getByText, getAllByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(getByText("Imported human message")).toBeTruthy();
+    expect(getByText("Imported assistant message")).toBeTruthy();
+    await waitFor(() => {
+      expect(readBrainstormSession).not.toHaveBeenCalled();
+    });
+    expect(queryByText("Brainstorm user message")).toBeNull();
+    expect(queryByText("Brainstorm assistant message")).toBeNull();
+  });
+
+  it("falls back to raw body when no linked brainstorm session exists", async () => {
+    const entry = {
+      id: 777,
+      title: "No linked session",
+      raw_text: "Raw transcript fallback text",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getLinkedBrainstormSessionId).toHaveBeenCalledWith(777);
+    });
+    expect(readBrainstormSession).not.toHaveBeenCalled();
+    expect(getByText("Raw transcript fallback text")).toBeTruthy();
+    expect(queryByText("You")).toBeNull();
+    expect(queryByText("Assistant")).toBeNull();
+  });
+
+  it("filters empty brainstorm session messages before rendering", async () => {
+    const entry = {
+      id: 909,
+      title: "Filter empty messages",
+      raw_text: "Raw body should not render",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-909");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-909",
+      messages: [
+        { role: "user", content: "   " },
+        { role: "assistant", content: "Useful assistant response" },
+      ],
+    });
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("Useful assistant response")).toBeTruthy();
+    });
+    expect(queryByText("Raw body should not render")).toBeNull();
+    expect(queryByText(/^You$/)).toBeNull();
+    expect(getByText("Assistant")).toBeTruthy();
+  });
+
+  it("renders brainstorm transcript-style entry text as conversation bubbles", async () => {
+    const entry = {
+      id: 1201,
+      title: "Transcript fallback",
+      description:
+        "User: I need launch messaging ideas.\n\nAssistant: Start with customer pain points.\n\nUser: Give me examples.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText, getAllByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("I need launch messaging ideas.")).toBeTruthy();
+    });
+    expect(getByText("Start with customer pain points.")).toBeTruthy();
+    expect(getByText("Give me examples.")).toBeTruthy();
+    expect(getAllByText(/^You$/).length).toBe(2);
+    expect(getByText("Assistant")).toBeTruthy();
+    expect(
+      queryByText(
+        "User: I need launch messaging ideas.\n\nAssistant: Start with customer pain points.\n\nUser: Give me examples.",
+      ),
+    ).toBeNull();
+  });
+
+  it("supports multiline brainstorm transcript chunks", async () => {
+    const entry = {
+      id: 1202,
+      title: "Multiline transcript",
+      description:
+        "User: I need a plan.\nThis is extra context.\n\nAssistant: Here are options.\n1) Option one\n2) Option two",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("I need a plan.")).toBeTruthy();
+    });
+    expect(getByText("This is extra context.")).toBeTruthy();
+    expect(getByText("Here are options.")).toBeTruthy();
+    expect(getByText("1) Option one")).toBeTruthy();
+    expect(getByText("2) Option two")).toBeTruthy();
+  });
+
+  it("parses transcript fallback from raw_text when description is missing", async () => {
+    const entry = {
+      id: 1204,
+      title: "Raw text transcript",
+      raw_text: "Human: First thought\n\nAssistant: Helpful response",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("First thought")).toBeTruthy();
+    });
+    expect(getByText("Helpful response")).toBeTruthy();
+    expect(getByText("You")).toBeTruthy();
+    expect(getByText("Assistant")).toBeTruthy();
+  });
+
+  it("falls back to raw body when transcript chunks do not use role prefixes", async () => {
+    const entry = {
+      id: 1205,
+      title: "No role prefixes",
+      description: "Idea one\n\nIdea two\n\nIdea three",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("Idea one")).toBeTruthy();
+    });
+    expect(getByText("Idea two")).toBeTruthy();
+    expect(getByText("Idea three")).toBeTruthy();
+    expect(queryByText("Assistant")).toBeNull();
+  });
+
+  it("renders transcript fallback when linked brainstorm session exists but has no valid messages", async () => {
+    const entry = {
+      id: 1206,
+      title: "Session empty transcript fallback",
+      description: "User: Plan launch\n\nAssistant: Draft launch pillars",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-empty");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-empty",
+      messages: [{ role: "user", content: "   " }],
+    });
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByText("Plan launch")).toBeTruthy();
+    });
+    expect(getByText("Draft launch pillars")).toBeTruthy();
+  });
+
+  it("does not force conversation rendering for a single-role transcript-like body", async () => {
+    const entry = {
+      id: 1203,
+      title: "Single-role transcript",
+      raw_text: "User: Just one message without assistant response.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(
+        getByText("User: Just one message without assistant response."),
+      ).toBeTruthy();
+    });
+    expect(queryByText(/^You$/)).toBeNull();
+    expect(queryByText("Assistant")).toBeNull();
+  });
+
   it("navigates to edit entry screen when Edit is pressed", () => {
     const navigate = jest.fn();
     const entry = { id: 7, title: "Entry" };
-    const { getByLabelText, getByText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry } }}
-        navigation={{ navigate }}
-      />,
-    );
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      navigationOverrides: { navigate },
+    });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     fireEvent.press(getByText("Edit"));
 
     expect(navigate).toHaveBeenCalledWith("SecondBrainEditEntry", {
@@ -215,14 +669,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
     const navigate = jest.fn();
     const replace = jest.fn();
     const entry = { id: 9, title: "Entry 9" };
-    const { getByLabelText, getByText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry } }}
-        navigation={{ navigate, replace }}
-      />,
-    );
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      navigationOverrides: { navigate, replace },
+    });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     fireEvent.press(getByText("Edit"));
 
     expect(replace).toHaveBeenCalledWith("SecondBrainEditEntry", {
@@ -235,14 +687,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
   it("navigates to brainstorm screen from continue action", () => {
     const navigate = jest.fn();
     const entry = { id: 91, title: "Entry 91", raw_text: "Body text" };
-    const { getByLabelText, getByText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry } }}
-        navigation={{ navigate }}
-      />,
-    );
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      navigationOverrides: { navigate },
+    });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     fireEvent.press(getByText("Continue Brainstorming"));
 
     expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstorm", {
@@ -253,14 +703,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
   it("shows Delete in the action drawer and prompts for confirmation", () => {
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const entry = { id: 11, title: "Entry 11", category: "note" };
-    const { getByLabelText, getByText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry } }}
-        token="token"
-      />,
-    );
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      token: "token",
+    });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
 
     expect(getByText("Edit")).toBeTruthy();
     expect(getByText("Archive")).toBeTruthy();
@@ -283,14 +731,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
       category: "reminder",
       is_archived: false,
     };
-    const { getByLabelText, getByText } = render(
-      <SecondBrainEntryDetailsScreen
-        route={{ params: { entry } }}
-        token="token"
-      />,
-    );
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      token: "token",
+    });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     fireEvent.press(getByText("Mark Done"));
 
     expect(alertSpy).toHaveBeenCalledWith(
@@ -310,11 +756,10 @@ describe("SecondBrainEntryDetailsScreen", () => {
       category: "note",
     };
 
-    const { getByLabelText, getByTestId, getByText, queryByTestId } = render(
-      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
-    );
+    const { getByTestId, getByText, queryByTestId, pressHeaderActionButton } =
+      renderWithHeaderAction({ entry });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     expect(getByText("Edit")).toBeTruthy();
 
     fireEvent.press(getByTestId("entry-actions-dismiss-overlay"));
@@ -337,15 +782,14 @@ describe("SecondBrainEntryDetailsScreen", () => {
       });
     const entry = { id: 22, title: "Persistent title", category: "note" };
 
-    const { getByLabelText, getByTestId, getByText } = render(
-      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
-    );
+    const { getByTestId, getByText, pressHeaderActionButton } =
+      renderWithHeaderAction({ entry });
 
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
 
     expect(getByText("Persistent title")).toBeTruthy();
     expect(getByText("Edit")).toBeTruthy();
-    expect(getByTestId("entry-inline-actions-large")).toBeTruthy();
+    expect(getByTestId("entry-actions-dropdown")).toBeTruthy();
     useWindowDimensionsSpy.mockRestore();
   });
 
@@ -360,12 +804,12 @@ describe("SecondBrainEntryDetailsScreen", () => {
       });
     const entry = { id: 23, title: "Stable summary spacing", category: "note" };
 
-    const { getByLabelText, getByTestId } = render(
-      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
-    );
+    const { getByTestId, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+    });
 
     const titleRowBefore = getByTestId("entry-title-row");
-    fireEvent.press(getByLabelText("Open entry actions"));
+    pressHeaderActionButton();
     const titleRowAfter = getByTestId("entry-title-row");
 
     expect(titleRowBefore.props.style).toEqual(

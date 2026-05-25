@@ -6,15 +6,15 @@
 
 ## What's cut vs the full plan
 
-| Full plan | POC |
-|---|---|
-| Magic-link auth (Resend + JWT) | **Removed** — webapp runs unprotected on localhost |
-| `magic_links` DB table | **Removed** |
-| `auth.js` route + middleware | **Removed** |
-| `Login.jsx` page | **Removed** |
-| React Router / protected routes | **Removed** — dashboard renders directly |
-| UUID primary keys | **Simplified** — SQLite auto-increment integers |
-| `source` column (voice/text) | **Optional** — keep if trivial, skip if not |
+| Full plan                       | POC                                                |
+| ------------------------------- | -------------------------------------------------- |
+| Magic-link auth (Resend + JWT)  | **Removed** — webapp runs unprotected on localhost |
+| `magic_links` DB table          | **Removed**                                        |
+| `auth.js` route + middleware    | **Removed**                                        |
+| `Login.jsx` page                | **Removed**                                        |
+| React Router / protected routes | **Removed** — dashboard renders directly           |
+| UUID primary keys               | **Simplified** — SQLite auto-increment integers    |
+| `source` column (voice/text)    | **Optional** — keep if trivial, skip if not        |
 
 Everything else is identical to the full plan: Groq Whisper transcription, Groq LLM classification, SQLite storage, node-cron reminders, and the React dashboard.
 
@@ -46,16 +46,16 @@ Backend (Node.js / Express)                         │
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Telegram bot | `node-telegram-bot-api` |
+| Layer               | Technology                                  |
+| ------------------- | ------------------------------------------- |
+| Telegram bot        | `node-telegram-bot-api`                     |
 | Voice transcription | Groq Whisper API (`whisper-large-v3-turbo`) |
-| AI classification | Groq LLM API (`openai/gpt-oss-120b`) |
-| Backend | Node.js + Express |
-| Database | SQLite via `@libsql/client` (libSQL) |
-| Scheduler | `node-cron` (1-min DB poll) |
-| Web frontend | React + Tailwind CSS (Vite) |
-| Auth | **None** — localhost only |
+| AI classification   | Groq LLM API (`openai/gpt-oss-120b`)        |
+| Backend             | Node.js + Express                           |
+| Database            | SQLite via `@libsql/client` (libSQL)        |
+| Scheduler           | `node-cron` (1-min DB poll)                 |
+| Web frontend        | React + Tailwind CSS (Vite)                 |
+| Auth                | **None** — localhost only                   |
 
 ---
 
@@ -65,15 +65,15 @@ Single table. No `magic_links` table.
 
 ### `entries` table
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | INTEGER | Auto-increment primary key |
-| `raw_text` | TEXT | Original transcribed or typed text |
-| `category` | TEXT | `reminder`, `todo`, `thought`, `note` |
-| `content` | TEXT | Cleaned/summarised content |
-| `remind_at` | INTEGER | Unix timestamp — nullable, reminders only |
-| `reminded` | INTEGER | 0 or 1 — has reminder been sent? |
-| `created_at` | INTEGER | Unix timestamp |
+| Column       | Type    | Notes                                     |
+| ------------ | ------- | ----------------------------------------- |
+| `id`         | INTEGER | Auto-increment primary key                |
+| `raw_text`   | TEXT    | Original transcribed or typed text        |
+| `category`   | TEXT    | `reminder`, `todo`, `thought`, `note`     |
+| `content`    | TEXT    | Cleaned/summarised content                |
+| `remind_at`  | INTEGER | Unix timestamp — nullable, reminders only |
+| `reminded`   | INTEGER | 0 or 1 — has reminder been sent?          |
+| `created_at` | INTEGER | Unix timestamp                            |
 
 ---
 
@@ -142,7 +142,7 @@ Five variables total. One `GROQ_API_KEY` covers both transcription and classific
 4. `classify.js` sends the text to Groq (`openai/gpt-oss-120b`) → returns `{ category, content, remind_at }`
 5. Entry is saved to SQLite
 6. If `remind_at` is set, `cron.js` will pick it up automatically — nothing else to do
-7. Bot replies: *"Got it — I'll remind you to buy tomatoes at 8pm tonight."*
+7. Bot replies: _"Got it — I'll remind you to buy tomatoes at 8pm tonight."_
 
 ### 2. Reminder fires
 
@@ -199,6 +199,7 @@ Note: "{{RAW_TEXT}}"
 ## Build Phases
 
 ### Phase 1 — Core pipeline (day 1–2)
+
 - [ ] Scaffold `package.json`, `.env`, `db.js` (create `entries` table)
 - [ ] Telegram bot receives text messages + replies
 - [ ] Whisper transcription for voice messages (Groq `whisper-large-v3-turbo`)
@@ -206,10 +207,12 @@ Note: "{{RAW_TEXT}}"
 - [ ] Bot confirms back to user
 
 ### Phase 2 — Reminders (day 2–3)
+
 - [ ] `cron.js` polls every minute for due reminders
 - [ ] `notify.js` sends Telegram message + marks `reminded = 1`
 
 ### Phase 3 — Web dashboard (day 3–5)
+
 - [ ] `GET /entries` and `DELETE /entries/:id` routes (no auth middleware)
 - [ ] React SPA: `EntryCard`, `Sidebar`, `StatsBar`
 - [ ] Category filter + client-side search

@@ -4,7 +4,7 @@ function renderInlineMarkdown(text) {
   const source = String(text ?? "");
   const segments = [];
   const pattern =
-    /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|`([^`]+)`)/g;
+    /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|`([^`]+)`|(https?:\/\/[^\s)]+))/g;
   let lastIndex = 0;
   let match;
   while ((match = pattern.exec(source)) !== null) {
@@ -44,6 +44,13 @@ function renderInlineMarkdown(text) {
         key: `code-${match.index}`,
         type: "code",
         text: match[7],
+      });
+    else if (match[8])
+      segments.push({
+        key: `autolink-${match.index}`,
+        type: "link",
+        text: match[8],
+        url: match[8],
       });
     lastIndex = pattern.lastIndex;
   }

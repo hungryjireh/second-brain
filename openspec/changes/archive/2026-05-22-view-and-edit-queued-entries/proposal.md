@@ -12,9 +12,11 @@ Users can queue entries in Second Brain, but they currently lack a clear way to 
 ## Capabilities
 
 ### New Capabilities
+
 - `queued-entry-management`: View, edit, and persist updates to queued entries prior to processing.
 
 ### Modified Capabilities
+
 - None.
 
 ## Impact

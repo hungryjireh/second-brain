@@ -93,4 +93,60 @@ describe("MarkdownBody", () => {
     expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/path");
     openUrlSpy.mockRestore();
   });
+
+  it("opens bare URLs when pressed", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody text="Visit https://example.com/bare" styles={styles} />,
+    );
+
+    fireEvent.press(getByText("https://example.com/bare"));
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/bare");
+    openUrlSpy.mockRestore();
+  });
+
+  it("opens multiple links in one paragraph", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody
+        text="Links: [One](https://example.com/1) and https://example.com/2"
+        styles={styles}
+      />,
+    );
+
+    fireEvent.press(getByText("One"));
+    fireEvent.press(getByText("https://example.com/2"));
+    expect(openUrlSpy).toHaveBeenNthCalledWith(1, "https://example.com/1");
+    expect(openUrlSpy).toHaveBeenNthCalledWith(2, "https://example.com/2");
+    openUrlSpy.mockRestore();
+  });
+
+  it("renders links with accessibility role", () => {
+    const { getByText } = render(
+      <MarkdownBody text="[Open](https://example.com/path)" styles={styles} />,
+    );
+
+    expect(getByText("Open").props.accessibilityRole).toBe("link");
+  });
+
+  it("opens attachment links generated from fileUrls", () => {
+    const openUrlSpy = jest
+      .spyOn(Linking, "openURL")
+      .mockResolvedValue(undefined);
+    const { getByText } = render(
+      <MarkdownBody
+        text="Generated image: sample"
+        fileUrls={["https://example.com/file-a.png"]}
+        styles={styles}
+      />,
+    );
+
+    fireEvent.press(getByText("Attachment 1"));
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/file-a.png");
+    openUrlSpy.mockRestore();
+  });
 });

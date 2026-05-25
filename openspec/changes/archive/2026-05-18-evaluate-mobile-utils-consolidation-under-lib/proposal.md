@@ -12,9 +12,11 @@ The `mobile/utils` folder may overlap with shared utilities in the root `lib/` d
 ## Capabilities
 
 ### New Capabilities
+
 - `mobile-utils-consolidation`: Standardizes how mobile utility modules are evaluated, consolidated into `lib/` when shared, and safely migrated with compatibility safeguards.
 
 ### Modified Capabilities
+
 - None.
 
 ## Impact

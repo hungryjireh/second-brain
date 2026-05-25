@@ -226,6 +226,67 @@ test("auth action handler returns 404 for unknown action", async () => {
   assert.deepEqual(jsonBody(res), { error: "Not found" });
 });
 
+test("auth handler rate limits repeated requests from same IP", async () => {
+  const { default: authActionHandler } = await importFresh(
+    "../../api/auth/[action].js",
+    "auth-ip-rate-limit",
+  );
+
+  let finalRes = null;
+  for (let attempt = 0; attempt < 31; attempt += 1) {
+    const req = createReq({
+      method: "POST",
+      body: {},
+      headers: { "x-forwarded-for": "203.0.113.10" },
+      query: { action: "unknown-action" },
+    });
+    const res = createRes();
+    await authActionHandler(req, res);
+    finalRes = res;
+  }
+
+  assert.equal(finalRes?.statusCode, 429);
+  assert.equal(typeof jsonBody(finalRes)?.retryAfterSeconds, "number");
+});
+
+test("auth login rate limits repeated attempts for same identifier", async () => {
+  const { default: authActionHandler } = await importFresh(
+    "../../api/auth/[action].js",
+    "auth-identifier-rate-limit",
+  );
+
+  const original = {
+    AUTH_USERNAME: process.env.AUTH_USERNAME,
+    AUTH_PASSWORD: process.env.AUTH_PASSWORD,
+  };
+  process.env.AUTH_USERNAME = "test-admin";
+  process.env.AUTH_PASSWORD = "test-password";
+
+  let finalRes = null;
+  try {
+    for (let attempt = 0; attempt < 11; attempt += 1) {
+      const req = createReq({
+        method: "POST",
+        body: {
+          username: "limit-user",
+          password: "wrong-password",
+        },
+        headers: { "x-forwarded-for": "203.0.113.11" },
+        query: { action: "login" },
+      });
+      const res = createRes();
+      await authActionHandler(req, res);
+      finalRes = res;
+    }
+  } finally {
+    process.env.AUTH_USERNAME = original.AUTH_USERNAME;
+    process.env.AUTH_PASSWORD = original.AUTH_PASSWORD;
+  }
+
+  assert.equal(finalRes?.statusCode, 429);
+  assert.equal(typeof jsonBody(finalRes)?.retryAfterSeconds, "number");
+});
+
 test("settings handler: OPTIONS preflight and bearer token guard", async () => {
   const { default: settingsHandler } = await importFresh(
     "../../api/settings.js",
@@ -402,23 +463,101 @@ test("ics handler: method guard and bearer token guard", async () => {
 });
 
 test("bot handler: method guard and no-message noop", async () => {
+  const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  process.env.TELEGRAM_WEBHOOK_SECRET = "";
   const { default: botHandler } = await importFresh(
     "../../api/bot.js",
     "bot-guards",
   );
 
-  const wrongMethodReq = createReq({ method: "GET" });
-  const wrongMethodRes = createRes();
-  await botHandler(wrongMethodReq, wrongMethodRes);
-  assert.equal(wrongMethodRes.statusCode, 405);
+  try {
+    const wrongMethodReq = createReq({ method: "GET" });
+    const wrongMethodRes = createRes();
+    await botHandler(wrongMethodReq, wrongMethodRes);
+    assert.equal(wrongMethodRes.statusCode, 405);
 
-  const noMessageReq = createReq({
-    method: "POST",
-    body: {},
-  });
-  const noMessageRes = createRes();
-  await botHandler(noMessageReq, noMessageRes);
-  assert.equal(noMessageRes.statusCode, 200);
+    const noMessageReq = createReq({
+      method: "POST",
+      body: {},
+    });
+    const noMessageRes = createRes();
+    await botHandler(noMessageReq, noMessageRes);
+    assert.equal(noMessageRes.statusCode, 200);
+  } finally {
+    process.env.TELEGRAM_WEBHOOK_SECRET = originalWebhookSecret;
+  }
+});
+
+test("bot handler rejects invalid telegram webhook secret when configured", async () => {
+  const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  process.env.TELEGRAM_WEBHOOK_SECRET = "expected-secret";
+
+  try {
+    const { default: botHandler } = await importFresh(
+      "../../api/bot.js",
+      "bot-webhook-secret-guard",
+    );
+
+    const missingHeaderRes = createRes();
+    await botHandler(
+      createReq({ method: "POST", body: { message: {} }, headers: {} }),
+      missingHeaderRes,
+    );
+    assert.equal(missingHeaderRes.statusCode, 401);
+
+    const wrongHeaderRes = createRes();
+    await botHandler(
+      createReq({
+        method: "POST",
+        body: { message: {} },
+        headers: {
+          "x-telegram-bot-api-secret-token": "wrong-secret",
+        },
+      }),
+      wrongHeaderRes,
+    );
+    assert.equal(wrongHeaderRes.statusCode, 401);
+
+    const validHeaderRes = createRes();
+    await botHandler(
+      createReq({
+        method: "POST",
+        body: {},
+        headers: {
+          "x-telegram-bot-api-secret-token": "expected-secret",
+        },
+      }),
+      validHeaderRes,
+    );
+    assert.equal(validHeaderRes.statusCode, 200);
+  } finally {
+    process.env.TELEGRAM_WEBHOOK_SECRET = originalWebhookSecret;
+  }
+});
+
+test("launch signups rate limits repeated requests for same email", async () => {
+  const { default: launchSignupsHandler } = await importFresh(
+    "../../api/launch-signups.js",
+    "launch-signups-rate-limit",
+  );
+
+  let finalRes = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const req = createReq({
+      method: "POST",
+      body: {
+        name: "Rate Limit Test",
+        email: "ratelimit@example.com",
+      },
+      headers: { "x-forwarded-for": "203.0.113.12" },
+    });
+    const res = createRes();
+    await launchSignupsHandler(req, res);
+    finalRes = res;
+  }
+
+  assert.equal(finalRes?.statusCode, 429);
+  assert.equal(typeof jsonBody(finalRes)?.retryAfterSeconds, "number");
 });
 
 test("bot handler enforces and communicates 120-second voice note limit", () => {

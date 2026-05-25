@@ -443,23 +443,14 @@ export function useSecondBrainEntries({ token, onError }) {
 
   const applyOfflineCreateFallback = useCallback(
     async (description) => {
-      const localId = `offline-${Date.now()}`;
-      const optimisticEntry = {
-        id: localId,
-        description,
-        category: "note",
-        is_archived: false,
-        created_at: Math.floor(Date.now() / 1000),
-      };
-      const nextEntries = [optimisticEntry, ...entries];
-      const sortedEntries = sortEntriesByUpdatedAt(nextEntries);
+      const sortedEntries = sortEntriesByUpdatedAt(entries);
       setEntries(sortedEntries);
       setOfflineMode(true);
       onError("Offline mode: changes will sync automatically.");
       await enqueueOfflineAction(
         {
           type: "create",
-          description: optimisticEntry.description,
+          description,
         },
         sortedEntries,
       );

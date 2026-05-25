@@ -43,7 +43,10 @@ const SearchUserRow = memo(function SearchUserRow({ user, openProfile }) {
   );
 });
 
-const SearchThoughtRow = memo(function SearchThoughtRow({ thought, openProfile }) {
+const SearchThoughtRow = memo(function SearchThoughtRow({
+  thought,
+  openProfile,
+}) {
   return (
     <Pressable
       style={styles.resultRow}
@@ -104,7 +107,9 @@ export default function OpenBrainSearchScreen({ token, navigation, route }) {
       if (item.type === "user") {
         return <SearchUserRow user={item.user} openProfile={openProfile} />;
       }
-      return <SearchThoughtRow thought={item.thought} openProfile={openProfile} />;
+      return (
+        <SearchThoughtRow thought={item.thought} openProfile={openProfile} />
+      );
     },
     [openProfile],
   );
