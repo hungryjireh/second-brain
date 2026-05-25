@@ -80,7 +80,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       tags: ["work"],
     };
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -196,7 +196,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       category: "note",
     };
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -232,7 +232,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       updated_at: 1710003600,
     };
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -350,7 +350,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       raw_text: "{not-valid-json",
     };
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
@@ -455,7 +455,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
       ],
     });
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getByText, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 

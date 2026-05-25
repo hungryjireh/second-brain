@@ -1,22 +1,8 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
-import {
-  FlatList,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import MarkdownBody from "../components/MarkdownBody";
+import SecondBrainConversationList from "../components/SecondBrainConversationList";
 import { apiRequest } from "../api";
 import { confirmAction } from "../utils/confirmAction";
 import { formatPublishedDateTime } from "../utils/dateTimeUtils";
@@ -25,35 +11,12 @@ import {
   readBrainstormSession,
 } from "../utils/brainstormSessions";
 import { normalizeTagValue, parseTagInput } from "../utils/secondBrainTagUtils";
+import {
+  parseBrainstormTranscriptFromEntry,
+  parseImportedConversationFromEntry,
+} from "../utils/secondBrainConversationParsers";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
-
-function parseImportedConversationFromEntry(entry) {
-  const rawText = String(entry?.raw_text ?? "").trim();
-  if (!rawText.startsWith("{")) return null;
-
-  try {
-    const parsed = JSON.parse(rawText);
-    if (parsed?._format !== "chat_conversation_v1") return null;
-    if (!Array.isArray(parsed.messages) || parsed.messages.length === 0)
-      return null;
-    return {
-      messages: parsed.messages
-        .map((msg) => ({
-          sender: msg?.sender === "human" ? "human" : "assistant",
-          text: String(msg?.text ?? "").trim(),
-          fileUrls: Array.isArray(msg?.files)
-            ? msg.files
-                .map((file) => String(file?.url ?? "").trim())
-                .filter(Boolean)
-            : [],
-        }))
-        .filter((msg) => msg.text),
-    };
-  } catch {
-    return null;
-  }
-}
 
 function parseBrainstormConversationFromSession(session) {
   if (!session || typeof session !== "object") return null;
@@ -73,45 +36,6 @@ function parseBrainstormConversationFromSession(session) {
   return { messages };
 }
 
-function parseBrainstormTranscriptFromEntry(entry) {
-  const source = String(entry?.description ?? entry?.raw_text ?? "").trim();
-  if (!source) return null;
-
-  const chunks = source
-    .split(/\n\s*\n+/)
-    .map((chunk) => chunk.trim())
-    .filter(Boolean);
-  if (chunks.length === 0) return null;
-
-  const messages = chunks
-    .map((chunk) => {
-      const lines = chunk.split("\n");
-      const first = String(lines[0] ?? "").trim();
-      const match = first.match(/^(user|assistant|human)\s*:\s*(.*)$/i);
-      if (!match) return null;
-      const senderLabel = match[1].toLowerCase();
-      const sender = senderLabel === "assistant" ? "assistant" : "human";
-      const firstContent = String(match[2] ?? "").trim();
-      const restContent = lines
-        .slice(1)
-        .map((line) => String(line).trim())
-        .join("\n")
-        .trim();
-      const text = [firstContent, restContent]
-        .filter(Boolean)
-        .join("\n")
-        .trim();
-      if (!text) return null;
-      return { sender, text, fileUrls: [] };
-    })
-    .filter(Boolean);
-
-  const hasAssistant = messages.some((msg) => msg.sender === "assistant");
-  if (messages.length < 2 || !hasAssistant) return null;
-  return { messages };
-}
-
-const MAX_WEB_RENDERED_MESSAGES = 200;
 const CATEGORY_TAG_STYLES = {
   reminder: {
     bg: theme.colors.reminderTagBg,
@@ -134,41 +58,6 @@ const CATEGORY_TAG_STYLES = {
     label: "Note",
   },
 };
-
-const ConversationMessageRow = memo(function ConversationMessageRow({
-  item,
-  styles,
-}) {
-  const fromHuman = item.sender === "human";
-  return (
-    <View
-      style={[
-        styles.conversationRow,
-        fromHuman
-          ? styles.conversationRowHuman
-          : styles.conversationRowAssistant,
-      ]}
-    >
-      <View
-        style={[
-          styles.conversationBubble,
-          fromHuman
-            ? styles.conversationBubbleHuman
-            : styles.conversationBubbleAssistant,
-        ]}
-      >
-        <Text style={styles.conversationSender}>
-          {fromHuman ? "You" : "Assistant"}
-        </Text>
-        <MarkdownBody
-          text={item.text}
-          fileUrls={item.fileUrls}
-          styles={styles}
-        />
-      </View>
-    </View>
-  );
-});
 
 async function confirmArchiveEntry(entry) {
   const isReminder = entry?.category === "reminder";
@@ -257,52 +146,6 @@ export default function SecondBrainEntryDetailsScreen({
     importedConversation ||
     brainstormConversation ||
     brainstormTranscriptConversation;
-  const isWeb = Platform.OS === "web";
-  const renderedMessages = useMemo(() => {
-    if (!displayedConversation?.messages) return [];
-    if (
-      !isWeb ||
-      displayedConversation.messages.length <= MAX_WEB_RENDERED_MESSAGES
-    )
-      return displayedConversation.messages;
-    return displayedConversation.messages.slice(0, MAX_WEB_RENDERED_MESSAGES);
-  }, [displayedConversation, isWeb]);
-  const hasHiddenMessages = Boolean(
-    isWeb && displayedConversation?.messages?.length > renderedMessages.length,
-  );
-  const conversationData = useMemo(
-    () =>
-      hasHiddenMessages
-        ? [
-            ...renderedMessages,
-            {
-              id: "__hidden_messages_notice__",
-              sender: "assistant",
-              text: `Showing first ${MAX_WEB_RENDERED_MESSAGES} messages on web for performance.`,
-              fileUrls: [],
-              isNotice: true,
-            },
-          ]
-        : renderedMessages,
-    [hasHiddenMessages, renderedMessages],
-  );
-  const keyExtractor = useCallback(
-    (item, index) =>
-      item.id ||
-      (item.isNotice
-        ? "__hidden_messages_notice__"
-        : `${item.sender}-${index}`),
-    [],
-  );
-  const renderConversationItem = useCallback(
-    ({ item }) =>
-      item.isNotice ? (
-        <Text style={styles.entryPanelSummary}>{item.text}</Text>
-      ) : (
-        <ConversationMessageRow item={item} styles={styles} />
-      ),
-    [],
-  );
   const categoryTag =
     CATEGORY_TAG_STYLES[entry?.category] ?? CATEGORY_TAG_STYLES.note;
   const title = entry?.title || entry?.content || "Untitled";
@@ -676,19 +519,17 @@ export default function SecondBrainEntryDetailsScreen({
         </View>
         <View style={[styles.entryPanelBodyWrap, { flex: 1 }]}>
           {displayedConversation ? (
-            <FlatList
+            <SecondBrainConversationList
+              messages={displayedConversation.messages}
+              styles={styles}
               style={styles.entryPanelBodyScroll}
               contentContainerStyle={[
                 styles.entryPanelBodyContent,
                 styles.conversationWrap,
               ]}
-              data={conversationData}
-              keyExtractor={keyExtractor}
-              renderItem={renderConversationItem}
-              removeClippedSubviews={!isWeb}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-              windowSize={7}
+              showWebHiddenMessageNotice
+              maxWebRenderedMessages={200}
+              hiddenMessageNoticeStyle={styles.entryPanelSummary}
             />
           ) : (
             <ScrollView

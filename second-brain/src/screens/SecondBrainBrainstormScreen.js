@@ -1,6 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -10,9 +9,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import styles from "./SecondBrainBrainstormScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
+import SecondBrainConversationList from "../components/SecondBrainConversationList";
 import { apiRequest } from "../api";
 import SecondBrainEntryPageLayout from "../components/SecondBrainEntryPageLayout";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
+import { parseBrainstormTranscriptFromText } from "../utils/secondBrainConversationParsers";
 import {
   createBrainstormSession,
   getLinkedBrainstormSessionId,
@@ -32,7 +33,7 @@ function prefixedWipTitle(title) {
 function normalizeSessionMessages(messages) {
   if (!Array.isArray(messages)) return [];
   return messages
-    .map((message, index) => {
+    .flatMap((message, index) => {
       const legacySender =
         message?.sender === "human" || message?.sender === "user"
           ? "user"
@@ -46,21 +47,25 @@ function normalizeSessionMessages(messages) {
             ? "user"
             : legacySender || "user";
       const content = String(message?.content ?? message?.text ?? "").trim();
-      if (!content) return null;
+      if (!content) return [];
       const createdAt =
         typeof message?.createdAt === "string" && message.createdAt.trim()
           ? message.createdAt
           : new Date().toISOString();
+      const transcript = parseBrainstormTranscriptFromText(content);
+      if (transcript?.messages?.length) {
+        return transcript.messages.map((chunk, transcriptIndex) => ({
+          id: `${createdAt}-${role}-${index}-${transcriptIndex}`,
+          role: chunk.sender === "assistant" ? "assistant" : "user",
+          content: chunk.text,
+          createdAt,
+        }));
+      }
       const id =
         typeof message?.id === "string" && message.id.trim()
           ? message.id
           : `${createdAt}-${role}-${index}`;
-      return {
-        id,
-        role,
-        content,
-        createdAt,
-      };
+      return [{ id, role, content, createdAt }];
     })
     .filter(Boolean);
 }
@@ -73,32 +78,13 @@ function normalizeSession(session) {
   };
 }
 
-const BrainstormMessageRow = memo(function BrainstormMessageRow({ item }) {
-  const isUser = item.role === "user";
-  return (
-    <View
-      style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}
-    >
-      <View
-        style={[
-          styles.bubble,
-          isUser ? styles.userBubble : styles.assistantBubble,
-        ]}
-      >
-        <Text style={styles.roleLabel}>{isUser ? "You" : "Assistant"}</Text>
-        <Text style={styles.messageText}>{item.content}</Text>
-      </View>
-    </View>
-  );
-});
-
 export default function SecondBrainBrainstormScreen({
   route,
   navigation,
   token,
 }) {
   const insets = useSafeAreaInsets();
-  const COMPOSER_MIN_HEIGHT = 42;
+  const COMPOSER_MIN_HEIGHT = 38;
   const COMPOSER_MAX_HEIGHT = 160;
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
@@ -119,12 +105,20 @@ export default function SecondBrainBrainstormScreen({
   const initialMessageCountRef = useRef(null);
 
   const messages = useMemo(() => session?.messages || [], [session?.messages]);
+  const conversationMessages = useMemo(
+    () =>
+      messages.map((item) => ({
+        id: item.id,
+        sender: item.role === "assistant" ? "assistant" : "human",
+        text: item.content,
+        fileUrls: [],
+      })),
+    [messages],
+  );
   const isWeb = Platform.OS === "web";
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
-  const renderMessageItem = useCallback(
-    ({ item }) => <BrainstormMessageRow item={item} />,
-    [],
-  );
+  const typebarHeight = Math.max(inputHeight + 12, 48);
+  const messagesBottomPadding = typebarBottom + typebarHeight + 24;
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +209,30 @@ export default function SecondBrainBrainstormScreen({
     finalizedRef.current = true;
     await persistSession(nextSession);
 
+    const hasExistingEntryId =
+      nextSession?.entryId !== null && nextSession?.entryId !== undefined;
+
+    if (hasExistingEntryId) {
+      const updated = await apiRequest(`/entries?id=${nextSession.entryId}`, {
+        method: "PATCH",
+        token,
+        body: {
+          description: transcript,
+        },
+      });
+      if (!isEnd) {
+        await apiRequest(`/entries?id=${nextSession.entryId}`, {
+          method: "PATCH",
+          token,
+          body: {
+            title: prefixedWipTitle(updated?.title),
+          },
+        });
+      }
+      await linkEntryToBrainstormSession(nextSession.entryId, nextSession.id);
+      return;
+    }
+
     const created = await apiRequest("/entries", {
       method: "POST",
       token,
@@ -223,19 +241,22 @@ export default function SecondBrainBrainstormScreen({
         tags: ["brainstorm"],
       },
     });
-
-    if (!isEnd && created?.id) {
-      await apiRequest(`/entries?id=${created.id}`, {
-        method: "PATCH",
-        token,
-        body: {
-          title: prefixedWipTitle(created?.title),
-        },
-      });
-    }
-
     if (created?.id) {
-      await linkEntryToBrainstormSession(created.id, nextSession.id);
+      const savedSession = {
+        ...nextSession,
+        entryId: created.id,
+      };
+      await persistSession(savedSession);
+      if (!isEnd) {
+        await apiRequest(`/entries?id=${created.id}`, {
+          method: "PATCH",
+          token,
+          body: {
+            title: prefixedWipTitle(created?.title),
+          },
+        });
+      }
+      await linkEntryToBrainstormSession(created.id, savedSession.id);
     }
   }
 
@@ -272,6 +293,11 @@ export default function SecondBrainBrainstormScreen({
       messages: [...messages, userMessage],
       updatedAt: createdAt,
       lifecycle: "active",
+      // Session resumed with new user activity should allow a fresh finalize.
+      finalizeGuards: {
+        ended: false,
+        wipSaved: false,
+      },
     };
 
     setDraft("");
@@ -430,12 +456,15 @@ export default function SecondBrainBrainstormScreen({
           alwaysExpanded
         >
           <View style={styles.container}>
-            <FlatList
+            <SecondBrainConversationList
+              messages={conversationMessages}
+              styles={secondBrainScreenStyles}
               style={styles.messagesList}
-              data={messages}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.messagesWrap}
-              renderItem={renderMessageItem}
+              contentContainerStyle={[
+                styles.messagesWrap,
+                { paddingBottom: messagesBottomPadding },
+                secondBrainScreenStyles.conversationWrap,
+              ]}
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </View>

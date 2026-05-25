@@ -1,6 +1,5 @@
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { theme } from "../theme";
 
 export default function SecondBrainOfflineBanner({
   styles,

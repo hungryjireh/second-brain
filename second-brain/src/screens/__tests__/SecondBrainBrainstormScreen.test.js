@@ -357,6 +357,54 @@ describe("SecondBrainBrainstormScreen", () => {
     });
   });
 
+  it("updates continued entry when leaving without /end", async () => {
+    apiRequest
+      .mockResolvedValueOnce({ reply: "Assistant follow-up" })
+      .mockResolvedValueOnce({ id: 9, title: "Existing title" })
+      .mockResolvedValueOnce({});
+
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { seedEntry: { id: 9, raw_text: "Seed context" } } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "New continued thought",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(view.getByText("Assistant follow-up")).toBeTruthy();
+    });
+
+    await act(async () => {
+      view.unmount();
+    });
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/entries?id=9",
+        expect.objectContaining({
+          method: "PATCH",
+          body: expect.objectContaining({
+            description: expect.stringContaining("New continued thought"),
+          }),
+        }),
+      );
+      const postCalls = apiRequest.mock.calls.filter(
+        ([path, options]) => path === "/entries" && options?.method === "POST",
+      );
+      expect(postCalls).toHaveLength(0);
+    });
+  });
+
   it("does not finalize when leaving without sending any new chat", async () => {
     const view = render(
       <SecondBrainBrainstormScreen
@@ -547,6 +595,31 @@ describe("SecondBrainBrainstormScreen", () => {
     });
   });
 
+  it("splits transcript-shaped seed text into user and assistant bubbles", async () => {
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            seedEntry: {
+              id: 222,
+              raw_text:
+                "User: I want to create an app.\n￼\n\nAssistant: That's a fascinating concept for the app.",
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("I want to create an app.")).toBeTruthy();
+      expect(
+        view.getByText("That's a fascinating concept for the app."),
+      ).toBeTruthy();
+    });
+  });
+
   it("filters empty legacy resumed messages and still renders valid ones", async () => {
     readBrainstormSession.mockResolvedValueOnce({
       id: "legacy-2",
@@ -593,5 +666,137 @@ describe("SecondBrainBrainstormScreen", () => {
       expect(view.getByText("No metadata user message")).toBeTruthy();
       expect(view.getByText("No metadata assistant message")).toBeTruthy();
     });
+  });
+
+  it("saves continued session updates even when resumed session was already wip-saved", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "continued-1",
+      lifecycle: "wip-saved",
+      finalizeGuards: { ended: false, wipSaved: true },
+      messages: [{ role: "user", content: "Existing brainstorm context" }],
+    });
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        return Promise.resolve({ reply: "Follow-up reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 900, title: "Continued result" });
+      }
+      if (path === "/entries?id=900" && options?.method === "PATCH") {
+        return Promise.resolve({});
+      }
+      return Promise.resolve({});
+    });
+
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "continued-1" } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Existing brainstorm context")).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "New continuation message",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      const brainstormCalls = apiRequest.mock.calls.filter(
+        ([path, options]) =>
+          path === "/brainstorm" && options?.method === "POST",
+      );
+      expect(brainstormCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    await act(async () => {
+      view.unmount();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      const finalizeCalls = apiRequest.mock.calls.filter(
+        ([path, options]) => path === "/entries" && options?.method === "POST",
+      );
+      expect(finalizeCalls).toHaveLength(1);
+    });
+  });
+
+  it("persists full continued transcript (existing + new turns) on /end", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "continued-2",
+      lifecycle: "wip-saved",
+      finalizeGuards: { ended: false, wipSaved: true },
+      messages: [
+        { role: "user", content: "Original idea context" },
+        { role: "assistant", content: "Original assistant guidance" },
+      ],
+    });
+
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        return Promise.resolve({ reply: "New assistant response" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 901, title: "Ended result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "continued-2" } }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Original idea context")).toBeTruthy();
+      expect(view.getByText("Original assistant guidance")).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "Continuation from resumed session",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(view.getByText("New assistant response")).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(goBack).toHaveBeenCalled();
+    });
+
+    const finalizeCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/entries" && options?.method === "POST",
+    );
+    expect(finalizeCalls).toHaveLength(1);
+    expect(finalizeCalls[0][1]?.body?.description).toContain(
+      "Original idea context",
+    );
+    expect(finalizeCalls[0][1]?.body?.description).toContain(
+      "Original assistant guidance",
+    );
+    expect(finalizeCalls[0][1]?.body?.description).toContain(
+      "Continuation from resumed session",
+    );
+    expect(finalizeCalls[0][1]?.body?.description).toContain(
+      "New assistant response",
+    );
   });
 });
