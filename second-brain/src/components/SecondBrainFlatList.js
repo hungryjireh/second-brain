@@ -213,7 +213,7 @@ export default function SecondBrainFlatList({
   const listContentContainerStyle = useMemo(
     () => [
       styles.listContent,
-      loadingEntries && groupedRows.length === 0
+      groupedRows.length === 0 && (loadingEntries || hasActiveFilters)
         ? styles.listContentEmpty
         : null,
       pullRefreshing ? { paddingTop: 100 } : null,
@@ -221,6 +221,7 @@ export default function SecondBrainFlatList({
     ],
     [
       groupedRows.length,
+      hasActiveFilters,
       listBottomPadding,
       loadingEntries,
       pullRefreshing,
@@ -238,7 +239,11 @@ export default function SecondBrainFlatList({
       );
     }
     if (hasActiveFilters) {
-      return <Text style={styles.listEmptyText}>No matching entries</Text>;
+      return (
+        <View style={styles.listEmptyCentered}>
+          <Text style={styles.listEmptyText}>No matching entries</Text>
+        </View>
+      );
     }
     return null;
   }, [

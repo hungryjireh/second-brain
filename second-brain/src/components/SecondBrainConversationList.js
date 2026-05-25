@@ -44,6 +44,9 @@ export default function SecondBrainConversationList({
   styles,
   style,
   contentContainerStyle,
+  listRef,
+  onListLayout,
+  onListContentSizeChange,
   maxWebRenderedMessages,
   showWebHiddenMessageNotice = false,
   hiddenMessageNoticeStyle,
@@ -117,8 +120,11 @@ export default function SecondBrainConversationList({
 
   return (
     <FlatList
+      ref={listRef}
       style={style}
       contentContainerStyle={contentContainerStyle}
+      onLayout={onListLayout}
+      onContentSizeChange={onListContentSizeChange}
       data={data}
       keyExtractor={keyExtractor}
       renderItem={renderItem}

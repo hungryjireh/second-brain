@@ -92,6 +92,7 @@ export default function SecondBrainBrainstormScreen({
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [isTypebarFocused, setIsTypebarFocused] = useState(false);
   const finalizedRef = useRef(false);
   const sendInFlightRef = useRef(false);
   const finalizeInFlightRef = useRef({
@@ -100,6 +101,9 @@ export default function SecondBrainBrainstormScreen({
   });
   const sessionRef = useRef(null);
   const initialMessageCountRef = useRef(null);
+  const conversationListRef = useRef(null);
+  const listViewportHeightRef = useRef(0);
+  const listContentHeightRef = useRef(0);
 
   const messages = useMemo(() => session?.messages || [], [session?.messages]);
   const conversationMessages = useMemo(
@@ -176,6 +180,38 @@ export default function SecondBrainBrainstormScreen({
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  function scrollConversationToLatestAssistantTail() {
+    const assistantMessageExists = messages.some(
+      (message) => message?.role === "assistant",
+    );
+    if (!assistantMessageExists) return;
+    const contentHeight = listContentHeightRef.current;
+    const viewportHeight = listViewportHeightRef.current;
+    if (!contentHeight || !viewportHeight) {
+      conversationListRef.current?.scrollToEnd?.({ animated: false });
+      return;
+    }
+    const targetOffset = Math.max(0, contentHeight - viewportHeight);
+    conversationListRef.current?.scrollToOffset?.({
+      offset: targetOffset,
+      animated: false,
+    });
+  }
+
+  useEffect(() => {
+    if (!isTypebarFocused) return undefined;
+    const assistantMessageExists = messages.some(
+      (message) => message?.role === "assistant",
+    );
+    if (!assistantMessageExists) return undefined;
+
+    const timeouts = [setTimeout(scrollConversationToLatestAssistantTail, 0)];
+
+    return () => {
+      timeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    };
+  }, [isTypebarFocused, keyboardOffset, messages]);
 
   async function finalizeSession({ mode, sessionOverride }) {
     const activeSession = sessionOverride || sessionRef.current || session;
@@ -408,7 +444,14 @@ export default function SecondBrainBrainstormScreen({
             }}
             onSubmitDraft={sendMessage}
             closeOpenActionDrawer={noop}
-            setTypebarFocused={noop}
+            setTypebarFocused={(focused) => {
+              setIsTypebarFocused(focused);
+              if (focused) {
+                requestAnimationFrame(() => {
+                  scrollConversationToLatestAssistantTail();
+                });
+              }
+            }}
             isTypebarExpanded={isTypebarExpanded}
             setIsTypebarExpanded={setIsTypebarExpanded}
             isSmallScreen={false}
@@ -447,6 +490,24 @@ export default function SecondBrainBrainstormScreen({
           >
             <View style={styles.container}>
               <SecondBrainConversationList
+                listRef={conversationListRef}
+                onListLayout={(event) => {
+                  listViewportHeightRef.current =
+                    event?.nativeEvent?.layout?.height || 0;
+                  if (isTypebarFocused) {
+                    requestAnimationFrame(() => {
+                      scrollConversationToLatestAssistantTail();
+                    });
+                  }
+                }}
+                onListContentSizeChange={(_, contentHeight) => {
+                  listContentHeightRef.current = contentHeight || 0;
+                  if (isTypebarFocused) {
+                    requestAnimationFrame(() => {
+                      scrollConversationToLatestAssistantTail();
+                    });
+                  }
+                }}
                 messages={conversationMessages}
                 styles={secondBrainScreenStyles}
                 style={styles.messagesList}
