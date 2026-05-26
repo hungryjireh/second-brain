@@ -90,6 +90,24 @@ function buildInitialBrainstormPrompt(seedEntry) {
   return `i want to brainstorm about: ${seedText}`;
 }
 
+function messagesFromPersistedTranscript(seedEntry) {
+  const transcript = parseBrainstormTranscriptFromText(seedEntry?.raw_text);
+  if (!transcript?.messages?.length) return [];
+  const createdAt = new Date().toISOString();
+  return transcript.messages
+    .map((message, index) => {
+      const content = String(message?.text || "").trim();
+      if (!content) return null;
+      return {
+        id: `${createdAt}-persisted-${index}`,
+        role: message.sender === "assistant" ? "assistant" : "user",
+        content,
+        createdAt,
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildEndFinalizePrompt() {
   return [
     "Summarise this conversation between a human and an AI and generate structured entry fields.",
@@ -195,12 +213,23 @@ export default function SecondBrainBrainstormScreen({
         }
       }
       if (!nextSession) {
-        seedPrompt = buildInitialBrainstormPrompt(seedEntry);
+        const persistedMessages = messagesFromPersistedTranscript(seedEntry);
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
           seedText: "",
         });
-        shouldAutoSendSeedPrompt = Boolean(seedPrompt);
+        if (persistedMessages.length) {
+          nextSession = {
+            ...nextSession,
+            messages: persistedMessages,
+            updatedAt:
+              persistedMessages[persistedMessages.length - 1]?.createdAt ||
+              nextSession.updatedAt,
+          };
+        } else {
+          seedPrompt = buildInitialBrainstormPrompt(seedEntry);
+          shouldAutoSendSeedPrompt = Boolean(seedPrompt);
+        }
       }
       const normalizedSession = normalizeSession(nextSession);
       if (!cancelled) {
@@ -359,6 +388,7 @@ export default function SecondBrainBrainstormScreen({
         token,
         body: {
           description: descriptionToSave,
+          raw_text: transcript,
           ...(isEnd && generatedEntryFields.title
             ? { title: generatedEntryFields.title }
             : {}),
@@ -367,7 +397,9 @@ export default function SecondBrainBrainstormScreen({
             : {}),
           ...(isEnd && generatedEntryFields.content
             ? { content: generatedEntryFields.content }
-            : {}),
+            : isEnd && descriptionToSave
+              ? { content: descriptionToSave }
+              : {}),
         },
       });
       if (!isEnd) {
@@ -388,6 +420,7 @@ export default function SecondBrainBrainstormScreen({
       token,
       body: {
         description: descriptionToSave,
+        raw_text: transcript,
         tags: ["brainstorm"],
         ...(isEnd && generatedEntryFields.title
           ? { title: generatedEntryFields.title }
@@ -397,7 +430,9 @@ export default function SecondBrainBrainstormScreen({
           : {}),
         ...(isEnd && generatedEntryFields.content
           ? { content: generatedEntryFields.content }
-          : {}),
+          : isEnd && descriptionToSave
+            ? { content: descriptionToSave }
+            : {}),
       },
     });
     if (created?.id) {

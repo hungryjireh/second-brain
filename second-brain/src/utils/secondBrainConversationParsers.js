@@ -116,7 +116,8 @@ export function parseImportedConversationFromEntry(entry) {
 }
 
 export function parseBrainstormTranscriptFromEntry(entry) {
-  return parseBrainstormTranscriptFromText(
-    entry?.description ?? entry?.raw_text,
+  return (
+    parseBrainstormTranscriptFromText(entry?.raw_text) ||
+    parseBrainstormTranscriptFromText(entry?.description)
   );
 }

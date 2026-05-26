@@ -447,6 +447,68 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getAllByText("Assistant").length).toBeGreaterThan(0);
   });
 
+  it("prefers the persisted entry transcript over a divergent local brainstorm session", async () => {
+    const entry = {
+      id: 89,
+      title: "Brainstorm canonical",
+      raw_text:
+        "User: Server-side brainstorm prompt\n\nAssistant: Server-side brainstorm answer",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-divergent");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-divergent",
+      messages: [
+        { role: "user", content: "Local-only prompt" },
+        { role: "assistant", content: "Local-only answer" },
+      ],
+    });
+
+    const { getAllByText, getByTestId, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    expect(
+      getAllByText("Server-side brainstorm prompt").length,
+    ).toBeGreaterThan(0);
+    expect(
+      getAllByText("Server-side brainstorm answer").length,
+    ).toBeGreaterThan(0);
+    expect(queryByText("Local-only prompt")).toBeNull();
+    expect(queryByText("Local-only answer")).toBeNull();
+  });
+
+  it("shows persisted brainstorm summary content without a local ended session", async () => {
+    const entry = {
+      id: 90,
+      title: "Brainstorm persisted summary",
+      summary: "A concise persisted summary.",
+      content: "Clean persisted brainstorm summary body.",
+      raw_text:
+        "User: Persisted conversation prompt\n\nAssistant: Persisted conversation answer",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("");
+
+    const { getByText, getByTestId, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+
+    expect(getByText("A concise persisted summary.")).toBeTruthy();
+    expect(queryByText("Clean persisted brainstorm summary body.")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-summary-toggle"));
+    expect(getByText("Clean persisted brainstorm summary body.")).toBeTruthy();
+  });
+
   it("uses a full-page ScrollView for brainstorm entries", async () => {
     const entry = {
       id: 1888,
@@ -586,6 +648,65 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("JSON Summary Title")).toBeTruthy();
     expect(getByText("JSON summary line.")).toBeTruthy();
     expect(queryByText(/```json/)).toBeNull();
+  });
+
+  it("unwraps fenced JSON when payload is stored in content", async () => {
+    const entry = {
+      id: 8923,
+      title: "Legacy title",
+      description: "Plain fallback description",
+      content:
+        '```json\n{"description":"# Conversation Summary\\nContent payload summary.","title":"JSON Content Title","summary":"JSON content summary line.","content":"Clean content body."}\n```',
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-8923");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-8923",
+      lifecycle: "ended",
+      messages: [{ role: "assistant", content: "Conversation available." }],
+    });
+
+    const { getByText, queryByText, getByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+    });
+
+    expect(getByText("JSON Content Title")).toBeTruthy();
+    expect(getByText("JSON content summary line.")).toBeTruthy();
+    expect(queryByText(/```json/)).toBeNull();
+  });
+
+  it("unwraps raw structured JSON when payload is stored in raw_text", async () => {
+    const entry = {
+      id: 8924,
+      title: "Legacy title",
+      raw_text: `{
+  "title": "Raw Text JSON Title",
+  "summary": "Raw text JSON summary.",
+  "description": "# Conversation Summary
+Raw text JSON description."
+}`,
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-8924");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-8924",
+      lifecycle: "ended",
+      messages: [{ role: "assistant", content: "Conversation available." }],
+    });
+
+    const { getByText, queryByText, getByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+    });
+
+    expect(getByText("Raw Text JSON Title")).toBeTruthy();
+    expect(getByText("Raw text JSON summary.")).toBeTruthy();
+    expect(queryByText(/"title"/)).toBeNull();
   });
 
   it("does not show summary dropdown for brainstorm notes that never ended", async () => {

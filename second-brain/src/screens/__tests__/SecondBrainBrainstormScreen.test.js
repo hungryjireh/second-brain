@@ -170,6 +170,7 @@ describe("SecondBrainBrainstormScreen", () => {
         method: "POST",
         body: expect.objectContaining({
           description: expect.stringContaining("## Key points/decisions"),
+          raw_text: expect.stringContaining("First idea"),
           tags: ["brainstorm"],
           title: "Second pass title",
           summary: "Second pass summary sentence.",
@@ -488,6 +489,82 @@ Decided on a simple walk-through format without scripted dialogue."
       }),
     );
     expect(createCalls[0][1]?.body?.description).not.toContain("```");
+  });
+
+  it("parses /end structured payloads that omit content", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: `{
+  "title": "Personal Knowledge App Brainstorming",
+  "summary": "Developing a concept for a short-form video.",
+  "description": "# Conversation Summary
+A user brainstormed a short-form video concept."
+}`,
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1115, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need missing content finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, requestOptions]) =>
+        path === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        title: "Personal Knowledge App Brainstorming",
+        summary: "Developing a concept for a short-form video.",
+        description:
+          "# Conversation Summary\nA user brainstormed a short-form video concept.",
+        content:
+          "# Conversation Summary\nA user brainstormed a short-form video concept.",
+      }),
+    );
   });
 
   it("marks session with ended-summary metadata after /end", async () => {
@@ -1197,7 +1274,7 @@ Decided on a simple walk-through format without scripted dialogue."
     });
   });
 
-  it("starts non-brainstorm notes with the required brainstorm prompt", async () => {
+  it("rehydrates persisted brainstorm-looking notes instead of re-prompting", async () => {
     const view = render(
       <SecondBrainBrainstormScreen
         route={{
@@ -1215,13 +1292,15 @@ Decided on a simple walk-through format without scripted dialogue."
     );
 
     await waitFor(() => {
+      expect(view.getByText("I want to create an app.")).toBeTruthy();
       expect(
-        view.getByText(
-          "i want to brainstorm about: User: I want to create an app.",
-        ),
+        view.getByText("That's a fascinating concept for the app."),
       ).toBeTruthy();
-      expect(view.getByText("Assistant reply")).toBeTruthy();
     });
+    const brainstormCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
+    );
+    expect(brainstormCalls).toHaveLength(0);
   });
 
   it("uses only raw_text for the initial brainstorm prompt", async () => {
@@ -1287,6 +1366,38 @@ Decided on a simple walk-through format without scripted dialogue."
       ([path, options]) => path === "/brainstorm" && options?.method === "POST",
     );
     expect(brainstormCalls).toHaveLength(0);
+  });
+
+  it("rehydrates a persisted brainstorm transcript without auto-sending it", async () => {
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            seedEntry: {
+              id: 42,
+              raw_text:
+                "User: Existing persisted idea\n\nAssistant: Existing persisted answer",
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Existing persisted idea")).toBeTruthy();
+      expect(view.getByText("Existing persisted answer")).toBeTruthy();
+    });
+
+    const brainstormCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
+    );
+    expect(brainstormCalls).toHaveLength(0);
+    expect(createBrainstormSession).toHaveBeenCalledWith({
+      entryId: 42,
+      seedText: "",
+    });
   });
 
   it("filters empty legacy resumed messages and still renders valid ones", async () => {

@@ -168,11 +168,14 @@ export default function SecondBrainEntryDetailsScreen({
   );
   const displayedConversation =
     importedConversation ||
-    brainstormConversation ||
-    brainstormTranscriptConversation;
+    brainstormTranscriptConversation ||
+    brainstormConversation;
+  const hasPersistedBrainstormConversation = Boolean(
+    !importedConversation && brainstormTranscriptConversation,
+  );
   const isBrainstormGeneratedEntry = Boolean(
     !importedConversation &&
-    (brainstormConversation || brainstormTranscriptConversation),
+    (brainstormTranscriptConversation || brainstormConversation),
   );
   const categoryTag =
     CATEGORY_TAG_STYLES[entry?.category] ?? CATEGORY_TAG_STYLES.note;
@@ -180,18 +183,38 @@ export default function SecondBrainEntryDetailsScreen({
     () => getStructuredPayloadFromEntry(entry),
     [entry],
   );
+  const persistedBrainstormSummaryBody = useMemo(() => {
+    if (!hasPersistedBrainstormConversation) return "";
+    const contentText = String(entry?.content || "").trim();
+    if (!contentText) return "";
+    const rawText = String(entry?.raw_text || "").trim();
+    const descriptionText = String(entry?.description || "").trim();
+    if (contentText === rawText || contentText === descriptionText) return "";
+    return contentText;
+  }, [
+    entry?.content,
+    entry?.description,
+    entry?.raw_text,
+    hasPersistedBrainstormConversation,
+  ]);
   const title =
     structuredPayload?.title || entry?.title || entry?.content || "Untitled";
   const summary =
     structuredPayload?.summary ||
-    (entry?.content === null ? entry?.summary || "" : entry?.content || "");
-  const body =
+    (!isBrainstormGeneratedEntry &&
+    entry?.content !== null &&
+    entry?.content !== undefined
+      ? entry.content
+      : entry?.summary || "");
+  const fallbackBody =
     structuredPayload?.description ||
     entry?.description ||
     entry?.raw_text ||
     entry?.content ||
     "";
+  const body = persistedBrainstormSummaryBody || fallbackBody;
   const hasBrainstormEnded = Boolean(
+    persistedBrainstormSummaryBody ||
     brainstormSessionMeta?.hasEndedSummary ||
     brainstormSessionMeta?.lifecycle === "ended" ||
     brainstormSessionMeta?.finalizeGuards?.ended,

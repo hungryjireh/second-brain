@@ -381,6 +381,8 @@ export default async function handler(req, res) {
       title: requestedTitle,
       summary: requestedSummary,
       content: requestedContent,
+      raw_text: requestedRawText,
+      rawText: requestedRawTextCamel,
     } = req.body ?? {};
     const sourceDescription = description ?? text;
     if (typeof sourceDescription !== "string" || !sourceDescription.trim())
@@ -392,6 +394,15 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "summary must be a string" });
     if (requestedContent !== undefined && typeof requestedContent !== "string")
       return json(res, 400, { error: "content must be a string" });
+    const requestedRawTextSource =
+      requestedRawText !== undefined ? requestedRawText : requestedRawTextCamel;
+    if (
+      requestedRawTextSource !== undefined &&
+      (typeof requestedRawTextSource !== "string" ||
+        !requestedRawTextSource.trim())
+    ) {
+      return json(res, 400, { error: "raw_text must be a non-empty string" });
+    }
 
     const validCategories = new Set(["reminder", "todo", "thought", "note"]);
     if (
@@ -432,11 +443,13 @@ export default async function handler(req, res) {
         requestedContent !== undefined
           ? requestedContent.trim()
           : (parsedStructuredSource?.content || "").trim();
+      const rawTextOverride =
+        requestedRawTextSource !== undefined
+          ? normalizeMarkdownBullets(requestedRawTextSource).trim()
+          : "";
 
       const hasExplicitStructuredOverrides =
-        requestedTitle !== undefined &&
-        requestedSummary !== undefined &&
-        requestedContent !== undefined;
+        requestedTitle !== undefined && requestedSummary !== undefined;
       if (
         (parsedStructuredSource || hasExplicitStructuredOverrides) &&
         titleOverride &&
@@ -451,7 +464,7 @@ export default async function handler(req, res) {
           : parsedTags;
         const entry = await insertEntry({
           userId,
-          raw_text: derived.raw_text,
+          raw_text: rawTextOverride || derived.raw_text,
           category: finalCategory,
           title: titleOverride,
           summary: summaryOverride,
@@ -494,7 +507,7 @@ export default async function handler(req, res) {
         : candidateTags;
       const entry = await insertEntry({
         userId,
-        raw_text: classifiedDerived.raw_text,
+        raw_text: rawTextOverride || classifiedDerived.raw_text,
         category: finalCategory,
         title:
           titleOverride || compactWhitespace(title) || classifiedDerived.title,
@@ -561,7 +574,10 @@ export default async function handler(req, res) {
       updates.category = category;
     }
 
-    const nextDescriptionSource = description ?? rawText ?? raw_text;
+    const explicitRawTextSource = raw_text ?? rawText;
+    const nextDescriptionSource =
+      description ??
+      (explicitRawTextSource === undefined ? undefined : explicitRawTextSource);
     if (nextDescriptionSource !== undefined) {
       if (
         typeof nextDescriptionSource !== "string" ||
@@ -590,6 +606,16 @@ export default async function handler(req, res) {
       if (parsedStructuredSource?.content) {
         updates.content = parsedStructuredSource.content.trim() || null;
       }
+    }
+
+    if (description !== undefined && explicitRawTextSource !== undefined) {
+      if (
+        typeof explicitRawTextSource !== "string" ||
+        !explicitRawTextSource.trim()
+      ) {
+        return json(res, 400, { error: "raw_text must be a non-empty string" });
+      }
+      updates.raw_text = normalizeMarkdownBullets(explicitRawTextSource).trim();
     }
 
     if (title !== undefined) {

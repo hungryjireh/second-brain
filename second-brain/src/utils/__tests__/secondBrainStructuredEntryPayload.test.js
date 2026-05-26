@@ -25,4 +25,29 @@ Decided on a simple walk-through format without scripted dialogue."
         "Created a concept for a short-form video content featuring a team member's 'A Day in the Life' experience.\nDecided on a lighthearted tone, short length, and a simple walk-through format.\nDiscussed adding fun elements such as quick cuts, upbeat music, and visual breaks.\nDecided on a simple walk-through format without scripted dialogue.",
     });
   });
+
+  it("parses title-first payloads without content", () => {
+    const payload = parseStructuredEntryPayload(`{
+  "title": "Personal Knowledge App Brainstorming",
+  "summary": "Developing a concept for a short-form video.",
+  "description": "# Conversation Summary
+A user brainstormed a short-form video concept."
+}`);
+
+    expect(payload).toEqual({
+      description:
+        "# Conversation Summary\nA user brainstormed a short-form video concept.",
+      title: "Personal Knowledge App Brainstorming",
+      summary: "Developing a concept for a short-form video.",
+      content: "",
+    });
+  });
+
+  it("returns null for plain markdown notes", () => {
+    expect(
+      parseStructuredEntryPayload(
+        "# Conversation Summary\nA plain markdown summary.",
+      ),
+    ).toBeNull();
+  });
 });
