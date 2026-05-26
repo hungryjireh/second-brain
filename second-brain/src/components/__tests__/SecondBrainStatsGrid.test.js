@@ -79,7 +79,7 @@ describe("SecondBrainStatsGrid", () => {
     expect(setNext("todo")).toBe("note");
   });
 
-  it("keeps active stat symbol/count/label in light text color", () => {
+  it("keeps active stat count/label in light text color", () => {
     const { getByText } = renderGrid({
       activeCategory: "todo",
       counts: { reminder: 2, todo: 3, thought: 4, note: 5 },
@@ -87,7 +87,6 @@ describe("SecondBrainStatsGrid", () => {
 
     const todoLabelStyle = getByText("TODOs").props.style;
     const todoCountStyle = getByText("3").props.style;
-    const todoSymbolStyle = getByText("◻").props.style;
 
     expect(todoLabelStyle).toEqual(
       expect.arrayContaining([
@@ -95,11 +94,6 @@ describe("SecondBrainStatsGrid", () => {
       ]),
     );
     expect(todoCountStyle).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ color: theme.colors.textLight }),
-      ]),
-    );
-    expect(todoSymbolStyle).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ color: theme.colors.textLight }),
       ]),

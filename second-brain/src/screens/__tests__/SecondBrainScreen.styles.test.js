@@ -46,6 +46,21 @@ describe("SecondBrainScreen responsive styles", () => {
     expect(titleRow.alignItems).toBe("center");
   });
 
+  it("defines detail-screen spacing between summary, created meta, and tags", () => {
+    const titleRow = StyleSheet.flatten(styles.entryDetailsTitleRow);
+    const summary = StyleSheet.flatten(styles.entryDetailsSummary);
+    const createdMetaRow = StyleSheet.flatten(
+      styles.entryDetailsCreatedMetaRow,
+    );
+    const tagsRow = StyleSheet.flatten(styles.entryDetailsTagsRow);
+
+    expect(titleRow.marginTop).toBe(10);
+    expect(summary.marginTop).toBe(10);
+    expect(summary.marginBottom).toBeUndefined();
+    expect(createdMetaRow.marginTop).toBe(10);
+    expect(tagsRow.marginTop).toBe(10);
+  });
+
   it("keeps typebar tooltips wide enough to avoid character-by-character wrapping", () => {
     const tooltip = StyleSheet.flatten(styles.typebarTooltip);
     const tooltipText = StyleSheet.flatten(styles.typebarTooltipText);

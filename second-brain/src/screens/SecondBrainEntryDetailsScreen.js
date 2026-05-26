@@ -526,13 +526,21 @@ export default function SecondBrainEntryDetailsScreen({
           </View>
           <View
             testID="entry-title-row"
-            style={[styles.entryPanelTitleRow, styles.entryPanelTitleRowLarge]}
+            style={[
+              styles.entryPanelTitleRow,
+              styles.entryPanelTitleRowLarge,
+              styles.entryDetailsTitleRow,
+            ]}
           >
             <Text style={styles.entryPanelTitle}>{title}</Text>
           </View>
-          <Text style={styles.entryPanelSummary}>{summary}</Text>
+          <Text style={[styles.entryPanelSummary, styles.entryDetailsSummary]}>
+            {summary}
+          </Text>
           {createdLabel ? (
-            <View style={styles.metaInfoRow}>
+            <View
+              style={[styles.metaInfoRow, styles.entryDetailsCreatedMetaRow]}
+            >
               <Text style={styles.metaText}>{`Created ${createdLabel}`}</Text>
             </View>
           ) : null}
@@ -546,7 +554,7 @@ export default function SecondBrainEntryDetailsScreen({
               </View>
             </View>
           ) : null}
-          <View style={styles.entryPanelTags}>
+          <View style={[styles.entryPanelTags, styles.entryDetailsTagsRow]}>
             {parsedEntryTags.map((tagName) => (
               <View
                 key={tagName}

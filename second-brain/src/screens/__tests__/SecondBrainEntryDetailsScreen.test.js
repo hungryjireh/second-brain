@@ -256,6 +256,29 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText(/ · /)).toBeTruthy();
   });
 
+  it("applies extra spacing to the summary text block", () => {
+    const entry = {
+      id: 808,
+      title: "Spaced entry",
+      summary: "Spacing summary",
+      raw_text: "Body",
+      created_at: 1710000000,
+      tags: ["spacing"],
+    };
+
+    const { getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    const summaryText = getByText("Spacing summary");
+    const summaryStyle = ReactNative.StyleSheet.flatten(
+      summaryText.props.style,
+    );
+
+    expect(summaryStyle.marginTop).toBe(10);
+    expect(summaryStyle.marginBottom).toBeUndefined();
+  });
+
   it("does not render the in-page back button", () => {
     const { queryByLabelText } = render(
       <SecondBrainEntryDetailsScreen

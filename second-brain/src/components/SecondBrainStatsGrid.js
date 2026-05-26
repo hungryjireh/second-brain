@@ -6,7 +6,6 @@ const STATS = [
     key: "reminder",
     label: "Reminders",
     color: theme.colors.brand,
-    symbol: "◎",
     cardBackgroundColor: "#DDEEE5",
     borderColor: "#58D0A0",
     labelColor: "#8B9AB2",
@@ -15,7 +14,6 @@ const STATS = [
     key: "todo",
     label: "TODOs",
     color: theme.colors.todo,
-    symbol: "◻",
     cardBackgroundColor: "#DCE7F6",
     borderColor: "#7FB1F2",
     labelColor: "#8494AE",
@@ -24,7 +22,6 @@ const STATS = [
     key: "thought",
     label: "Thoughts",
     color: theme.colors.thought,
-    symbol: "◈",
     cardBackgroundColor: "#E7E4F4",
     borderColor: "#B1A2EE",
     labelColor: "#8494AE",
@@ -33,7 +30,6 @@ const STATS = [
     key: "note",
     label: "Notes",
     color: theme.colors.note,
-    symbol: "◇",
     cardBackgroundColor: "#F1ECD9",
     borderColor: "#E6BA35",
     labelColor: "#8494AE",
@@ -87,14 +83,6 @@ export default function SecondBrainStatsGrid({
                 pressed || isActive ? theme.colors.textLight : null;
               return (
                 <>
-                  <Text
-                    style={[
-                      styles.statSymbol,
-                      { color: activeTextColor ?? stat.color },
-                    ]}
-                  >
-                    {stat.symbol}
-                  </Text>
                   <Text
                     style={[
                       styles.statCount,

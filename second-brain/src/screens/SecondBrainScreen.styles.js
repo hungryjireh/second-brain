@@ -1061,6 +1061,9 @@ const styles = StyleSheet.create({
   entryPanelTitleRowLarge: {
     minHeight: 32,
   },
+  entryDetailsTitleRow: {
+    marginTop: 10,
+  },
   entryPanelInlineActionsLarge: {
     width: "auto",
     marginBottom: 0,
@@ -1088,6 +1091,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexShrink: 1,
   },
+  entryDetailsSummary: {
+    marginTop: 10,
+  },
   entryCategoryMetaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1105,6 +1111,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexWrap: "wrap",
+  },
+  entryDetailsTagsRow: {
+    marginTop: 10,
   },
   entryPanelBodyWrap: {
     flexShrink: 1,
@@ -1355,6 +1364,9 @@ const styles = StyleSheet.create({
     gap: 8,
     minWidth: 0,
     flexShrink: 1,
+  },
+  entryDetailsCreatedMetaRow: {
+    marginTop: 10,
   },
   metaInfoCol: {
     minWidth: 0,
