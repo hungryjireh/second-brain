@@ -92,6 +92,22 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("+ tag")).toBeTruthy();
   });
 
+  it("uses a full-page ScrollView for regular entries", () => {
+    const entry = {
+      id: 420,
+      title: "Full-page scrolling",
+      summary: "Header should scroll",
+      raw_text: "Body copy",
+      tags: ["ux"],
+    };
+
+    const view = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    expect(view.UNSAFE_getAllByType(ReactNative.ScrollView)).toHaveLength(1);
+  });
+
   it("adds a tag inline when pressing the + tag flow", async () => {
     const entry = {
       id: 76,
@@ -278,7 +294,7 @@ describe("SecondBrainEntryDetailsScreen", () => {
     expect(getByText("Attachment 1")).toBeTruthy();
   });
 
-  it("renders conversation in FlatList with virtualization tuning props", () => {
+  it("uses a full-page ScrollView for imported conversations", () => {
     const entry = {
       title: "Virtualized conversation",
       raw_text: JSON.stringify({
@@ -294,13 +310,9 @@ describe("SecondBrainEntryDetailsScreen", () => {
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
-    const conversationList = view.UNSAFE_getByType(ReactNative.FlatList);
-    expect(conversationList.props.initialNumToRender).toBe(10);
-    expect(conversationList.props.maxToRenderPerBatch).toBe(10);
-    expect(conversationList.props.windowSize).toBe(7);
-    expect(conversationList.props.removeClippedSubviews).toBe(true);
-    expect(typeof conversationList.props.renderItem).toBe("function");
-    expect(typeof conversationList.props.keyExtractor).toBe("function");
+    expect(view.UNSAFE_getAllByType(ReactNative.ScrollView)).toHaveLength(1);
+    expect(view.queryByText("Message one")).toBeTruthy();
+    expect(view.queryByText("Message two")).toBeTruthy();
   });
 
   it("renders assistant conversation bubble with bgSurface background", () => {
@@ -382,22 +394,13 @@ describe("SecondBrainEntryDetailsScreen", () => {
         <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
       );
       const { getByText, queryByText } = view;
-      const conversationList = view.UNSAFE_getByType(ReactNative.FlatList);
-      const noticeRow = conversationList.props.data.find(
-        (item) => item.isNotice,
-      );
 
       expect(getByText("Conversation message 0")).toBeTruthy();
       expect(queryByText("Conversation message 204")).toBeNull();
-      expect(conversationList.props.data).toHaveLength(201);
+      expect(getByText("Conversation message 199")).toBeTruthy();
       expect(
-        conversationList.props.data.some(
-          (item) => item.text === "Conversation message 199",
-        ),
-      ).toBe(true);
-      expect(noticeRow?.text).toBe(
-        "Showing first 200 messages on web for performance.",
-      );
+        getByText("Showing first 200 messages on web for performance."),
+      ).toBeTruthy();
     } finally {
       Object.defineProperty(ReactNative.Platform, "OS", {
         configurable: true,
@@ -421,17 +424,285 @@ describe("SecondBrainEntryDetailsScreen", () => {
       ],
     });
 
-    const { getByText, queryByText } = render(
+    const { getAllByText, getByTestId, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("Help me brainstorm launch ideas.")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
-    expect(getByText("Start with 3 launch themes.")).toBeTruthy();
-    expect(getByText("You")).toBeTruthy();
-    expect(getByText("Assistant")).toBeTruthy();
     expect(queryByText("User: old transcript text")).toBeNull();
+    expect(queryByText("Help me brainstorm launch ideas.")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(
+        getAllByText("Help me brainstorm launch ideas.").length,
+      ).toBeGreaterThan(0);
+    });
+    expect(getAllByText("Start with 3 launch themes.").length).toBeGreaterThan(
+      0,
+    );
+    expect(getAllByText("You").length).toBeGreaterThan(0);
+    expect(getAllByText("Assistant").length).toBeGreaterThan(0);
+  });
+
+  it("uses a full-page ScrollView for brainstorm entries", async () => {
+    const entry = {
+      id: 1888,
+      title: "Brainstorm scrolling",
+      raw_text: "User: seed",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-scroll");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-scroll",
+      messages: [{ role: "assistant", content: "Keep scrolling" }],
+    });
+
+    const view = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+    expect(view.UNSAFE_getAllByType(ReactNative.ScrollView)).toHaveLength(1);
+  });
+
+  it("shows brainstorm summary dropdown collapsed by default", async () => {
+    const entry = {
+      id: 890,
+      title: "Brainstorm summary",
+      description:
+        "## Key points/decisions\n- Picked launch angle.\n\n## Follow-up actions\n- Draft landing page copy.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-890");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-890",
+      lifecycle: "ended",
+      messages: [
+        { role: "assistant", content: "Conversation stays available." },
+      ],
+    });
+
+    const { getByTestId, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+    expect(queryByText("Key points/decisions")).toBeNull();
+    expect(queryByText("Picked launch angle.")).toBeNull();
+  });
+
+  it("renders brainstorm summary markdown when expanded", async () => {
+    const entry = {
+      id: 891,
+      title: "Brainstorm summary markdown",
+      description:
+        "## Key points/decisions\n- **Picked** launch angle.\n\n## Follow-up actions\n- Draft landing page copy.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-891");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-891",
+      lifecycle: "ended",
+      messages: [
+        { role: "assistant", content: "Conversation stays available." },
+      ],
+    });
+
+    const { getByTestId, getByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+    });
+    fireEvent.press(getByTestId("brainstorm-summary-toggle"));
+
+    expect(getByText("Key points/decisions")).toBeTruthy();
+    expect(getByText("Picked")).toBeTruthy();
+    expect(getByText("Follow-up actions")).toBeTruthy();
+    expect(getByText("Draft landing page copy.")).toBeTruthy();
+    expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+  });
+
+  it("unwraps JSON summary payload in details rendering", async () => {
+    const entry = {
+      id: 8921,
+      title: "Legacy title",
+      description:
+        '``` json\n{"description":"# Conversation Summary\\nOne human and AI discussed app ideas.","title":"Knowledge App Brainstorming","summary":"A human and AI discussed marketing ideas.","content":"Conversation cleaned note."}\n```',
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-8921");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-8921",
+      lifecycle: "ended",
+      messages: [{ role: "assistant", content: "Conversation available." }],
+    });
+
+    const { getByTestId, getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+    });
+
+    expect(getByText("Knowledge App Brainstorming")).toBeTruthy();
+    expect(getByText("A human and AI discussed marketing ideas.")).toBeTruthy();
+    expect(queryByText(/```/)).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-summary-toggle"));
+    expect(getByText("Conversation Summary")).toBeTruthy();
+    expect(getByText("One human and AI discussed app ideas.")).toBeTruthy();
+  });
+
+  it("unwraps fenced JSON when payload is stored in summary", async () => {
+    const entry = {
+      id: 8922,
+      title: "Legacy title",
+      description: "Plain fallback description",
+      summary:
+        '```json\n{"description":"# Conversation Summary\\nSummary from JSON payload.","title":"JSON Summary Title","summary":"JSON summary line.","content":"Clean content."}\n```',
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-8922");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-8922",
+      lifecycle: "ended",
+      messages: [{ role: "assistant", content: "Conversation available." }],
+    });
+
+    const { getByText, queryByText, getByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+    });
+
+    expect(getByText("JSON Summary Title")).toBeTruthy();
+    expect(getByText("JSON summary line.")).toBeTruthy();
+    expect(queryByText(/```json/)).toBeNull();
+  });
+
+  it("does not show summary dropdown for brainstorm notes that never ended", async () => {
+    const entry = {
+      id: 892,
+      title: "Brainstorm without end",
+      description:
+        "## Key points/decisions\n- Draft text exists.\n\n## Follow-up actions\n- None.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-892");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-892",
+      lifecycle: "wip-saved",
+      finalizeGuards: { ended: false, wipSaved: true },
+      messages: [{ role: "assistant", content: "Conversation is available." }],
+    });
+
+    const { getByTestId, queryByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+    expect(queryByTestId("brainstorm-summary-toggle")).toBeNull();
+  });
+
+  it("shows summary dropdown for resumed brainstorm notes that previously ended", async () => {
+    const entry = {
+      id: 893,
+      title: "Brainstorm resumed after end",
+      description:
+        "## Key points/decisions\n- Persisted summary.\n\n## Follow-up actions\n- Follow through.",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-893");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-893",
+      lifecycle: "active",
+      hasEndedSummary: true,
+      finalizeGuards: { ended: false, wipSaved: false },
+      messages: [{ role: "assistant", content: "Conversation is available." }],
+    });
+
+    const { getByTestId } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-summary-toggle")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+  });
+
+  it("keeps brainstorm conversation hidden by default when collapsed", async () => {
+    const entry = {
+      id: 188,
+      title: "Collapsed by default",
+      raw_text: "User: seed",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-hidden");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-hidden",
+      messages: [
+        { role: "user", content: "Hidden brainstorm user message" },
+        { role: "assistant", content: "Hidden brainstorm assistant message" },
+      ],
+    });
+
+    const { getByTestId, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+    expect(queryByText("Hidden brainstorm user message")).toBeNull();
+    expect(queryByText("Hidden brainstorm assistant message")).toBeNull();
+    expect(queryByText("You")).toBeNull();
+    expect(queryByText("Assistant")).toBeNull();
+  });
+
+  it("hides brainstorm conversation again after collapsing from expanded state", async () => {
+    const entry = {
+      id: 189,
+      title: "Collapse toggle behavior",
+      raw_text: "User: seed",
+    };
+    getLinkedBrainstormSessionId.mockResolvedValue("session-toggle");
+    readBrainstormSession.mockResolvedValue({
+      id: "session-toggle",
+      messages: [
+        { role: "user", content: "Toggle user message" },
+        { role: "assistant", content: "Toggle assistant message" },
+      ],
+    });
+
+    const { getByTestId, getByText, queryByText } = render(
+      <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(getByText("Toggle user message")).toBeTruthy();
+    });
+    expect(getByText("Toggle assistant message")).toBeTruthy();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(queryByText("Toggle user message")).toBeNull();
+    });
+    expect(queryByText("Toggle assistant message")).toBeNull();
+    expect(queryByText("You")).toBeNull();
+    expect(queryByText("Assistant")).toBeNull();
   });
 
   it("prefers imported chat payload over linked brainstorm session messages", async () => {
@@ -504,16 +775,24 @@ describe("SecondBrainEntryDetailsScreen", () => {
       ],
     });
 
-    const { getByText, queryByText } = render(
+    const { getAllByText, getByTestId, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("Useful assistant response")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
     expect(queryByText("Raw body should not render")).toBeNull();
+    expect(queryByText("Useful assistant response")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(getAllByText("Useful assistant response").length).toBeGreaterThan(
+        0,
+      );
+    });
     expect(queryByText(/^You$/)).toBeNull();
-    expect(getByText("Assistant")).toBeTruthy();
+    expect(getAllByText("Assistant").length).toBeGreaterThan(0);
   });
 
   it("renders brainstorm transcript-style entry text as conversation bubbles", async () => {
@@ -525,22 +804,25 @@ describe("SecondBrainEntryDetailsScreen", () => {
     };
     getLinkedBrainstormSessionId.mockResolvedValue("");
 
-    const { getByText, getAllByText, queryByText } = render(
+    const { getAllByText, getByTestId, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("I need launch messaging ideas.")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
-    expect(getByText("Start with customer pain points.")).toBeTruthy();
-    expect(getByText("Give me examples.")).toBeTruthy();
-    expect(getAllByText(/^You$/).length).toBe(2);
-    expect(getByText("Assistant")).toBeTruthy();
+    expect(queryByText("I need launch messaging ideas.")).toBeNull();
+    expect(queryByText("Start with customer pain points.")).toBeNull();
+    expect(queryByText("Give me examples.")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
     expect(
-      queryByText(
-        "User: I need launch messaging ideas.\n\nAssistant: Start with customer pain points.\n\nUser: Give me examples.",
-      ),
-    ).toBeNull();
+      getAllByText("Start with customer pain points.").length,
+    ).toBeGreaterThan(0);
+    expect(getAllByText("Give me examples.").length).toBeGreaterThan(0);
+    expect(getAllByText(/^You$/).length).toBeGreaterThan(1);
+    expect(getAllByText("Assistant").length).toBeGreaterThan(0);
+    expect(queryByText("User: I need launch messaging ideas.")).toBeNull();
   });
 
   it("supports multiline brainstorm transcript chunks", async () => {
@@ -552,17 +834,19 @@ describe("SecondBrainEntryDetailsScreen", () => {
     };
     getLinkedBrainstormSessionId.mockResolvedValue("");
 
-    const { getByText } = render(
+    const { getAllByText, getByTestId } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("I need a plan.")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
-    expect(getByText("This is extra context.")).toBeTruthy();
-    expect(getByText("Here are options.")).toBeTruthy();
-    expect(getByText("1) Option one")).toBeTruthy();
-    expect(getByText("2) Option two")).toBeTruthy();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    expect(getAllByText("This is extra context.").length).toBeGreaterThan(0);
+    expect(getAllByText("Here are options.").length).toBeGreaterThan(0);
+    expect(getAllByText("1) Option one").length).toBeGreaterThan(0);
+    expect(getAllByText("2) Option two").length).toBeGreaterThan(0);
   });
 
   it("parses transcript fallback from raw_text when description is missing", async () => {
@@ -573,16 +857,23 @@ describe("SecondBrainEntryDetailsScreen", () => {
     };
     getLinkedBrainstormSessionId.mockResolvedValue("");
 
-    const { getByText } = render(
+    const { getAllByText, getByTestId, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("First thought")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
-    expect(getByText("Helpful response")).toBeTruthy();
-    expect(getByText("You")).toBeTruthy();
-    expect(getByText("Assistant")).toBeTruthy();
+    expect(queryByText("First thought")).toBeNull();
+    expect(queryByText("Helpful response")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(getAllByText("First thought").length).toBeGreaterThan(0);
+    });
+    expect(getAllByText("Helpful response").length).toBeGreaterThan(0);
+    expect(getAllByText("You").length).toBeGreaterThan(0);
+    expect(getAllByText("Assistant").length).toBeGreaterThan(0);
   });
 
   it("falls back to raw body when transcript chunks do not use role prefixes", async () => {
@@ -617,14 +908,21 @@ describe("SecondBrainEntryDetailsScreen", () => {
       messages: [{ role: "user", content: "   " }],
     });
 
-    const { getByText } = render(
+    const { getAllByText, getByTestId, queryByText } = render(
       <SecondBrainEntryDetailsScreen route={{ params: { entry } }} />,
     );
 
     await waitFor(() => {
-      expect(getByText("Plan launch")).toBeTruthy();
+      expect(getByTestId("brainstorm-conversation-toggle")).toBeTruthy();
     });
-    expect(getByText("Draft launch pillars")).toBeTruthy();
+    expect(queryByText("Plan launch")).toBeNull();
+    expect(queryByText("Draft launch pillars")).toBeNull();
+
+    fireEvent.press(getByTestId("brainstorm-conversation-toggle"));
+    await waitFor(() => {
+      expect(getAllByText("Plan launch").length).toBeGreaterThan(0);
+    });
+    expect(getAllByText("Draft launch pillars").length).toBeGreaterThan(0);
   });
 
   it("does not force conversation rendering for a single-role transcript-like body", async () => {

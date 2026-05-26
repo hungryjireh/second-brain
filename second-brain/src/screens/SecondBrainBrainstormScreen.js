@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +14,7 @@ import SecondBrainConversationList from "../components/SecondBrainConversationLi
 import { apiRequest } from "../api";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormTranscriptFromText } from "../utils/secondBrainConversationParsers";
+import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
 import {
   createBrainstormSession,
   getLinkedBrainstormSessionId,
@@ -77,6 +79,59 @@ function normalizeSession(session) {
   };
 }
 
+function getSeedEntryText(seedEntry) {
+  if (!seedEntry || typeof seedEntry !== "object") return "";
+  return String(seedEntry.raw_text || "").trim();
+}
+
+function buildInitialBrainstormPrompt(seedEntry) {
+  const seedText = getSeedEntryText(seedEntry);
+  if (!seedText) return "";
+  return `i want to brainstorm about: ${seedText}`;
+}
+
+function buildEndFinalizePrompt() {
+  return [
+    "Summarise this conversation between a human and an AI and generate structured entry fields.",
+    'Return ONLY valid JSON with this exact shape: {"description":"...","title":"...","summary":"...","content":"..."}',
+    "",
+    "description must be a markdown string in this exact structure:",
+    "# Conversation Summary\\nOne sentence overview.\\n\\n## Goal\\n- ...\\n\\n## Outputs & Decisions\\n- ...\\n\\n## To Revisit\\n- ...\\n\\n## Context to Remember\\n- ...",
+    "",
+    "Field rules:",
+    "- Keep it concise and specific.",
+    "- If a section has nothing to report, write: - None.",
+    "- title: 3-8 words, specific, no markdown.",
+    "- summary: one concise sentence, no markdown.",
+    "- content: concise cleaned note in plain text, preserving important context and decisions.",
+    "- description: use \\n for newlines, no code blocks, valid JSON string.",
+  ].join("\n");
+}
+
+function parseEndFinalizeFromReply(replyText) {
+  const fallback = {
+    description: "",
+    title: "",
+    summary: "",
+    content: "",
+  };
+  if (!replyText) return fallback;
+
+  return parseStructuredEntryPayload(replyText) || fallback;
+}
+
+function looksLikeStructuredFinalizeResponse(text) {
+  const value = String(text || "").toLowerCase();
+  if (!value.trim()) return false;
+  return (
+    value.includes("```") ||
+    value.includes('"title"') ||
+    value.includes('"summary"') ||
+    value.includes('"content"') ||
+    value.includes('"description"')
+  );
+}
+
 export default function SecondBrainBrainstormScreen({
   route,
   navigation,
@@ -91,6 +146,7 @@ export default function SecondBrainBrainstormScreen({
   const [isTypebarExpanded, setIsTypebarExpanded] = useState(true);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [finalizingEnd, setFinalizingEnd] = useState(false);
   const [error, setError] = useState("");
   const [isTypebarFocused, setIsTypebarFocused] = useState(false);
   const finalizedRef = useRef(false);
@@ -125,6 +181,8 @@ export default function SecondBrainBrainstormScreen({
     let cancelled = false;
     async function bootstrap() {
       let nextSession = null;
+      let shouldAutoSendSeedPrompt = false;
+      let seedPrompt = "";
       if (existingSessionId) {
         nextSession = await readBrainstormSession(existingSessionId);
       }
@@ -137,14 +195,12 @@ export default function SecondBrainBrainstormScreen({
         }
       }
       if (!nextSession) {
+        seedPrompt = buildInitialBrainstormPrompt(seedEntry);
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
-          seedText:
-            seedEntry?.raw_text ||
-            seedEntry?.description ||
-            seedEntry?.content ||
-            "",
+          seedText: "",
         });
+        shouldAutoSendSeedPrompt = Boolean(seedPrompt);
       }
       const normalizedSession = normalizeSession(nextSession);
       if (!cancelled) {
@@ -158,6 +214,10 @@ export default function SecondBrainBrainstormScreen({
 
       if (normalizedSession?.id) {
         await writeBrainstormSession(normalizedSession);
+      }
+
+      if (!cancelled && shouldAutoSendSeedPrompt && normalizedSession) {
+        await sendMessage(seedPrompt, normalizedSession);
       }
     }
     bootstrap();
@@ -219,7 +279,7 @@ export default function SecondBrainBrainstormScreen({
     const isEnd = mode === "end";
     const guardKey = isEnd ? "ended" : "wipSaved";
     if (
-      activeSession?.finalizeGuards?.[guardKey] ||
+      (!isEnd && activeSession?.finalizeGuards?.[guardKey]) ||
       finalizeInFlightRef.current[guardKey]
     ) {
       return;
@@ -228,11 +288,59 @@ export default function SecondBrainBrainstormScreen({
 
     const transcript = toBrainstormTranscript(activeSession.messages);
     if (!transcript.trim()) return;
+    let descriptionToSave = transcript;
+    let generatedEntryFields = {
+      title: "",
+      summary: "",
+      content: "",
+    };
+
+    if (isEnd) {
+      try {
+        const history = (activeSession.messages || []).map((item) => ({
+          role: item.role === "assistant" ? "assistant" : "user",
+          content: item.content,
+        }));
+        const endResponse = await apiRequest("/brainstorm", {
+          method: "POST",
+          token,
+          body: {
+            message: buildEndFinalizePrompt(),
+            history,
+          },
+        });
+        const parsedFinalize = parseEndFinalizeFromReply(endResponse?.reply);
+        const parsedDescription = String(
+          parsedFinalize?.description || "",
+        ).trim();
+        if (parsedDescription) {
+          descriptionToSave = parsedDescription;
+        } else {
+          const plainSummary = String(endResponse?.reply || "").trim();
+          const looksLikeMarkdownSummary = /^#{1,6}\s/m.test(plainSummary);
+          if (
+            plainSummary &&
+            !looksLikeStructuredFinalizeResponse(plainSummary) &&
+            looksLikeMarkdownSummary
+          ) {
+            descriptionToSave = plainSummary;
+          }
+        }
+        generatedEntryFields = {
+          title: parsedFinalize.title,
+          summary: parsedFinalize.summary,
+          content: parsedFinalize.content,
+        };
+      } catch {
+        // Fall back to transcript if summary generation fails.
+      }
+    }
 
     const nextSession = {
       ...activeSession,
       lifecycle: isEnd ? "ended" : "wip-saved",
       updatedAt: new Date().toISOString(),
+      hasEndedSummary: Boolean(activeSession?.hasEndedSummary || isEnd),
       finalizeGuards: {
         ended: Boolean(activeSession?.finalizeGuards?.ended || isEnd),
         wipSaved: Boolean(activeSession?.finalizeGuards?.wipSaved || !isEnd),
@@ -250,7 +358,16 @@ export default function SecondBrainBrainstormScreen({
         method: "PATCH",
         token,
         body: {
-          description: transcript,
+          description: descriptionToSave,
+          ...(isEnd && generatedEntryFields.title
+            ? { title: generatedEntryFields.title }
+            : {}),
+          ...(isEnd && generatedEntryFields.summary
+            ? { summary: generatedEntryFields.summary }
+            : {}),
+          ...(isEnd && generatedEntryFields.content
+            ? { content: generatedEntryFields.content }
+            : {}),
         },
       });
       if (!isEnd) {
@@ -270,8 +387,17 @@ export default function SecondBrainBrainstormScreen({
       method: "POST",
       token,
       body: {
-        description: transcript,
+        description: descriptionToSave,
         tags: ["brainstorm"],
+        ...(isEnd && generatedEntryFields.title
+          ? { title: generatedEntryFields.title }
+          : {}),
+        ...(isEnd && generatedEntryFields.summary
+          ? { summary: generatedEntryFields.summary }
+          : {}),
+        ...(isEnd && generatedEntryFields.content
+          ? { content: generatedEntryFields.content }
+          : {}),
       },
     });
     if (created?.id) {
@@ -293,21 +419,24 @@ export default function SecondBrainBrainstormScreen({
     }
   }
 
-  async function sendMessage() {
+  async function sendMessage(overrideContent, baseSessionOverride) {
     if (sendInFlightRef.current) return;
-    const content = draft.trim();
-    if (!content || !session || busy) return;
+    const content = (overrideContent ?? draft).trim();
+    const baseSession = baseSessionOverride || session;
+    if (!content || !baseSession || busy) return;
     sendInFlightRef.current = true;
     setError("");
 
     if (content === "/end") {
       setBusy(true);
+      setFinalizingEnd(true);
       try {
         await finalizeSession({ mode: "end" });
         navigation?.goBack?.();
       } catch (err) {
         setError(String(err?.message || "Unable to end brainstorm."));
       } finally {
+        setFinalizingEnd(false);
         setBusy(false);
         sendInFlightRef.current = false;
       }
@@ -322,8 +451,8 @@ export default function SecondBrainBrainstormScreen({
       createdAt,
     };
     const pendingSession = {
-      ...session,
-      messages: [...messages, userMessage],
+      ...baseSession,
+      messages: [...(baseSession.messages || []), userMessage],
       updatedAt: createdAt,
       lifecycle: "active",
       // Session resumed with new user activity should allow a fresh finalize.
@@ -333,7 +462,9 @@ export default function SecondBrainBrainstormScreen({
       },
     };
 
-    setDraft("");
+    if (!overrideContent) {
+      setDraft("");
+    }
     setBusy(true);
 
     try {
@@ -518,6 +649,15 @@ export default function SecondBrainBrainstormScreen({
                 ]}
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
+              {finalizingEnd ? (
+                <View
+                  style={styles.finalizingWrap}
+                  accessibilityLabel="Finalizing brainstorm"
+                >
+                  <ActivityIndicator size="small" />
+                  <Text style={styles.finalizingText}>Finalizing...</Text>
+                </View>
+              ) : null}
             </View>
           </SecondBrainTypebar>
         </KeyboardAvoidingView>

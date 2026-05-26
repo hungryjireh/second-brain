@@ -1074,4 +1074,19 @@ describe("SecondBrainScreen", () => {
 
     expect(getByLabelText("Open settings")).toBeTruthy();
   });
+
+  it("keeps microphone visible after expanding and collapsing the typebar", async () => {
+    const { getByLabelText, getByPlaceholderText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate: jest.fn() }} />,
+    );
+
+    expect(getByLabelText("Record voice note")).toBeTruthy();
+
+    fireEvent.press(getByLabelText("Expand typebar"));
+    const input = getByPlaceholderText("Type a note, reminder or thought...");
+    fireEvent(input, "focus");
+    fireEvent.press(getByLabelText("Collapse typebar"));
+
+    expect(getByLabelText("Record voice note")).toBeTruthy();
+  });
 });

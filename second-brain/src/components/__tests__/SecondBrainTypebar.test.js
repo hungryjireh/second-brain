@@ -165,6 +165,7 @@ describe("SecondBrainTypebar", () => {
 
     fireEvent.press(getByLabelText("Collapse typebar"));
 
+    expect(props.setTypebarFocused).toHaveBeenCalledWith(false);
     expect(props.setIsTypebarExpanded).toHaveBeenCalledWith(false);
   });
 

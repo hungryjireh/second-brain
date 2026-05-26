@@ -107,7 +107,10 @@ export default function SecondBrainTypebar({
       {isTypebarExpanded && !alwaysExpanded ? (
         <Pressable
           style={styles.typebarDismissOverlay}
-          onPress={() => setIsTypebarExpanded(false)}
+          onPress={() => {
+            setTypebarFocused(false);
+            setIsTypebarExpanded(false);
+          }}
           accessibilityRole="button"
           accessibilityLabel="Collapse typebar"
         />

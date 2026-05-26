@@ -39,6 +39,126 @@ function normalizeMarkdownBullets(value) {
     .join("\n");
 }
 
+const STRUCTURED_ENTRY_FIELDS = ["description", "title", "summary", "content"];
+
+function emptyStructuredPayload() {
+  return {
+    description: "",
+    title: "",
+    summary: "",
+    content: "",
+  };
+}
+
+function hasStructuredPayloadValue(payload) {
+  return STRUCTURED_ENTRY_FIELDS.some((field) => payload[field]);
+}
+
+function normalizeStructuredPayload(parsed) {
+  const payload = emptyStructuredPayload();
+  for (const field of STRUCTURED_ENTRY_FIELDS) {
+    const value = parsed?.[field];
+    payload[field] = typeof value === "string" ? value.trim() : "";
+  }
+  return payload;
+}
+
+function stripMarkdownFences(value) {
+  return value
+    .replace(/```[^\n\r]*[\n\r]?/g, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
+function extractBalancedJsonObject(text) {
+  const start = text.indexOf("{");
+  if (start === -1) return "";
+  let depth = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (isEscaped) {
+      isEscaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      isEscaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{") depth += 1;
+    if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return "";
+}
+
+function unescapeLooseJsonString(value) {
+  return value
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\\\/g, "\\")
+    .trim();
+}
+
+function parseLooseStructuredFields(value) {
+  const source = extractBalancedJsonObject(value) || value;
+  const payload = emptyStructuredPayload();
+  const fieldAlternates = STRUCTURED_ENTRY_FIELDS.join("|");
+
+  for (const field of STRUCTURED_ENTRY_FIELDS) {
+    const pattern = new RegExp(
+      `"${field}"\\s*:\\s*"([\\s\\S]*?)"\\s*(?=,\\s*"(?:${fieldAlternates})"\\s*:|\\s*})`,
+      "i",
+    );
+    const match = source.match(pattern);
+    if (match) payload[field] = unescapeLooseJsonString(match[1]);
+  }
+
+  return hasStructuredPayloadValue(payload) ? payload : null;
+}
+
+function parseStructuredEntryPayload(value) {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!raw) return null;
+
+  const normalized = stripMarkdownFences(raw);
+  const parseCandidates = [
+    normalized,
+    raw,
+    extractBalancedJsonObject(normalized),
+  ].filter(Boolean);
+
+  for (const candidate of parseCandidates) {
+    try {
+      const parsedCandidate = JSON.parse(candidate);
+      const parsed =
+        typeof parsedCandidate === "string"
+          ? JSON.parse(parsedCandidate)
+          : parsedCandidate;
+      const payload = normalizeStructuredPayload(parsed);
+      if (hasStructuredPayloadValue(payload)) return payload;
+    } catch {
+      // Try the next candidate shape.
+    }
+  }
+
+  return (
+    parseLooseStructuredFields(normalized) || parseLooseStructuredFields(raw)
+  );
+}
+
 function parseTags(input) {
   if (input === undefined) return undefined;
   if (!Array.isArray(input)) return null;
@@ -258,10 +378,21 @@ export default async function handler(req, res) {
       priority,
       tags,
       category: requestedCategory,
+      title: requestedTitle,
+      summary: requestedSummary,
+      content: requestedContent,
     } = req.body ?? {};
     const sourceDescription = description ?? text;
-    if (!sourceDescription?.trim())
+    if (typeof sourceDescription !== "string" || !sourceDescription.trim())
       return json(res, 400, { error: "description is required" });
+    if (requestedTitle !== undefined && typeof requestedTitle !== "string") {
+      return json(res, 400, { error: "title must be a string" });
+    }
+    if (requestedSummary !== undefined && typeof requestedSummary !== "string")
+      return json(res, 400, { error: "summary must be a string" });
+    if (requestedContent !== undefined && typeof requestedContent !== "string")
+      return json(res, 400, { error: "content must be a string" });
+
     const validCategories = new Set(["reminder", "todo", "thought", "note"]);
     if (
       requestedCategory !== undefined &&
@@ -281,10 +412,58 @@ export default async function handler(req, res) {
     }
 
     try {
-      const normalizedDescription = sourceDescription.trim();
+      const parsedStructuredSource =
+        parseStructuredEntryPayload(sourceDescription);
+      const normalizedDescription =
+        parsedStructuredSource?.description || sourceDescription.trim();
       const { category: forcedCategory, text: cleanedText } =
         extractCategoryOverride(normalizedDescription);
       const textToClassify = cleanedText || normalizedDescription;
+      const derived = deriveEntryFields(textToClassify);
+      const titleOverride =
+        requestedTitle !== undefined
+          ? compactWhitespace(requestedTitle)
+          : compactWhitespace(parsedStructuredSource?.title);
+      const summaryOverride =
+        requestedSummary !== undefined
+          ? compactWhitespace(requestedSummary)
+          : compactWhitespace(parsedStructuredSource?.summary);
+      const contentOverride =
+        requestedContent !== undefined
+          ? requestedContent.trim()
+          : (parsedStructuredSource?.content || "").trim();
+
+      const hasExplicitStructuredOverrides =
+        requestedTitle !== undefined &&
+        requestedSummary !== undefined &&
+        requestedContent !== undefined;
+      if (
+        (parsedStructuredSource || hasExplicitStructuredOverrides) &&
+        titleOverride &&
+        summaryOverride
+      ) {
+        const finalCategory = forcedCategory ?? requestedCategory ?? "note";
+        const finalTags = isOpenBrainImportedThought(
+          textToClassify,
+          finalCategory,
+        )
+          ? enforceOpenBrainTags(parsedTags)
+          : parsedTags;
+        const entry = await insertEntry({
+          userId,
+          raw_text: derived.raw_text,
+          category: finalCategory,
+          title: titleOverride,
+          summary: summaryOverride,
+          content: contentOverride || summaryOverride || derived.raw_text,
+          remind_at: null,
+          priority: parsedPriority,
+          tags: finalTags,
+          authToken: token,
+        });
+        return json(res, 201, normalizeEntry(entry));
+      }
+
       const timezone = await getUserTimezone(userId, token);
       const existingTags = await getUserTags(userId, token);
       const {
@@ -299,7 +478,7 @@ export default async function handler(req, res) {
         existingTags,
       });
       const finalCategory = forcedCategory ?? requestedCategory ?? category;
-      const derived = deriveEntryFields(textToClassify, content);
+      const classifiedDerived = deriveEntryFields(textToClassify, content);
       const normalizedClassifiedTags = parseTags(classifiedTags);
       const validatedClassifiedTags = filterClassifierTagsByPermittedUserTags(
         normalizedClassifiedTags ?? [],
@@ -315,11 +494,18 @@ export default async function handler(req, res) {
         : candidateTags;
       const entry = await insertEntry({
         userId,
-        raw_text: derived.raw_text,
+        raw_text: classifiedDerived.raw_text,
         category: finalCategory,
-        title: compactWhitespace(title) || derived.title,
-        summary: compactWhitespace(summary) || derived.summary,
-        content: compactWhitespace(content) || derived.raw_text,
+        title:
+          titleOverride || compactWhitespace(title) || classifiedDerived.title,
+        summary:
+          summaryOverride ||
+          compactWhitespace(summary) ||
+          classifiedDerived.summary,
+        content:
+          contentOverride ||
+          compactWhitespace(content) ||
+          classifiedDerived.raw_text,
         remind_at,
         priority: parsedPriority,
         tags: finalTags,
@@ -359,6 +545,7 @@ export default async function handler(req, res) {
       content,
       description,
       rawText,
+      raw_text,
       remind_at,
       priority,
       is_archived,
@@ -374,15 +561,35 @@ export default async function handler(req, res) {
       updates.category = category;
     }
 
-    const nextDescriptionSource = description ?? rawText ?? content;
+    const nextDescriptionSource = description ?? rawText ?? raw_text;
     if (nextDescriptionSource !== undefined) {
-      if (!nextDescriptionSource?.trim())
+      if (
+        typeof nextDescriptionSource !== "string" ||
+        !nextDescriptionSource.trim()
+      ) {
         return json(res, 400, { error: "description is required" });
-      const derived = deriveEntryFields(nextDescriptionSource.trim());
+      }
+      const parsedStructuredSource = parseStructuredEntryPayload(
+        nextDescriptionSource,
+      );
+      const normalizedDescription =
+        parsedStructuredSource?.description || nextDescriptionSource.trim();
+      const derived = deriveEntryFields(normalizedDescription);
       updates.raw_text = derived.raw_text;
       updates.content = derived.raw_text;
       updates.title = derived.title;
       updates.summary = derived.summary;
+
+      if (parsedStructuredSource?.title) {
+        updates.title = compactWhitespace(parsedStructuredSource.title) || null;
+      }
+      if (parsedStructuredSource?.summary) {
+        updates.summary =
+          compactWhitespace(parsedStructuredSource.summary) || null;
+      }
+      if (parsedStructuredSource?.content) {
+        updates.content = parsedStructuredSource.content.trim() || null;
+      }
     }
 
     if (title !== undefined) {
@@ -395,6 +602,12 @@ export default async function handler(req, res) {
       if (typeof summary !== "string")
         return json(res, 400, { error: "summary must be a string" });
       updates.summary = compactWhitespace(summary) || null;
+    }
+
+    if (content !== undefined) {
+      if (typeof content !== "string")
+        return json(res, 400, { error: "content must be a string" });
+      updates.content = content.trim() || null;
     }
 
     if (remind_at !== undefined) {

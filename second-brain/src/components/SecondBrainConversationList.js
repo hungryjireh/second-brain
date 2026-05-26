@@ -50,6 +50,7 @@ export default function SecondBrainConversationList({
   maxWebRenderedMessages,
   showWebHiddenMessageNotice = false,
   hiddenMessageNoticeStyle,
+  renderInline = false,
 }) {
   const isWeb = Platform.OS === "web";
   const webRenderLimit =
@@ -117,6 +118,37 @@ export default function SecondBrainConversationList({
       ),
     [hiddenMessageNoticeStyle, styles],
   );
+
+  if (renderInline) {
+    return (
+      <View style={style} onLayout={onListLayout}>
+        <View style={contentContainerStyle}>
+          {data.map((item, index) => {
+            const key = keyExtractor(item, index);
+            if (item.isNotice) {
+              return (
+                <Text
+                  key={key}
+                  style={hiddenMessageNoticeStyle || styles.entryPanelSummary}
+                >
+                  {item.text}
+                </Text>
+              );
+            }
+            return (
+              <ConversationMessageRow
+                key={key}
+                sender={item.sender}
+                text={item.text}
+                fileUrls={item.fileUrls}
+                styles={styles}
+              />
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
 
   return (
     <FlatList

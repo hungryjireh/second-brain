@@ -101,9 +101,31 @@ describe("SecondBrainBrainstormScreen", () => {
   });
 
   it("finalizes once for repeated /end commands", async () => {
-    apiRequest
-      .mockResolvedValueOnce({ reply: "Assistant reply" })
-      .mockResolvedValueOnce({ id: 101, title: "Result" });
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: JSON.stringify({
+              description:
+                "## Key points/decisions\n- Finalized idea direction.\n\n## Follow-up actions\n- Draft first version.",
+              title: "Second pass title",
+              summary: "Second pass summary sentence.",
+              content: "Second pass cleaned content.",
+            }),
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 101, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
 
     const goBack = jest.fn();
     const { getByPlaceholderText, getByLabelText } = render(
@@ -147,16 +169,537 @@ describe("SecondBrainBrainstormScreen", () => {
       expect.objectContaining({
         method: "POST",
         body: expect.objectContaining({
+          description: expect.stringContaining("## Key points/decisions"),
           tags: ["brainstorm"],
+          title: "Second pass title",
+          summary: "Second pass summary sentence.",
+          content: "Second pass cleaned content.",
         }),
       }),
     );
   });
 
+  it("parses /end JSON wrapped in markdown fences with spacing", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              '``` json\n{"description":"# Conversation Summary\\nWrapped summary.","title":"Wrapped Title","summary":"Wrapped summary sentence.","content":"Wrapped cleaned content."}\n```',
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1111, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, requestOptions]) =>
+        path === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        description: expect.stringContaining("# Conversation Summary"),
+      }),
+    );
+    expect(createCalls[0][1]?.body).not.toEqual(
+      expect.objectContaining({
+        description: expect.stringContaining("```"),
+      }),
+    );
+  });
+
+  it("parses /end JSON wrapped in markdown language fences", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              '```markdown\n{"description":"# Conversation Summary\\nMarkdown wrapped summary.","title":"Markdown Wrapped Title","summary":"Markdown wrapped summary sentence.","content":"Markdown wrapped cleaned content."}\n```',
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1112, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need markdown finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, requestOptions]) =>
+        path === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        title: "Markdown Wrapped Title",
+        summary: "Markdown wrapped summary sentence.",
+        content: "Markdown wrapped cleaned content.",
+        description: expect.stringContaining("# Conversation Summary"),
+      }),
+    );
+    expect(createCalls[0][1]?.body?.description).not.toContain("```");
+  });
+
+  it("parses JSON-like /end payloads with multiline unescaped description", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: `\`\`\`json
+{
+  "title": "Content Creation and Instagram Marketing",
+  "description": "# Conversation Summary
+## Goal
+- Create content for marketing campaigns.
+## Outputs & Decisions
+- Focus on Instagram marketing.
+",
+  "summary": "Generated ideas for Instagram marketing content to increase engagement.",
+  "content": "Content creation for marketing campaigns."
+}
+\`\`\``,
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1113, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need malformed-json finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, requestOptions]) =>
+        path === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        title: "Content Creation and Instagram Marketing",
+        summary:
+          "Generated ideas for Instagram marketing content to increase engagement.",
+        content: "Content creation for marketing campaigns.",
+        description: expect.stringContaining("# Conversation Summary"),
+      }),
+    );
+    expect(createCalls[0][1]?.body?.description).not.toContain("```");
+  });
+
+  it("parses exact /end structured payload fields into the create request", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: `\`\`\`json
+{
+  "description": "# Conversation Summary
+One sentence overview of creating a short-form video content for a personal knowledge app, specifically 'A Day in the Life' style video.",
+  "title": "Short-Form Video Content Creation",
+  "summary": "Developed a concept for a short-form video content featuring a team member's 'A Day in the Life' experience.",
+  "content": "Created a concept for a short-form video content featuring a team member's 'A Day in the Life' experience.
+Decided on a lighthearted tone, short length, and a simple walk-through format.
+Discussed adding fun elements such as quick cuts, upbeat music, and visual breaks.
+Decided on a simple walk-through format without scripted dialogue."
+}
+\`\`\``,
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1114, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need exact finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, requestOptions]) =>
+        path === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        description:
+          "# Conversation Summary\nOne sentence overview of creating a short-form video content for a personal knowledge app, specifically 'A Day in the Life' style video.",
+        title: "Short-Form Video Content Creation",
+        summary:
+          "Developed a concept for a short-form video content featuring a team member's 'A Day in the Life' experience.",
+        content: expect.stringContaining(
+          "Decided on a lighthearted tone, short length, and a simple walk-through format.",
+        ),
+      }),
+    );
+    expect(createCalls[0][1]?.body?.description).not.toContain("```");
+  });
+
+  it("marks session with ended-summary metadata after /end", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              "## Key points/decisions\n- Confirmed.\n\n## Follow-up actions\n- None.",
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1001, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Wrap this up",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      const brainstormCalls = apiRequest.mock.calls.filter(
+        ([path, options]) =>
+          path === "/brainstorm" && options?.method === "POST",
+      );
+      expect(brainstormCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+    const createdSession = await createBrainstormSession.mock.results[0]?.value;
+    const saved = await readBrainstormSession(createdSession?.id);
+    expect(saved?.hasEndedSummary).toBe(true);
+  });
+
+  it("regenerates summary when /end is submitted again in a resumed session", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: JSON.stringify({
+              description:
+                "# Conversation Summary\nSecond pass summary.\n\n## Goal\n- Close loop.\n\n## Outputs Produced\n- Nothing to note.\n\n## Decisions Made\n- Nothing to note.\n\n## Working Prompts & Framings\n- Nothing to note.\n\n## Constraints & Preferences\n- Nothing to note.\n\n## Ruled Out\n- Nothing to note.\n\n## Unfinished Threads\n- Nothing to note.\n\n## Corrections Made\n- Nothing to note.\n\n## Implicit Knowledge the Human Brought\n- Nothing to note.",
+              title: "Second pass title",
+              summary: "Second pass summary sentence.",
+              content: "Second pass cleaned content.",
+            }),
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 202, title: "Result" });
+      }
+      if (
+        typeof path === "string" &&
+        path.startsWith("/entries?id=") &&
+        options?.method === "PATCH"
+      ) {
+        return Promise.resolve({ id: 202, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const firstView = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      firstView.getByPlaceholderText("Share your thought, or type /end"),
+      "First pass",
+    );
+    fireEvent.press(firstView.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(firstView.getByText("Assistant reply")).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      firstView.getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(firstView.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      const createCalls = apiRequest.mock.calls.filter(
+        ([path, options]) => path === "/entries" && options?.method === "POST",
+      );
+      expect(createCalls).toHaveLength(1);
+    });
+
+    await act(async () => {
+      firstView.unmount();
+    });
+
+    const createdSession = await createBrainstormSession.mock.results[0]?.value;
+    const resumedView = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: createdSession?.id } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      resumedView.getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(resumedView.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      const finalizeCalls = apiRequest.mock.calls.filter(
+        ([path, options]) =>
+          path === "/brainstorm" &&
+          options?.method === "POST" &&
+          String(options?.body?.message || "").includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          ),
+      );
+      expect(finalizeCalls).toHaveLength(2);
+    });
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/entries" && options?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    const patchCalls = apiRequest.mock.calls.filter(
+      ([path, options]) =>
+        path === "/entries?id=202" && options?.method === "PATCH",
+    );
+    expect(patchCalls.length).toBeGreaterThanOrEqual(1);
+    expect(patchCalls).toEqual(
+      expect.arrayContaining([
+        [
+          "/entries?id=202",
+          expect.objectContaining({
+            method: "PATCH",
+            body: expect.objectContaining({
+              title: "Second pass title",
+              summary: "Second pass summary sentence.",
+              content: "Second pass cleaned content.",
+              description: expect.stringContaining("# Conversation Summary"),
+            }),
+          }),
+        ],
+      ]),
+    );
+  });
+
   it("prevents duplicate /end finalize requests from rapid taps", async () => {
-    apiRequest
-      .mockResolvedValueOnce({ reply: "Assistant reply" })
-      .mockResolvedValueOnce({ id: 303, title: "Result" });
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              "## Key points/decisions\n- Done.\n\n## Follow-up actions\n- None.",
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 303, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
 
     const goBack = jest.fn();
     const { getByPlaceholderText, getByLabelText } = render(
@@ -198,6 +741,65 @@ describe("SecondBrainBrainstormScreen", () => {
       ([path, options]) => path === "/entries" && options?.method === "POST",
     );
     expect(finalizeCalls).toHaveLength(1);
+  });
+
+  it("shows loading indicator while /end finalization is in progress", async () => {
+    let resolveSummary;
+    const summaryPromise = new Promise((resolve) => {
+      resolveSummary = resolve;
+    });
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return summaryPromise;
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 404, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText, queryByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(queryByLabelText("Finalizing brainstorm")).toBeTruthy();
+    });
+
+    await act(async () => {
+      resolveSummary({
+        reply:
+          "## Key points/decisions\n- Done.\n\n## Follow-up actions\n- None.",
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(goBack).toHaveBeenCalled();
+    });
+    expect(queryByLabelText("Finalizing brainstorm")).toBeNull();
   });
 
   it("prevents duplicate brainstorm requests from rapid Send taps", async () => {
@@ -595,7 +1197,7 @@ describe("SecondBrainBrainstormScreen", () => {
     });
   });
 
-  it("splits transcript-shaped seed text into user and assistant bubbles", async () => {
+  it("starts non-brainstorm notes with the required brainstorm prompt", async () => {
     const view = render(
       <SecondBrainBrainstormScreen
         route={{
@@ -613,11 +1215,78 @@ describe("SecondBrainBrainstormScreen", () => {
     );
 
     await waitFor(() => {
-      expect(view.getByText("I want to create an app.")).toBeTruthy();
       expect(
-        view.getByText("That's a fascinating concept for the app."),
+        view.getByText(
+          "i want to brainstorm about: User: I want to create an app.",
+        ),
       ).toBeTruthy();
+      expect(view.getByText("Assistant reply")).toBeTruthy();
     });
+  });
+
+  it("uses only raw_text for the initial brainstorm prompt", async () => {
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            seedEntry: {
+              id: 333,
+              title: "Title should be ignored",
+              summary: "Summary should be ignored",
+              content: "Content should be ignored",
+              description: "Description should be ignored",
+              raw_text: "This raw text should be used",
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        view.getByText(
+          "i want to brainstorm about: This raw text should be used",
+        ),
+      ).toBeTruthy();
+      expect(view.queryByText(/Title should be ignored/)).toBeNull();
+      expect(view.queryByText(/Summary should be ignored/)).toBeNull();
+      expect(view.queryByText(/Content should be ignored/)).toBeNull();
+      expect(view.queryByText(/Description should be ignored/)).toBeNull();
+    });
+  });
+
+  it("does not auto-send initial prompt when raw_text is empty", async () => {
+    apiRequest.mockResolvedValue({ reply: "Assistant reply" });
+
+    render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            seedEntry: {
+              id: 444,
+              title: "Ignored title",
+              summary: "Ignored summary",
+              content: "Ignored content",
+              description: "Ignored description",
+              raw_text: "   ",
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const brainstormCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
+    );
+    expect(brainstormCalls).toHaveLength(0);
   });
 
   it("filters empty legacy resumed messages and still renders valid ones", async () => {
@@ -727,7 +1396,7 @@ describe("SecondBrainBrainstormScreen", () => {
     });
   });
 
-  it("persists full continued transcript (existing + new turns) on /end", async () => {
+  it("stores markdown summary on /end for resumed sessions", async () => {
     readBrainstormSession.mockResolvedValueOnce({
       id: "continued-2",
       lifecycle: "wip-saved",
@@ -740,6 +1409,17 @@ describe("SecondBrainBrainstormScreen", () => {
 
     apiRequest.mockImplementation((path, options) => {
       if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              "## Key points/decisions\n- Confirmed direction.\n\n## Follow-up actions\n- Draft first outline.",
+          });
+        }
         return Promise.resolve({ reply: "New assistant response" });
       }
       if (path === "/entries" && options?.method === "POST") {
@@ -787,16 +1467,10 @@ describe("SecondBrainBrainstormScreen", () => {
     );
     expect(finalizeCalls).toHaveLength(1);
     expect(finalizeCalls[0][1]?.body?.description).toContain(
-      "Original idea context",
+      "## Key points/decisions",
     );
     expect(finalizeCalls[0][1]?.body?.description).toContain(
-      "Original assistant guidance",
-    );
-    expect(finalizeCalls[0][1]?.body?.description).toContain(
-      "Continuation from resumed session",
-    );
-    expect(finalizeCalls[0][1]?.body?.description).toContain(
-      "New assistant response",
+      "## Follow-up actions",
     );
   });
 });

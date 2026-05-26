@@ -1122,6 +1122,28 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 0,
   },
+  entryDetailsDividerToggle: {
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  entryDetailsDividerToggleText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  entryDetailsSummaryWrap: {
+    paddingBottom: 8,
+  },
   markdownBody: { gap: 8 },
   markdownParagraph: {
     color: theme.colors.textPrimary,

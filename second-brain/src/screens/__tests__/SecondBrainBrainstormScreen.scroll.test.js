@@ -1,5 +1,4 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
-import React from "react";
 import SecondBrainBrainstormScreen from "../SecondBrainBrainstormScreen";
 
 jest.mock("../../api", () => ({
@@ -63,7 +62,7 @@ describe("SecondBrainBrainstormScreen scroll behavior", () => {
     const view = render(
       <SecondBrainBrainstormScreen
         route={{
-          params: { seedEntry: { id: 101, description: "Assistant seeded" } },
+          params: { seedEntry: { id: 101, raw_text: "Assistant seeded" } },
         }}
         navigation={{ goBack: jest.fn() }}
         token="token"

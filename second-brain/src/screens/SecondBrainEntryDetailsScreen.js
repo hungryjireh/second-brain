@@ -15,6 +15,7 @@ import {
   parseBrainstormTranscriptFromEntry,
   parseImportedConversationFromEntry,
 } from "../utils/secondBrainConversationParsers";
+import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
 
@@ -118,6 +119,21 @@ function formatEntryRelativeTimestamp(value) {
   return `${shortDateFormatter.format(parsedDate)} · ${time}`;
 }
 
+function getStructuredPayloadFromEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const candidates = [
+    entry.description,
+    entry.summary,
+    entry.content,
+    entry.raw_text,
+  ];
+  for (const candidate of candidates) {
+    const parsed = parseStructuredEntryPayload(candidate);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
 export default function SecondBrainEntryDetailsScreen({
   route,
   navigation,
@@ -128,12 +144,20 @@ export default function SecondBrainEntryDetailsScreen({
   const token = tokenFromProps ?? null;
   const [entry, setEntry] = useState(entryFromRoute);
   const [brainstormConversation, setBrainstormConversation] = useState(null);
+  const [brainstormSessionMeta, setBrainstormSessionMeta] = useState(null);
   const [isActionDrawerOpen, setIsActionDrawerOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagDraft, setNewTagDraft] = useState("");
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [tagError, setTagError] = useState("");
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [
+    isBrainstormConversationExpanded,
+    setIsBrainstormConversationExpanded,
+  ] = useState(false);
+  const [isBrainstormSummaryExpanded, setIsBrainstormSummaryExpanded] =
+    useState(false);
   const importedConversation = useMemo(
     () => parseImportedConversationFromEntry(entry),
     [entry?.raw_text],
@@ -146,12 +170,35 @@ export default function SecondBrainEntryDetailsScreen({
     importedConversation ||
     brainstormConversation ||
     brainstormTranscriptConversation;
+  const isBrainstormGeneratedEntry = Boolean(
+    !importedConversation &&
+    (brainstormConversation || brainstormTranscriptConversation),
+  );
   const categoryTag =
     CATEGORY_TAG_STYLES[entry?.category] ?? CATEGORY_TAG_STYLES.note;
-  const title = entry?.title || entry?.content || "Untitled";
+  const structuredPayload = useMemo(
+    () => getStructuredPayloadFromEntry(entry),
+    [entry],
+  );
+  const title =
+    structuredPayload?.title || entry?.title || entry?.content || "Untitled";
   const summary =
-    entry?.content === null ? entry?.summary || "" : entry?.content || "";
-  const body = entry?.description || entry?.raw_text || entry?.content || "";
+    structuredPayload?.summary ||
+    (entry?.content === null ? entry?.summary || "" : entry?.content || "");
+  const body =
+    structuredPayload?.description ||
+    entry?.description ||
+    entry?.raw_text ||
+    entry?.content ||
+    "";
+  const hasBrainstormEnded = Boolean(
+    brainstormSessionMeta?.hasEndedSummary ||
+    brainstormSessionMeta?.lifecycle === "ended" ||
+    brainstormSessionMeta?.finalizeGuards?.ended,
+  );
+  const hasBrainstormSummary = Boolean(
+    hasBrainstormEnded && String(body || "").trim(),
+  );
   const createdLabel = formatEntryTimestamp(entry?.created_at);
   const updatedLabel = formatEntryRelativeTimestamp(entry?.updated_at);
   const reminderLabel = formatEntryTimestamp(entry?.remind_at);
@@ -173,6 +220,14 @@ export default function SecondBrainEntryDetailsScreen({
   useEffect(() => {
     setEntry(entryFromRoute);
   }, [entryFromRoute]);
+
+  useEffect(() => {
+    if (!navigation?.addListener) return undefined;
+    const unsubscribe = navigation.addListener("focus", () => {
+      setRefreshTick((value) => value + 1);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useLayoutEffect(() => {
     if (!navigation?.setOptions) return;
@@ -204,7 +259,6 @@ export default function SecondBrainEntryDetailsScreen({
   useEffect(() => {
     async function loadEntryById() {
       if (!entryId || !token) return;
-      if (entry?.id === entryId) return;
       try {
         const data = await apiRequest("/entries?limit=60", { token });
         const list = Array.isArray(data?.entries)
@@ -221,35 +275,47 @@ export default function SecondBrainEntryDetailsScreen({
       }
     }
     loadEntryById();
-  }, [entry?.id, entryId, token]);
+  }, [entryId, refreshTick, token]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadBrainstormConversation() {
       if (!entry?.id || importedConversation) {
-        if (!cancelled) setBrainstormConversation(null);
+        if (!cancelled) {
+          setBrainstormConversation(null);
+          setBrainstormSessionMeta(null);
+        }
         return;
       }
       try {
         const sessionId = await getLinkedBrainstormSessionId(entry.id);
         if (!sessionId) {
-          if (!cancelled) setBrainstormConversation(null);
+          if (!cancelled) {
+            setBrainstormConversation(null);
+            setBrainstormSessionMeta(null);
+          }
           return;
         }
         const session = await readBrainstormSession(sessionId);
         if (cancelled) return;
+        setBrainstormSessionMeta(
+          session && typeof session === "object" ? session : null,
+        );
         setBrainstormConversation(
           parseBrainstormConversationFromSession(session),
         );
       } catch {
-        if (!cancelled) setBrainstormConversation(null);
+        if (!cancelled) {
+          setBrainstormConversation(null);
+          setBrainstormSessionMeta(null);
+        }
       }
     }
     loadBrainstormConversation();
     return () => {
       cancelled = true;
     };
-  }, [entry?.id, importedConversation]);
+  }, [entry?.id, importedConversation, refreshTick]);
 
   function closeActionDrawer(onClosed) {
     setIsActionDrawerOpen(false);
@@ -421,125 +487,193 @@ export default function SecondBrainEntryDetailsScreen({
             </View>
           </>
         ) : null}
-        <View style={styles.entryCategoryMetaRow}>
-          <View
-            testID="entry-category-pill"
-            style={[styles.tagPill, { backgroundColor: categoryTag.bg }]}
-          >
-            <Text style={[styles.tagPillText, { color: categoryTag.color }]}>
-              {categoryTag.label}
-            </Text>
-          </View>
-          {updatedLabel ? (
-            <Text style={styles.entryLastUpdatedText}>{updatedLabel}</Text>
-          ) : null}
-        </View>
-        <View
-          testID="entry-title-row"
-          style={[styles.entryPanelTitleRow, styles.entryPanelTitleRowLarge]}
-        >
-          <Text style={styles.entryPanelTitle}>{title}</Text>
-        </View>
-        <Text style={styles.entryPanelSummary}>{summary}</Text>
-        {createdLabel ? (
-          <View style={styles.metaInfoRow}>
-            <Text style={styles.metaText}>{`Created ${createdLabel}`}</Text>
-          </View>
-        ) : null}
-        {entry?.category === "reminder" && reminderLabel ? (
-          <View style={styles.metaInfoRow}>
-            <View style={styles.reminderMetaPill}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Feather name="clock" size={12} color={theme.colors.brand} />
-                <Text style={styles.reminderMetaText}> {reminderLabel}</Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
-        <View style={styles.entryPanelTags}>
-          {parsedEntryTags.map((tagName) => (
+        <ScrollView contentContainerStyle={styles.entryPanelBodyContent}>
+          <View style={styles.entryCategoryMetaRow}>
             <View
-              key={tagName}
-              style={[styles.itemTagPill, styles.entryDetailsTagPill]}
+              testID="entry-category-pill"
+              style={[styles.tagPill, { backgroundColor: categoryTag.bg }]}
             >
-              <Text style={styles.itemTagText}>#{tagName}</Text>
+              <Text style={[styles.tagPillText, { color: categoryTag.color }]}>
+                {categoryTag.label}
+              </Text>
             </View>
-          ))}
-          {isAddingTag ? (
-            <View style={styles.entryDetailsAddTagInputWrap}>
-              <View style={styles.tagInputRow}>
-                <TextInput
-                  accessibilityLabel="Tag input"
-                  value={newTagDraft}
-                  onChangeText={(value) => {
-                    setNewTagDraft(value);
-                    setTagError("");
-                  }}
-                  style={[styles.editField, styles.tagInput]}
-                  placeholder="Type a tag"
-                  placeholderTextColor={theme.colors.textSecondary}
-                />
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={handleAddTag}
-                  disabled={isSavingTag || isBusy}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {isSavingTag ? "Adding..." : "Add"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondaryButton}
-                  onPress={cancelAddTagInput}
-                  disabled={isSavingTag}
-                >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
-                </Pressable>
+            {updatedLabel ? (
+              <Text style={styles.entryLastUpdatedText}>{updatedLabel}</Text>
+            ) : null}
+          </View>
+          <View
+            testID="entry-title-row"
+            style={[styles.entryPanelTitleRow, styles.entryPanelTitleRowLarge]}
+          >
+            <Text style={styles.entryPanelTitle}>{title}</Text>
+          </View>
+          <Text style={styles.entryPanelSummary}>{summary}</Text>
+          {createdLabel ? (
+            <View style={styles.metaInfoRow}>
+              <Text style={styles.metaText}>{`Created ${createdLabel}`}</Text>
+            </View>
+          ) : null}
+          {entry?.category === "reminder" && reminderLabel ? (
+            <View style={styles.metaInfoRow}>
+              <View style={styles.reminderMetaPill}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Feather name="clock" size={12} color={theme.colors.brand} />
+                  <Text style={styles.reminderMetaText}> {reminderLabel}</Text>
+                </View>
               </View>
-              {tagError ? (
+            </View>
+          ) : null}
+          <View style={styles.entryPanelTags}>
+            {parsedEntryTags.map((tagName) => (
+              <View
+                key={tagName}
+                style={[styles.itemTagPill, styles.entryDetailsTagPill]}
+              >
+                <Text style={styles.itemTagText}>#{tagName}</Text>
+              </View>
+            ))}
+            {isAddingTag ? (
+              <View style={styles.entryDetailsAddTagInputWrap}>
+                <View style={styles.tagInputRow}>
+                  <TextInput
+                    accessibilityLabel="Tag input"
+                    value={newTagDraft}
+                    onChangeText={(value) => {
+                      setNewTagDraft(value);
+                      setTagError("");
+                    }}
+                    style={[styles.editField, styles.tagInput]}
+                    placeholder="Type a tag"
+                    placeholderTextColor={theme.colors.textSecondary}
+                  />
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={handleAddTag}
+                    disabled={isSavingTag || isBusy}
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {isSavingTag ? "Adding..." : "Add"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={cancelAddTagInput}
+                    disabled={isSavingTag}
+                  >
+                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  </Pressable>
+                </View>
+                {tagError ? (
+                  <Text
+                    style={[
+                      styles.tagCountText,
+                      { color: theme.colors.danger },
+                    ]}
+                  >
+                    {tagError}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add tag"
+                onPress={openAddTagInput}
+                style={[styles.itemTagPill, styles.entryDetailsAddTagPill]}
+              >
                 <Text
-                  style={[styles.tagCountText, { color: theme.colors.danger }]}
+                  style={[styles.itemTagText, styles.entryDetailsAddTagText]}
                 >
-                  {tagError}
+                  + tag
                 </Text>
+              </Pressable>
+            )}
+          </View>
+          {isBrainstormGeneratedEntry ? (
+            <View>
+              {hasBrainstormSummary ? (
+                <>
+                  <Pressable
+                    testID="brainstorm-summary-toggle"
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle brainstorm summary"
+                    onPress={() =>
+                      setIsBrainstormSummaryExpanded(
+                        (currentValue) => !currentValue,
+                      )
+                    }
+                    style={styles.entryDetailsDividerToggle}
+                  >
+                    <Text style={styles.entryDetailsDividerToggleText}>
+                      Summary
+                    </Text>
+                    <Feather
+                      name={
+                        isBrainstormSummaryExpanded
+                          ? "chevron-up"
+                          : "chevron-down"
+                      }
+                      size={16}
+                      color={theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                  {isBrainstormSummaryExpanded ? (
+                    <View style={styles.entryDetailsSummaryWrap}>
+                      <MarkdownBody text={body} styles={styles} />
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+              <Pressable
+                testID="brainstorm-conversation-toggle"
+                accessibilityRole="button"
+                accessibilityLabel="Toggle brainstorm conversation"
+                onPress={() =>
+                  setIsBrainstormConversationExpanded(
+                    (currentValue) => !currentValue,
+                  )
+                }
+                style={styles.entryDetailsDividerToggle}
+              >
+                <Text style={styles.entryDetailsDividerToggleText}>
+                  Brainstorm Conversation
+                </Text>
+                <Feather
+                  name={
+                    isBrainstormConversationExpanded
+                      ? "chevron-up"
+                      : "chevron-down"
+                  }
+                  size={16}
+                  color={theme.colors.textSecondary}
+                />
+              </Pressable>
+              {isBrainstormConversationExpanded && displayedConversation ? (
+                <SecondBrainConversationList
+                  messages={displayedConversation.messages}
+                  styles={styles}
+                  contentContainerStyle={styles.conversationWrap}
+                  showWebHiddenMessageNotice
+                  maxWebRenderedMessages={200}
+                  hiddenMessageNoticeStyle={styles.entryPanelSummary}
+                  renderInline
+                />
               ) : null}
             </View>
-          ) : (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add tag"
-              onPress={openAddTagInput}
-              style={[styles.itemTagPill, styles.entryDetailsAddTagPill]}
-            >
-              <Text style={[styles.itemTagText, styles.entryDetailsAddTagText]}>
-                + tag
-              </Text>
-            </Pressable>
-          )}
-        </View>
-        <View style={[styles.entryPanelBodyWrap, { flex: 1 }]}>
-          {displayedConversation ? (
+          ) : displayedConversation ? (
             <SecondBrainConversationList
               messages={displayedConversation.messages}
               styles={styles}
-              style={styles.entryPanelBodyScroll}
-              contentContainerStyle={[
-                styles.entryPanelBodyContent,
-                styles.conversationWrap,
-              ]}
+              contentContainerStyle={styles.conversationWrap}
               showWebHiddenMessageNotice
               maxWebRenderedMessages={200}
               hiddenMessageNoticeStyle={styles.entryPanelSummary}
+              renderInline
             />
           ) : (
-            <ScrollView
-              style={styles.entryPanelBodyScroll}
-              contentContainerStyle={styles.entryPanelBodyContent}
-            >
-              <MarkdownBody text={body} styles={styles} />
-            </ScrollView>
+            <MarkdownBody text={body} styles={styles} />
           )}
-        </View>
+        </ScrollView>
       </View>
     </View>
   );

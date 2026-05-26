@@ -180,7 +180,9 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
   const displayError = error.startsWith("Offline mode:") ? "" : error;
   const hasDraftText = draft.trim().length > 0;
   const hideTypebarSideActions =
-    (typebarFocused || (isWeb && hasDraftText)) && !recording;
+    isTypebarExpanded &&
+    (typebarFocused || (isWeb && hasDraftText)) &&
+    !recording;
   const isVoiceCaptureActive = recording || voiceStarting;
 
   useEffect(() => {
