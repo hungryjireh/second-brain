@@ -1,5 +1,5 @@
 import { fireEvent, render } from "@testing-library/react-native";
-import { ActivityIndicator, Platform } from "react-native";
+import { Platform } from "react-native";
 import SecondBrainFlatList from "../SecondBrainFlatList";
 
 const mockSecondBrainEntryCard = jest.fn();
@@ -183,7 +183,7 @@ describe("SecondBrainFlatList", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
-  it("uses custom pull-refresh UI and disables native spinner while pulling", () => {
+  it("enables native pull-refresh while keeping list scrolling available", () => {
     const groupedRows = [
       {
         type: "entry",
@@ -192,7 +192,7 @@ describe("SecondBrainFlatList", () => {
       },
     ];
 
-    const { getByTestId, UNSAFE_getAllByType } = render(
+    const { getByTestId } = render(
       <SecondBrainFlatList
         {...createBaseProps({
           groupedRows,
@@ -204,15 +204,40 @@ describe("SecondBrainFlatList", () => {
 
     const list = getByTestId("second-brain-flat-list");
     expect(list.props.refreshing).toBe(true);
-    expect(list.props.scrollEnabled).toBe(false);
-    expect(UNSAFE_getAllByType(ActivityIndicator)).toHaveLength(1);
+    expect(list.props.scrollEnabled).toBe(true);
+  });
 
-    const hasTopPadding = Array.isArray(list.props.contentContainerStyle)
-      ? list.props.contentContainerStyle.some(
-          (style) => style && style.paddingTop === 100,
-        )
-      : false;
-    expect(hasTopPadding).toBe(true);
+  it("keeps pull-refresh scrollable but still blocks scrolling during active swipe gestures", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          pullRefreshing: true,
+        })}
+      />,
+    );
+
+    expect(getByTestId("second-brain-flat-list").props.scrollEnabled).toBe(
+      true,
+    );
+
+    fireEvent.press(getByTestId("swipe-start-1"));
+    expect(getByTestId("second-brain-flat-list").props.scrollEnabled).toBe(
+      false,
+    );
+
+    fireEvent.press(getByTestId("swipe-end-1"));
+    expect(getByTestId("second-brain-flat-list").props.scrollEnabled).toBe(
+      true,
+    );
   });
 
   it("does not show native refresh spinner during non-pull background loads", () => {

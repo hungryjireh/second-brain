@@ -28,8 +28,10 @@ function mapTranscriptSenderLabel(senderLabel) {
 }
 
 function parseTranscriptUsingInlineMarkers(source) {
+  // Inline marker parsing is a fallback path, so keep matching strict enough
+  // to avoid false positives in prose like "AI-generated" or "tell me:".
   const markerPattern =
-    /(user|human|you|me|assistant|ai|chatgpt|claude|bot|model)\s*[:-]\s*/gi;
+    /(?:^|[\s([{>"'])\s*(user|human|you|assistant|ai|chatgpt|claude|bot|model)\s*[:-]\s+/gi;
   const markers = Array.from(source.matchAll(markerPattern));
   if (markers.length < 2) return null;
 
@@ -70,45 +72,58 @@ export function parseImportedConversationFromText(sourceText) {
 }
 
 export function parseBrainstormTranscriptFromText(sourceText) {
+  const parseTranscriptSource = (source) => {
+    const lines = source.split(/\n|\u2028|\u2029/);
+    const messages = [];
+    let current = null;
+    for (const line of lines) {
+      const trimmed = String(line ?? "").trim();
+      const marker = trimmed.match(
+        /^[^A-Za-z0-9]*?(user|human|you|me|assistant|ai|chatgpt|claude|bot|model)\s*(?::\s*|-\s+)(.*)$/i,
+      );
+      if (marker) {
+        if (current && current.text.trim()) {
+          messages.push({ ...current, text: current.text.trim() });
+        }
+        const sender = mapTranscriptSenderLabel(marker[1]);
+        current = {
+          sender,
+          text: String(marker[2] ?? "").trim(),
+          fileUrls: [],
+        };
+        continue;
+      }
+      if (!current) continue;
+      current.text = current.text
+        ? `${current.text}\n${trimmed}`.trim()
+        : trimmed;
+    }
+    if (current && current.text.trim()) {
+      messages.push({ ...current, text: current.text.trim() });
+    }
+
+    const hasAssistant = messages.some((msg) => msg.sender === "assistant");
+    if (messages.length >= 2 && hasAssistant) return { messages };
+
+    return parseTranscriptUsingInlineMarkers(source);
+  };
+
   const source = String(sourceText ?? "").trim();
   if (!source) return null;
 
   const normalizedSource = source
     .replace(/\r\n?/g, "\n")
     .replace(/[\u200B-\u200D\u2060\uFEFF\uFFFC]/g, "");
-  const lines = normalizedSource.split(/\n|\u2028|\u2029/);
-  const messages = [];
-  let current = null;
-  for (const line of lines) {
-    const trimmed = String(line ?? "").trim();
-    const marker = trimmed.match(
-      /^[^A-Za-z0-9]*?(user|human|you|me|assistant|ai|chatgpt|claude|bot|model)\s*[:-]\s*(.*)$/i,
-    );
-    if (marker) {
-      if (current && current.text.trim()) {
-        messages.push({ ...current, text: current.text.trim() });
-      }
-      const sender = mapTranscriptSenderLabel(marker[1]);
-      current = {
-        sender,
-        text: String(marker[2] ?? "").trim(),
-        fileUrls: [],
-      };
-      continue;
-    }
-    if (!current) continue;
-    current.text = current.text
-      ? `${current.text}\n${trimmed}`.trim()
-      : trimmed;
-  }
-  if (current && current.text.trim()) {
-    messages.push({ ...current, text: current.text.trim() });
-  }
+  const parsedFromNormalized = parseTranscriptSource(normalizedSource);
+  if (parsedFromNormalized) return parsedFromNormalized;
 
-  const hasAssistant = messages.some((msg) => msg.sender === "assistant");
-  if (messages.length >= 2 && hasAssistant) return { messages };
+  if (!normalizedSource.includes("\\n")) return null;
+  const parsedFromEscapedNewlines = parseTranscriptSource(
+    normalizedSource.replace(/\\n/g, "\n"),
+  );
+  if (parsedFromEscapedNewlines) return parsedFromEscapedNewlines;
 
-  return parseTranscriptUsingInlineMarkers(normalizedSource);
+  return null;
 }
 
 export function parseImportedConversationFromEntry(entry) {

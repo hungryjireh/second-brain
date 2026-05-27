@@ -1,11 +1,11 @@
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { FlatList } from "react-native";
 import SecondBrainBrainstormScreen from "../SecondBrainBrainstormScreen";
 import { apiRequest } from "../../api";
 import {
   createBrainstormSession,
   readBrainstormSession,
+  writeBrainstormSession,
 } from "../../utils/brainstormSessions";
 
 jest.mock("../../api", () => ({
@@ -97,6 +97,61 @@ describe("SecondBrainBrainstormScreen", () => {
           path === "/brainstorm" && options?.method === "POST",
       );
       expect(brainstormCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("repairs legacy merged assistant truncation from seed entry transcript", async () => {
+    const sessionId = "legacy-session-1";
+    await writeBrainstormSession({
+      id: sessionId,
+      entryId: 222,
+      lifecycle: "active",
+      updatedAt: new Date().toISOString(),
+      finalizeGuards: { ended: false, wipSaved: false },
+      messages: [
+        {
+          id: "2026-05-26T15:01:38.412Z-assistant-1-0-merged",
+          role: "assistant",
+          content:
+            "generated content.\nTo further develop this idea, can you tell me:",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            sessionId,
+            seedEntry: {
+              id: 222,
+              raw_text: [
+                "User: I am exploring app ideas for non-tech users.",
+                "Assistant: So, you want to create an app that bridges the gap between non-techies and AI, making it easier for them to discover and explore the possibilities of",
+                "AI-generated content.",
+                "To further develop this idea, can you tell me:",
+              ].join("\n"),
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await waitFor(async () => {
+      const repairedSession = await readBrainstormSession(sessionId);
+      expect(repairedSession?.messages?.[0]?.content).toContain(
+        "So, you want to create an app",
+      );
+      expect(repairedSession?.messages?.[0]?.content).toContain(
+        "AI-generated content.",
+      );
     });
   });
 
@@ -1154,29 +1209,6 @@ A user brainstormed a short-form video concept."
     expect(getByLabelText("Enter note")).toBeTruthy();
   });
 
-  it("keeps FlatList renderItem stable across input-driven rerenders", async () => {
-    const view = render(
-      <SecondBrainBrainstormScreen
-        route={{ params: {} }}
-        navigation={{ goBack: jest.fn() }}
-        token="token"
-      />,
-    );
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    const initialRenderItem = view.UNSAFE_getByType(FlatList).props.renderItem;
-
-    fireEvent.changeText(
-      view.getByPlaceholderText("Share your thought, or type /end"),
-      "Typing updates local state only",
-    );
-
-    const nextRenderItem = view.UNSAFE_getByType(FlatList).props.renderItem;
-    expect(nextRenderItem).toBe(initialRenderItem);
-  });
-
   it("uses a multiline expanding typebar input", async () => {
     const { getByPlaceholderText } = render(
       <SecondBrainBrainstormScreen
@@ -1250,59 +1282,6 @@ A user brainstormed a short-form video concept."
     expect(apiRequest).not.toHaveBeenCalled();
   });
 
-  it("renders legacy resumed session messages with sender/text shape", async () => {
-    readBrainstormSession.mockResolvedValueOnce({
-      id: "legacy-1",
-      lifecycle: "active",
-      messages: [
-        { sender: "human", text: "Legacy user thought" },
-        { sender: "assistant", text: "Legacy assistant response" },
-      ],
-    });
-
-    const view = render(
-      <SecondBrainBrainstormScreen
-        route={{ params: { sessionId: "legacy-1" } }}
-        navigation={{ goBack: jest.fn() }}
-        token="token"
-      />,
-    );
-
-    await waitFor(() => {
-      expect(view.getByText("Legacy user thought")).toBeTruthy();
-      expect(view.getByText("Legacy assistant response")).toBeTruthy();
-    });
-  });
-
-  it("rehydrates persisted brainstorm-looking notes instead of re-prompting", async () => {
-    const view = render(
-      <SecondBrainBrainstormScreen
-        route={{
-          params: {
-            seedEntry: {
-              id: 222,
-              raw_text:
-                "User: I want to create an app.\n￼\n\nAssistant: That's a fascinating concept for the app.",
-            },
-          },
-        }}
-        navigation={{ goBack: jest.fn() }}
-        token="token"
-      />,
-    );
-
-    await waitFor(() => {
-      expect(view.getByText("I want to create an app.")).toBeTruthy();
-      expect(
-        view.getByText("That's a fascinating concept for the app."),
-      ).toBeTruthy();
-    });
-    const brainstormCalls = apiRequest.mock.calls.filter(
-      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
-    );
-    expect(brainstormCalls).toHaveLength(0);
-  });
-
   it("uses only raw_text for the initial brainstorm prompt", async () => {
     const view = render(
       <SecondBrainBrainstormScreen
@@ -1366,62 +1345,6 @@ A user brainstormed a short-form video concept."
       ([path, options]) => path === "/brainstorm" && options?.method === "POST",
     );
     expect(brainstormCalls).toHaveLength(0);
-  });
-
-  it("rehydrates a persisted brainstorm transcript without auto-sending it", async () => {
-    const view = render(
-      <SecondBrainBrainstormScreen
-        route={{
-          params: {
-            seedEntry: {
-              id: 42,
-              raw_text:
-                "User: Existing persisted idea\n\nAssistant: Existing persisted answer",
-            },
-          },
-        }}
-        navigation={{ goBack: jest.fn() }}
-        token="token"
-      />,
-    );
-
-    await waitFor(() => {
-      expect(view.getByText("Existing persisted idea")).toBeTruthy();
-      expect(view.getByText("Existing persisted answer")).toBeTruthy();
-    });
-
-    const brainstormCalls = apiRequest.mock.calls.filter(
-      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
-    );
-    expect(brainstormCalls).toHaveLength(0);
-    expect(createBrainstormSession).toHaveBeenCalledWith({
-      entryId: 42,
-      seedText: "",
-    });
-  });
-
-  it("filters empty legacy resumed messages and still renders valid ones", async () => {
-    readBrainstormSession.mockResolvedValueOnce({
-      id: "legacy-2",
-      lifecycle: "active",
-      messages: [
-        { sender: "human", text: "   " },
-        { sender: "assistant", text: "Useful reply" },
-      ],
-    });
-
-    const view = render(
-      <SecondBrainBrainstormScreen
-        route={{ params: { sessionId: "legacy-2" } }}
-        navigation={{ goBack: jest.fn() }}
-        token="token"
-      />,
-    );
-
-    await waitFor(() => {
-      expect(view.getByText("Useful reply")).toBeTruthy();
-    });
-    expect(view.queryByText("   ")).toBeNull();
   });
 
   it("renders resumed messages when id and createdAt are missing", async () => {

@@ -15,27 +15,10 @@ import {
   parseBrainstormTranscriptFromEntry,
   parseImportedConversationFromEntry,
 } from "../utils/secondBrainConversationParsers";
+import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
 import { theme } from "../theme";
 import styles from "./SecondBrainScreen.styles";
-
-function parseBrainstormConversationFromSession(session) {
-  if (!session || typeof session !== "object") return null;
-  if (!Array.isArray(session.messages) || session.messages.length === 0)
-    return null;
-
-  const messages = session.messages
-    .map((msg) => {
-      const sender = msg?.role === "assistant" ? "assistant" : "human";
-      const text = String(msg?.content ?? "").trim();
-      if (!text) return null;
-      return { sender, text, fileUrls: [] };
-    })
-    .filter(Boolean);
-
-  if (messages.length === 0) return null;
-  return { messages };
-}
 
 const CATEGORY_TAG_STYLES = {
   reminder: {
@@ -283,11 +266,23 @@ export default function SecondBrainEntryDetailsScreen({
     async function loadEntryById() {
       if (!entryId || !token) return;
       try {
-        const data = await apiRequest("/entries?limit=60", { token });
-        const list = Array.isArray(data?.entries)
-          ? data.entries
-          : Array.isArray(data)
+        const data = await apiRequest(`/entries?id=${entryId}`, { token });
+        const directEntry = Array.isArray(data)
+          ? data.find((item) => String(item?.id) === String(entryId))
+          : data && typeof data === "object"
             ? data
+            : null;
+        if (directEntry) {
+          setEntry(directEntry);
+          return;
+        }
+
+        // Backward-compatible fallback for environments that only return list payloads.
+        const fallbackData = await apiRequest("/entries?limit=60", { token });
+        const list = Array.isArray(fallbackData?.entries)
+          ? fallbackData.entries
+          : Array.isArray(fallbackData)
+            ? fallbackData
             : [];
         const nextEntry = list.find(
           (item) => String(item?.id) === String(entryId),

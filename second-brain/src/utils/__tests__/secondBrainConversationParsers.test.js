@@ -55,4 +55,75 @@ describe("secondBrainConversationParsers", () => {
       ],
     });
   });
+
+  it("does not treat prose like AI-generated or tell me: as transcript markers", () => {
+    const source =
+      "i want to brainstorm about: User: We should make this friendlier for non-tech users. Assistant: That sounds good for AI-generated content. To further develop this idea, can you tell me: what onboarding would help most?";
+    const parsed = parseBrainstormTranscriptFromText(source);
+
+    expect(parsed).toEqual({
+      messages: [
+        {
+          sender: "human",
+          text: "We should make this friendlier for non-tech users.",
+          fileUrls: [],
+        },
+        {
+          sender: "assistant",
+          text: "That sounds good for AI-generated content. To further develop this idea, can you tell me: what onboarding would help most?",
+          fileUrls: [],
+        },
+      ],
+    });
+  });
+
+  it("does not split assistant text when a wrapped line starts with AI-generated", () => {
+    const source = [
+      "User: I am exploring app ideas for non-tech users.",
+      "Assistant: So, you want to create an app that bridges the gap between non-techies and AI, making it easier for them to discover and explore the possibilities of",
+      "AI-generated content.",
+      "To further develop this idea, can you tell me:",
+    ].join("\n");
+    const parsed = parseBrainstormTranscriptFromText(source);
+
+    expect(parsed).toEqual({
+      messages: [
+        {
+          sender: "human",
+          text: "I am exploring app ideas for non-tech users.",
+          fileUrls: [],
+        },
+        {
+          sender: "assistant",
+          text: [
+            "So, you want to create an app that bridges the gap between non-techies and AI, making it easier for them to discover and explore the possibilities of",
+            "AI-generated content.",
+            "To further develop this idea, can you tell me:",
+          ].join("\n"),
+          fileUrls: [],
+        },
+      ],
+    });
+  });
+
+  it("parses transcript text when newlines are persisted as literal \\n", () => {
+    const source =
+      "User: Help me draft a launch blurb.\\n\\nAssistant: Start with one promise and one audience.";
+    const parsed = parseBrainstormTranscriptFromText(source);
+
+    expect(parsed).toEqual({
+      messages: [
+        {
+          sender: "human",
+          text: "Help me draft a launch blurb.",
+          fileUrls: [],
+        },
+        {
+          sender: "assistant",
+          text: "Start with one promise and one audience.",
+          fileUrls: [],
+        },
+      ],
+    });
+  });
 });

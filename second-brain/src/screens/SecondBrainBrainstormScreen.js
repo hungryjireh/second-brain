@@ -13,6 +13,7 @@ import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import SecondBrainConversationList from "../components/SecondBrainConversationList";
 import { apiRequest } from "../api";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
+import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseBrainstormTranscriptFromText } from "../utils/secondBrainConversationParsers";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
 import {
@@ -31,57 +32,9 @@ function prefixedWipTitle(title) {
   return `[BRAINSTORMING] ${clean}`;
 }
 
-function normalizeSessionMessages(messages) {
-  if (!Array.isArray(messages)) return [];
-  return messages
-    .flatMap((message, index) => {
-      const legacySender =
-        message?.sender === "human" || message?.sender === "user"
-          ? "user"
-          : message?.sender === "assistant"
-            ? "assistant"
-            : "";
-      const role =
-        message?.role === "assistant"
-          ? "assistant"
-          : message?.role === "user"
-            ? "user"
-            : legacySender || "user";
-      const content = String(message?.content ?? message?.text ?? "").trim();
-      if (!content) return [];
-      const createdAt =
-        typeof message?.createdAt === "string" && message.createdAt.trim()
-          ? message.createdAt
-          : new Date().toISOString();
-      const transcript = parseBrainstormTranscriptFromText(content);
-      if (transcript?.messages?.length) {
-        return transcript.messages.map((chunk, transcriptIndex) => ({
-          id: `${createdAt}-${role}-${index}-${transcriptIndex}`,
-          role: chunk.sender === "assistant" ? "assistant" : "user",
-          content: chunk.text,
-          createdAt,
-        }));
-      }
-      const id =
-        typeof message?.id === "string" && message.id.trim()
-          ? message.id
-          : `${createdAt}-${role}-${index}`;
-      return [{ id, role, content, createdAt }];
-    })
-    .filter(Boolean);
-}
-
-function normalizeSession(session) {
-  if (!session || typeof session !== "object") return session;
-  return {
-    ...session,
-    messages: normalizeSessionMessages(session.messages),
-  };
-}
-
 function getSeedEntryText(seedEntry) {
   if (!seedEntry || typeof seedEntry !== "object") return "";
-  return String(seedEntry.raw_text || "").trim();
+  return String(seedEntry.raw_text || seedEntry.description || "").trim();
 }
 
 function buildInitialBrainstormPrompt(seedEntry) {
@@ -90,22 +43,48 @@ function buildInitialBrainstormPrompt(seedEntry) {
   return `i want to brainstorm about: ${seedText}`;
 }
 
-function messagesFromPersistedTranscript(seedEntry) {
-  const transcript = parseBrainstormTranscriptFromText(seedEntry?.raw_text);
-  if (!transcript?.messages?.length) return [];
-  const createdAt = new Date().toISOString();
-  return transcript.messages
-    .map((message, index) => {
-      const content = String(message?.text || "").trim();
-      if (!content) return null;
-      return {
-        id: `${createdAt}-persisted-${index}`,
-        role: message.sender === "assistant" ? "assistant" : "user",
-        content,
-        createdAt,
-      };
-    })
+function repairLegacyTruncatedAssistantMessages(session, seedEntry) {
+  if (!session || typeof session !== "object") return session;
+  const sourceText = String(seedEntry?.raw_text || seedEntry?.description || "");
+  if (!sourceText.trim()) return session;
+  const transcript = parseBrainstormTranscriptFromText(sourceText);
+  if (!transcript?.messages?.length) return session;
+
+  const transcriptAssistantTexts = transcript.messages
+    .filter((message) => message?.sender === "assistant")
+    .map((message) => String(message?.text ?? "").trim())
     .filter(Boolean);
+  if (transcriptAssistantTexts.length === 0) return session;
+
+  const sessionMessages = Array.isArray(session.messages) ? session.messages : [];
+  let assistantOrdinal = 0;
+  let hasChanges = false;
+  const repairedMessages = sessionMessages.map((message) => {
+    if (message?.role !== "assistant") return message;
+    const currentText = String(message?.content ?? "").trim();
+    const candidateText = transcriptAssistantTexts[assistantOrdinal] || "";
+    assistantOrdinal += 1;
+    if (!currentText || !candidateText || candidateText === currentText) {
+      return message;
+    }
+    const isLegacyMergedId = String(message?.id || "").includes("-merged");
+    const looksLikeTrimmedSuffix =
+      candidateText.length > currentText.length && candidateText.endsWith(currentText);
+    if (!isLegacyMergedId && !looksLikeTrimmedSuffix) {
+      return message;
+    }
+    hasChanges = true;
+    return {
+      ...message,
+      content: candidateText,
+    };
+  });
+
+  if (!hasChanges) return session;
+  return {
+    ...session,
+    messages: repairedMessages,
+  };
 }
 
 function buildEndFinalizePrompt() {
@@ -181,14 +160,8 @@ export default function SecondBrainBrainstormScreen({
 
   const messages = useMemo(() => session?.messages || [], [session?.messages]);
   const conversationMessages = useMemo(
-    () =>
-      messages.map((item) => ({
-        id: item.id,
-        sender: item.role === "assistant" ? "assistant" : "human",
-        text: item.content,
-        fileUrls: [],
-      })),
-    [messages],
+    () => parseBrainstormConversationFromSession(session)?.messages || [],
+    [session],
   );
   const isWeb = Platform.OS === "web";
   const typebarBottom = 10 + Math.max(insets.bottom, 0) + keyboardOffset;
@@ -212,41 +185,28 @@ export default function SecondBrainBrainstormScreen({
           nextSession = await readBrainstormSession(linkedSessionId);
         }
       }
+      nextSession = repairLegacyTruncatedAssistantMessages(nextSession, seedEntry);
       if (!nextSession) {
-        const persistedMessages = messagesFromPersistedTranscript(seedEntry);
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
           seedText: "",
         });
-        if (persistedMessages.length) {
-          nextSession = {
-            ...nextSession,
-            messages: persistedMessages,
-            updatedAt:
-              persistedMessages[persistedMessages.length - 1]?.createdAt ||
-              nextSession.updatedAt,
-          };
-        } else {
-          seedPrompt = buildInitialBrainstormPrompt(seedEntry);
-          shouldAutoSendSeedPrompt = Boolean(seedPrompt);
-        }
+        seedPrompt = buildInitialBrainstormPrompt(seedEntry);
+        shouldAutoSendSeedPrompt = Boolean(seedPrompt);
       }
-      const normalizedSession = normalizeSession(nextSession);
       if (!cancelled) {
-        initialMessageCountRef.current = Array.isArray(
-          normalizedSession?.messages,
-        )
-          ? normalizedSession.messages.length
+        initialMessageCountRef.current = Array.isArray(nextSession?.messages)
+          ? nextSession.messages.length
           : 0;
-        setSession(normalizedSession);
+        setSession(nextSession);
       }
 
-      if (normalizedSession?.id) {
-        await writeBrainstormSession(normalizedSession);
+      if (nextSession?.id) {
+        await writeBrainstormSession(nextSession);
       }
 
-      if (!cancelled && shouldAutoSendSeedPrompt && normalizedSession) {
-        await sendMessage(seedPrompt, normalizedSession);
+      if (!cancelled && shouldAutoSendSeedPrompt && nextSession) {
+        await sendMessage(seedPrompt, nextSession);
       }
     }
     bootstrap();
@@ -282,8 +242,15 @@ export default function SecondBrainBrainstormScreen({
       return;
     }
     const targetOffset = Math.max(0, contentHeight - viewportHeight);
-    conversationListRef.current?.scrollToOffset?.({
-      offset: targetOffset,
+    if (typeof conversationListRef.current?.scrollToOffset === "function") {
+      conversationListRef.current.scrollToOffset({
+        offset: targetOffset,
+        animated: false,
+      });
+      return;
+    }
+    conversationListRef.current?.scrollTo?.({
+      y: targetOffset,
       animated: false,
     });
   }
@@ -682,6 +649,12 @@ export default function SecondBrainBrainstormScreen({
                   { paddingBottom: messagesBottomPadding },
                   secondBrainScreenStyles.conversationWrap,
                 ]}
+                showWebHiddenMessageNotice
+                maxWebRenderedMessages={200}
+                hiddenMessageNoticeStyle={
+                  secondBrainScreenStyles.entryPanelSummary
+                }
+                renderInline
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
               {finalizingEnd ? (

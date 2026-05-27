@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from "react";
-import { FlatList, Text, Platform, View } from "react-native";
+import { FlatList, ScrollView, Text, Platform, View } from "react-native";
 import MarkdownBody from "./MarkdownBody";
 
 const DEFAULT_MAX_WEB_RENDERED_MESSAGES = 200;
@@ -120,31 +120,47 @@ export default function SecondBrainConversationList({
   );
 
   if (renderInline) {
+    const inlineChildren = data.map((item, index) => {
+      const key = keyExtractor(item, index);
+      if (item.isNotice) {
+        return (
+          <Text
+            key={key}
+            style={hiddenMessageNoticeStyle || styles.entryPanelSummary}
+          >
+            {item.text}
+          </Text>
+        );
+      }
+      return (
+        <ConversationMessageRow
+          key={key}
+          sender={item.sender}
+          text={item.text}
+          fileUrls={item.fileUrls}
+          styles={styles}
+        />
+      );
+    });
+
+    if (listRef) {
+      return (
+        <ScrollView
+          ref={listRef}
+          style={style}
+          contentContainerStyle={contentContainerStyle}
+          onLayout={onListLayout}
+          onContentSizeChange={onListContentSizeChange}
+        >
+          {inlineChildren}
+        </ScrollView>
+      );
+    }
+
     return (
       <View style={style} onLayout={onListLayout}>
         <View style={contentContainerStyle}>
-          {data.map((item, index) => {
-            const key = keyExtractor(item, index);
-            if (item.isNotice) {
-              return (
-                <Text
-                  key={key}
-                  style={hiddenMessageNoticeStyle || styles.entryPanelSummary}
-                >
-                  {item.text}
-                </Text>
-              );
-            }
-            return (
-              <ConversationMessageRow
-                key={key}
-                sender={item.sender}
-                text={item.text}
-                fileUrls={item.fileUrls}
-                styles={styles}
-              />
-            );
-          })}
+          {inlineChildren}
         </View>
       </View>
     );

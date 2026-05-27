@@ -263,6 +263,30 @@ describe("SecondBrainEditEntryScreen", () => {
     expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
   });
 
+  it("reloads latest entry by entryId even when route entry exists", async () => {
+    apiRequest.mockResolvedValueOnce({
+      ...entry,
+      title: "Fresh title",
+      summary: "Fresh summary",
+      raw_text: "Fresh description",
+    });
+
+    const { getByPlaceholderText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entryId: 42, entry } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith("/entries?id=42", {
+        token: "token",
+      });
+      expect(getByPlaceholderText("Title").props.value).toBe("Fresh title");
+    });
+  });
+
   it("disables description input and renders markdown preview when toggle is enabled", async () => {
     const goBack = jest.fn();
     const markdownEntry = {

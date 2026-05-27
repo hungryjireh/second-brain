@@ -1265,15 +1265,10 @@ Raw text JSON description."
 
   it("loads entry by route entryId and renders fetched title", async () => {
     apiRequest.mockResolvedValueOnce({
-      entries: [
-        { id: 10, title: "Other entry" },
-        {
-          id: 42,
-          title: "Loaded entry title",
-          summary: "Loaded summary",
-          raw_text: "Loaded body",
-        },
-      ],
+      id: 42,
+      title: "Loaded entry title",
+      summary: "Loaded summary",
+      raw_text: "Loaded body",
     });
 
     const { getByText } = render(
@@ -1284,7 +1279,7 @@ Raw text JSON description."
     );
 
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith("/entries?limit=60", {
+      expect(apiRequest).toHaveBeenCalledWith("/entries?id=42", {
         token: "token",
       });
       expect(getByText("Loaded entry title")).toBeTruthy();

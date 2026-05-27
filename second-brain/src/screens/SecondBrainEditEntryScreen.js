@@ -88,13 +88,24 @@ export default function SecondBrainEditEntryScreen({
   useEffect(() => {
     async function loadEntryById() {
       if (!entryId || !token) return;
-      if (entry?.id === entryId) return;
       try {
-        const data = await apiRequest("/entries?limit=60", { token });
-        const list = Array.isArray(data?.entries)
-          ? data.entries
-          : Array.isArray(data)
+        const data = await apiRequest(`/entries?id=${entryId}`, { token });
+        const directEntry = Array.isArray(data)
+          ? data.find((item) => String(item?.id) === String(entryId))
+          : data && typeof data === "object"
             ? data
+            : null;
+        if (directEntry) {
+          setEntry(directEntry);
+          return;
+        }
+
+        // Backward-compatible fallback for environments that only return list payloads.
+        const fallbackData = await apiRequest("/entries?limit=60", { token });
+        const list = Array.isArray(fallbackData?.entries)
+          ? fallbackData.entries
+          : Array.isArray(fallbackData)
+            ? fallbackData
             : [];
         const nextEntry = list.find(
           (item) => String(item?.id) === String(entryId),
@@ -105,7 +116,7 @@ export default function SecondBrainEditEntryScreen({
       }
     }
     loadEntryById();
-  }, [entry?.id, entryId, token]);
+  }, [entryId, token]);
 
   useEffect(() => {
     if (!entry) return;

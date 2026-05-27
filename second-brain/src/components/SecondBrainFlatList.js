@@ -1,11 +1,5 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Platform,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Platform, Text, View } from "react-native";
 import { theme } from "../theme";
 import SecondBrainEntryCard from "./SecondBrainEntryCard";
 import SwipeToDeleteRow from "./SwipeToDeleteRow";
@@ -216,7 +210,6 @@ export default function SecondBrainFlatList({
       groupedRows.length === 0 && (loadingEntries || hasActiveFilters)
         ? styles.listContentEmpty
         : null,
-      pullRefreshing ? { paddingTop: 100 } : null,
       { paddingBottom: listBottomPadding },
     ],
     [
@@ -255,27 +248,7 @@ export default function SecondBrainFlatList({
 
   return (
     <View style={{ flex: 1 }}>
-      {pullRefreshing ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 2,
-            alignItems: "center",
-          }}
-        >
-          <ActivityIndicator size="large" color={theme.colors.textSecondary} />
-        </View>
-      ) : null}
-      <View
-        style={{
-          flex: 1,
-          transform: [{ translateY: pullRefreshing ? -40 : 0 }],
-        }}
-      >
+      <View style={{ flex: 1 }}>
         <FlatList
           testID="second-brain-flat-list"
           data={groupedRows}
@@ -293,7 +266,7 @@ export default function SecondBrainFlatList({
           onScrollBeginDrag={closeOpenActionDrawer}
           onRefresh={onRefresh}
           refreshing={pullRefreshing}
-          scrollEnabled={!pullRefreshing && !isSwipeInteracting}
+          scrollEnabled={!isSwipeInteracting}
         />
       </View>
     </View>
