@@ -197,6 +197,9 @@ export default function SecondBrainEntryDetailsScreen({
     entry?.content ||
     "";
   const body = persistedBrainstormSummaryBody || fallbackBody;
+  const summaryDropdownBody =
+    String(structuredPayload?.description || entry?.description || "").trim() ||
+    body;
   const hasBrainstormEnded = Boolean(
     persistedBrainstormSummaryBody ||
     brainstormSessionMeta?.hasEndedSummary ||
@@ -204,7 +207,7 @@ export default function SecondBrainEntryDetailsScreen({
     brainstormSessionMeta?.finalizeGuards?.ended,
   );
   const hasBrainstormSummary = Boolean(
-    hasBrainstormEnded && String(body || "").trim(),
+    hasBrainstormEnded && String(summaryDropdownBody || "").trim(),
   );
   const createdLabel = formatEntryTimestamp(entry?.created_at);
   const updatedLabel = formatEntryRelativeTimestamp(entry?.updated_at);
@@ -652,7 +655,10 @@ export default function SecondBrainEntryDetailsScreen({
                   </Pressable>
                   {isBrainstormSummaryExpanded ? (
                     <View style={styles.entryDetailsSummaryWrap}>
-                      <MarkdownBody text={body} styles={styles} />
+                      <MarkdownBody
+                        text={summaryDropdownBody}
+                        styles={styles}
+                      />
                     </View>
                   ) : null}
                 </>

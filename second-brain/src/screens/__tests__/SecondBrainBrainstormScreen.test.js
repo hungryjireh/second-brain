@@ -622,6 +622,103 @@ A user brainstormed a short-form video concept."
     );
   });
 
+  it("parses markdown-labeled /end payload fields without storing labels in description", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: `# Conversation Summary
+A personal knowledge app for sharing and discovering daily thoughts and wisdom.
+
+## Goal
+- Create a social media-like app for sharing concise thoughts and ideas.
+- Use a Large Language Model (LLM) for moderation.
+
+## Outputs & Decisions
+- Limited text format to encourage concise thoughts.
+- No images or videos allowed.
+- Anonymous human reviewers for moderation.
+- Opaque moderation process.
+
+## To Revisit
+- Define appeal process for moderation decisions.
+- Determine logistics of human review process.
+
+## Context to Remember
+- Community values and guidelines to be defined.
+- User experience and engagement to be prioritized.
+
+## title: Personal Knowledge App for Daily Thoughts
+## summary: Create a social media app for sharing daily thoughts and wisdom.
+## content: The app will allow users to share concise thoughts and ideas, moderated by a Large Language Model and reviewed by anonymous human moderators. The app will prioritize user experience and engagement, with a focus on community values and guidelines.`,
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 1116, title: "Result" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "Need markdown-labeled finalize output",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const createCalls = apiRequest.mock.calls.filter(
+      ([callPath, requestOptions]) =>
+        callPath === "/entries" && requestOptions?.method === "POST",
+    );
+    expect(createCalls).toHaveLength(1);
+    expect(createCalls[0][1]?.body).toEqual(
+      expect.objectContaining({
+        title: "Personal Knowledge App for Daily Thoughts",
+        summary:
+          "Create a social media app for sharing daily thoughts and wisdom.",
+        content:
+          "The app will allow users to share concise thoughts and ideas, moderated by a Large Language Model and reviewed by anonymous human moderators. The app will prioritize user experience and engagement, with a focus on community values and guidelines.",
+        description: expect.stringContaining("# Conversation Summary"),
+      }),
+    );
+    expect(createCalls[0][1]?.body?.description).not.toContain("## title:");
+    expect(createCalls[0][1]?.body?.description).not.toContain("## summary:");
+    expect(createCalls[0][1]?.body?.description).not.toContain("## content:");
+  });
+
   it("marks session with ended-summary metadata after /end", async () => {
     apiRequest.mockImplementation((path, options) => {
       if (path === "/brainstorm" && options?.method === "POST") {

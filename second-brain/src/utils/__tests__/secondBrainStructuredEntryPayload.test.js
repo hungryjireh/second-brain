@@ -50,4 +50,71 @@ A user brainstormed a short-form video concept."
       ),
     ).toBeNull();
   });
+
+  it("does not parse trailing structured field fragments without a JSON object", () => {
+    expect(
+      parseStructuredEntryPayload(`# Conversation Summary
+An app for sharing daily thoughts and wisdom.
+
+## Goal
+- Create a platform for users to share their daily thoughts and insights.
+"
+  "title": "Open Brain App Development`),
+    ).toBeNull();
+  });
+
+  it("parses markdown-labeled title/summary/content fields without leaking them into description", () => {
+    const payload = parseStructuredEntryPayload(`# Conversation Summary
+A personal knowledge app for sharing and discovering daily thoughts and wisdom.
+
+## Goal
+- Create a social media-like app for sharing concise thoughts and ideas.
+- Use a Large Language Model (LLM) for moderation.
+
+## Outputs & Decisions
+- Limited text format to encourage concise thoughts.
+- No images or videos allowed.
+- Anonymous human reviewers for moderation.
+- Opaque moderation process.
+
+## To Revisit
+- Define appeal process for moderation decisions.
+- Determine logistics of human review process.
+
+## Context to Remember
+- Community values and guidelines to be defined.
+- User experience and engagement to be prioritized.
+
+## title: Personal Knowledge App for Daily Thoughts
+## summary: Create a social media app for sharing daily thoughts and wisdom.
+## content: The app will allow users to share concise thoughts and ideas, moderated by a Large Language Model and reviewed by anonymous human moderators. The app will prioritize user experience and engagement, with a focus on community values and guidelines.`);
+
+    expect(payload).toEqual({
+      description: `# Conversation Summary
+A personal knowledge app for sharing and discovering daily thoughts and wisdom.
+
+## Goal
+- Create a social media-like app for sharing concise thoughts and ideas.
+- Use a Large Language Model (LLM) for moderation.
+
+## Outputs & Decisions
+- Limited text format to encourage concise thoughts.
+- No images or videos allowed.
+- Anonymous human reviewers for moderation.
+- Opaque moderation process.
+
+## To Revisit
+- Define appeal process for moderation decisions.
+- Determine logistics of human review process.
+
+## Context to Remember
+- Community values and guidelines to be defined.
+- User experience and engagement to be prioritized.`,
+      title: "Personal Knowledge App for Daily Thoughts",
+      summary:
+        "Create a social media app for sharing daily thoughts and wisdom.",
+      content:
+        "The app will allow users to share concise thoughts and ideas, moderated by a Large Language Model and reviewed by anonymous human moderators. The app will prioritize user experience and engagement, with a focus on community values and guidelines.",
+    });
+  });
 });

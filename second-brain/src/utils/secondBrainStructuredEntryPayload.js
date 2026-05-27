@@ -71,7 +71,8 @@ function unescapeLooseJsonString(value) {
 }
 
 function parseLooseJsonFields(value) {
-  const source = extractBalancedJsonObject(value) || value;
+  const source = extractBalancedJsonObject(value);
+  if (!source) return null;
   const payload = emptyStructuredPayload();
   const fieldAlternates = STRUCTURED_ENTRY_FIELDS.join("|");
 
@@ -82,6 +83,61 @@ function parseLooseJsonFields(value) {
     );
     const match = source.match(pattern);
     if (match) payload[field] = unescapeLooseJsonString(match[1]);
+  }
+
+  return hasStructuredPayloadValue(payload) ? payload : null;
+}
+
+function parseMarkdownLabeledFields(value) {
+  const lines = String(value || "").split(/\r?\n/);
+  const fieldLinePattern =
+    /^\s{0,3}(?:[-*]\s*)?(?:#{1,6}\s*)?(?:\*\*)?(description|title|summary|content)(?:\*\*)?\s*:\s*(.*)$/i;
+  const hits = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(fieldLinePattern);
+    if (!match) continue;
+    hits.push({
+      index,
+      field: String(match[1] || "").toLowerCase(),
+      lineRemainder: String(match[2] || ""),
+    });
+  }
+
+  if (!hits.length) return null;
+
+  const fieldsFound = new Set(hits.map((hit) => hit.field));
+  const hasDescription = fieldsFound.has("description");
+  const hasEnoughStructuredFields =
+    fieldsFound.size >= 3 || (hasDescription && fieldsFound.size >= 2);
+  if (!hasEnoughStructuredFields) return null;
+
+  const payload = emptyStructuredPayload();
+
+  for (let i = 0; i < hits.length; i += 1) {
+    const hit = hits[i];
+    const nextHit = hits[i + 1];
+    const fieldLines = [hit.lineRemainder];
+    const endLineIndex = nextHit ? nextHit.index : lines.length;
+
+    for (
+      let lineIndex = hit.index + 1;
+      lineIndex < endLineIndex;
+      lineIndex += 1
+    ) {
+      fieldLines.push(lines[lineIndex]);
+    }
+
+    if (!payload[hit.field]) {
+      payload[hit.field] = fieldLines.join("\n").trim();
+    }
+  }
+
+  if (!payload.description && hits[0].index > 0) {
+    const leadingDescription = lines.slice(0, hits[0].index).join("\n").trim();
+    if (leadingDescription) {
+      payload.description = leadingDescription;
+    }
   }
 
   return hasStructuredPayloadValue(payload) ? payload : null;
@@ -113,5 +169,10 @@ export function parseStructuredEntryPayload(value) {
     }
   }
 
-  return parseLooseJsonFields(normalized) || parseLooseJsonFields(raw);
+  return (
+    parseLooseJsonFields(normalized) ||
+    parseLooseJsonFields(raw) ||
+    parseMarkdownLabeledFields(normalized) ||
+    parseMarkdownLabeledFields(raw)
+  );
 }
