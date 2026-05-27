@@ -1089,4 +1089,15 @@ describe("SecondBrainScreen", () => {
 
     expect(getByLabelText("Record voice note")).toBeTruthy();
   });
+
+  it("navigates to voice capture screen when mic button is pressed", async () => {
+    const navigate = jest.fn();
+    const { getByLabelText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    fireEvent.press(getByLabelText("Record voice note"));
+
+    expect(navigate).toHaveBeenCalledWith("SecondBrainVoiceCapture");
+  });
 });

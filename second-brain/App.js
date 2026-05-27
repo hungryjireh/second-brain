@@ -19,6 +19,7 @@ import SecondBrainEntryDetailsScreen from "./src/screens/SecondBrainEntryDetails
 import SecondBrainEditEntryScreen from "./src/screens/SecondBrainEditEntryScreen";
 import SecondBrainBrainstormScreen from "./src/screens/SecondBrainBrainstormScreen";
 import SecondBrainQueuedEditsScreen from "./src/screens/SecondBrainQueuedEditsScreen";
+import SecondBrainVoiceCaptureScreen from "./src/screens/SecondBrainVoiceCaptureScreen";
 import { buildSecondBrainHeaderOptions } from "./src/components/SecondBrainTopMenu";
 import { clearToken, getToken, setAuthExpiredHandler } from "./src/api";
 import { theme } from "./src/theme";
@@ -59,6 +60,7 @@ export default function App() {
           SecondBrainEditEntry: "second-brain/edit/:entryId",
           SecondBrainBrainstorm: "second-brain/brainstorm",
           SecondBrainQueuedEdits: "second-brain/queued-edits",
+          SecondBrainVoiceCapture: "second-brain/voice-capture",
         },
       },
       getStateFromPath(path, options) {
@@ -212,6 +214,15 @@ export default function App() {
                 >
                   {(props) => (
                     <SecondBrainQueuedEditsScreen {...props} token={token} />
+                  )}
+                </Stack.Screen>
+
+                <Stack.Screen
+                  name="SecondBrainVoiceCapture"
+                  options={{ headerShown: false }}
+                >
+                  {(props) => (
+                    <SecondBrainVoiceCaptureScreen {...props} token={token} />
                   )}
                 </Stack.Screen>
 

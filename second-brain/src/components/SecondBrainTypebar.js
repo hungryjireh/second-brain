@@ -28,6 +28,7 @@ export default function SecondBrainTypebar({
   voiceStarting,
   loadingTelegramLinkKey,
   offlineMode,
+  onMicPress,
   startVoiceCapture,
   stopVoiceCaptureAndSubmit,
   cancelVoiceCapture,
@@ -172,6 +173,10 @@ export default function SecondBrainTypebar({
                 closeOpenActionDrawer();
                 if (recording) {
                   stopVoiceCaptureAndSubmit();
+                  return;
+                }
+                if (typeof onMicPress === "function") {
+                  onMicPress();
                   return;
                 }
                 startVoiceCapture();

@@ -404,6 +404,9 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
       return current;
     });
   }, []);
+  const openVoiceCaptureScreen = useCallback(() => {
+    navigation.navigate("SecondBrainVoiceCapture");
+  }, [navigation]);
   const keyExtractor = useCallback((item) => item.key, []);
   const renderCell = useCallback(
     ({ item, children, style, ...rest }) => {
@@ -485,6 +488,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     voiceStarting,
     loadingTelegramLinkKey,
     offlineMode: isNativeOfflineMode,
+    onMicPress: openVoiceCaptureScreen,
     startVoiceCapture,
     stopVoiceCaptureAndSubmit,
     cancelVoiceCapture,
