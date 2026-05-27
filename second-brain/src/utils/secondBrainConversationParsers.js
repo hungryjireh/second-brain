@@ -126,6 +126,60 @@ export function parseBrainstormTranscriptFromText(sourceText) {
   return null;
 }
 
+export function repairLegacyTruncatedAssistantMessages(session, entry) {
+  if (!session || typeof session !== "object") return session;
+
+  const sourceText = String(entry?.raw_text || entry?.description || "");
+  if (!sourceText.trim()) return session;
+
+  const transcript = parseBrainstormTranscriptFromText(sourceText);
+  if (!transcript?.messages?.length) return session;
+
+  const transcriptAssistantTexts = transcript.messages
+    .filter((message) => message?.sender === "assistant")
+    .map((message) => String(message?.text ?? "").trim())
+    .filter(Boolean);
+  if (transcriptAssistantTexts.length === 0) return session;
+
+  const sessionMessages = Array.isArray(session.messages)
+    ? session.messages
+    : [];
+  let assistantOrdinal = 0;
+  let hasChanges = false;
+  const repairedMessages = sessionMessages.map((message) => {
+    if (message?.role !== "assistant") return message;
+
+    const currentText = String(message?.content ?? "").trim();
+    const candidateText = transcriptAssistantTexts[assistantOrdinal] || "";
+    assistantOrdinal += 1;
+
+    if (!currentText || !candidateText || candidateText === currentText) {
+      return message;
+    }
+
+    const isLegacyMergedId = String(message?.id || "").includes("-merged");
+    const looksLikeTrimmedSuffix =
+      candidateText.length > currentText.length &&
+      candidateText.endsWith(currentText);
+
+    if (!isLegacyMergedId && !looksLikeTrimmedSuffix) {
+      return message;
+    }
+
+    hasChanges = true;
+    return {
+      ...message,
+      content: candidateText,
+    };
+  });
+
+  if (!hasChanges) return session;
+  return {
+    ...session,
+    messages: repairedMessages,
+  };
+}
+
 export function parseImportedConversationFromEntry(entry) {
   return parseImportedConversationFromText(entry?.raw_text);
 }

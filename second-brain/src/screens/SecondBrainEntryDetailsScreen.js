@@ -14,6 +14,7 @@ import { normalizeTagValue, parseTagInput } from "../utils/secondBrainTagUtils";
 import {
   parseBrainstormTranscriptFromEntry,
   parseImportedConversationFromEntry,
+  repairLegacyTruncatedAssistantMessages,
 } from "../utils/secondBrainConversationParsers";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
@@ -315,12 +316,18 @@ export default function SecondBrainEntryDetailsScreen({
           return;
         }
         const session = await readBrainstormSession(sessionId);
+        const repairedSession = repairLegacyTruncatedAssistantMessages(
+          session,
+          entry,
+        );
         if (cancelled) return;
         setBrainstormSessionMeta(
-          session && typeof session === "object" ? session : null,
+          repairedSession && typeof repairedSession === "object"
+            ? repairedSession
+            : null,
         );
         setBrainstormConversation(
-          parseBrainstormConversationFromSession(session),
+          parseBrainstormConversationFromSession(repairedSession),
         );
       } catch {
         if (!cancelled) {

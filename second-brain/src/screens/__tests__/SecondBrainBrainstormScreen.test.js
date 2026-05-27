@@ -1507,4 +1507,75 @@ A user brainstormed a short-form video concept."
       "## Follow-up actions",
     );
   });
+
+  it("persists parsed /end description on resumed sessions with existing entry id", async () => {
+    readBrainstormSession.mockResolvedValueOnce({
+      id: "resumed-existing-entry",
+      entryId: 333,
+      lifecycle: "active",
+      finalizeGuards: { ended: false, wipSaved: false },
+      messages: [
+        { role: "user", content: "Original user context" },
+        { role: "assistant", content: "Original assistant context" },
+      ],
+    });
+
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply:
+              '```json\n{"description":"# Conversation Summary\\nPersisted parsed summary.","title":"Structured title","summary":"Structured summary.","content":"Structured content."}\n```',
+          });
+        }
+      }
+      if (path === "/entries?id=333" && options?.method === "PATCH") {
+        return Promise.resolve({ id: 333 });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { sessionId: "resumed-existing-entry" } }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByText("Original user context")).toBeTruthy();
+      expect(view.getByText("Original assistant context")).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(goBack).toHaveBeenCalled();
+    });
+
+    const patchCalls = apiRequest.mock.calls.filter(
+      ([path, options]) =>
+        path === "/entries?id=333" && options?.method === "PATCH",
+    );
+    expect(patchCalls.length).toBeGreaterThanOrEqual(1);
+    expect(patchCalls[0][1]?.body?.description).toBe(
+      "# Conversation Summary\nPersisted parsed summary.",
+    );
+    expect(patchCalls[0][1]?.body?.description).not.toContain("```");
+    expect(patchCalls[0][1]?.body?.raw_text).toContain("Original user context");
+    expect(patchCalls[0][1]?.body?.raw_text).toContain(
+      "Original assistant context",
+    );
+  });
 });

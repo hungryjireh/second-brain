@@ -1,5 +1,4 @@
 import js from "@eslint/js";
-import globals from "globals";
 import prettierRecommended from "eslint-plugin-prettier/recommended";
 
 const rootJsFiles = [
@@ -9,6 +8,21 @@ const rootJsFiles = [
   "scripts/**/*.js",
   "tests/**/*.js",
 ];
+
+const nodeRuntimeGlobals = Object.fromEntries(
+  Object.getOwnPropertyNames(globalThis).map((name) => [name, "readonly"]),
+);
+
+const nodeTestGlobals = {
+  suite: "readonly",
+  test: "readonly",
+  before: "readonly",
+  after: "readonly",
+  beforeEach: "readonly",
+  afterEach: "readonly",
+  describe: "readonly",
+  it: "readonly",
+};
 
 export default [
   {
@@ -32,7 +46,8 @@ export default [
       ecmaVersion: "latest",
       sourceType: "module",
       globals: {
-        ...globals.node,
+        ...nodeRuntimeGlobals,
+        ...nodeTestGlobals,
       },
     },
   },

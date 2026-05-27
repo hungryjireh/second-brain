@@ -163,6 +163,7 @@ test("POST /api/entries honors structured brainstorm field overrides", async () 
     );
 
     assert.equal(res.statusCode, 201);
+    assert.equal(createdEntryBody?.description, description);
     assert.equal(createdEntryBody?.raw_text, transcript);
     assert.equal(createdEntryBody?.title, "Short-Form Video Content Creation");
     assert.equal(
@@ -252,6 +253,7 @@ test("POST /api/entries uses structured title and summary without content", asyn
     );
 
     assert.equal(res.statusCode, 201);
+    assert.equal(createdEntryBody?.description, description);
     assert.equal(createdEntryBody?.raw_text, description);
     assert.equal(
       createdEntryBody?.title,
@@ -326,6 +328,7 @@ test("PATCH /api/entries preserves explicit raw_text when updating brainstorm su
     );
 
     assert.equal(res.statusCode, 200);
+    assert.equal(patchBody?.description, description);
     assert.equal(patchBody?.raw_text, transcript);
     assert.equal(patchBody?.title, "Canonical Brainstorm Transcript");
     assert.equal(patchBody?.summary, "Finished brainstorm summary.");
@@ -418,6 +421,7 @@ A user brainstormed ideas for a short-form 'day in the life' video for a persona
       "Developing a concept for a short-form 'day in the life' video for a personal knowledge app.",
     );
     assert.match(createdEntryBody?.raw_text, /^# Conversation Summary/);
+    assert.match(createdEntryBody?.description, /^# Conversation Summary/);
     assert.equal(
       createdEntryBody?.content,
       "Developing a concept for a short-form 'day in the life' video for a personal knowledge app.",
@@ -496,6 +500,7 @@ test("PATCH /api/entries lets content override description-derived content", asy
     );
 
     assert.equal(res.statusCode, 200);
+    assert.equal(patchBody?.description, description);
     assert.equal(patchBody?.raw_text, description);
     assert.equal(patchBody?.title, "Structured Title");
     assert.equal(patchBody?.summary, "Structured summary.");
@@ -573,6 +578,7 @@ A user brainstormed ideas for a short-form 'day in the life' video for a persona
     );
 
     assert.equal(res.statusCode, 200);
+    assert.match(patchBody?.description, /^# Conversation Summary/);
     assert.equal(patchBody?.title, "Personal Knowledge App Brainstorming");
     assert.equal(
       patchBody?.summary,

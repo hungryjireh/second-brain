@@ -44,6 +44,7 @@ export default function SecondBrainConversationList({
   styles,
   style,
   contentContainerStyle,
+  footer,
   listRef,
   onListLayout,
   onListContentSizeChange,
@@ -153,6 +154,7 @@ export default function SecondBrainConversationList({
           onContentSizeChange={onListContentSizeChange}
         >
           {inlineChildren}
+          {footer}
         </ScrollView>
       );
     }
@@ -161,6 +163,7 @@ export default function SecondBrainConversationList({
       <View style={style} onLayout={onListLayout}>
         <View style={contentContainerStyle}>
           {inlineChildren}
+          {footer}
         </View>
       </View>
     );
@@ -176,6 +179,7 @@ export default function SecondBrainConversationList({
       data={data}
       keyExtractor={keyExtractor}
       renderItem={renderItem}
+      ListFooterComponent={footer || null}
       removeClippedSubviews={!isWeb}
       initialNumToRender={10}
       maxToRenderPerBatch={10}

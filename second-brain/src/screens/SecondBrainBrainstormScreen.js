@@ -14,8 +14,8 @@ import SecondBrainConversationList from "../components/SecondBrainConversationLi
 import { apiRequest } from "../api";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
-import { parseBrainstormTranscriptFromText } from "../utils/secondBrainConversationParsers";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
+import { repairLegacyTruncatedAssistantMessages } from "../utils/secondBrainConversationParsers";
 import {
   createBrainstormSession,
   getLinkedBrainstormSessionId,
@@ -41,50 +41,6 @@ function buildInitialBrainstormPrompt(seedEntry) {
   const seedText = getSeedEntryText(seedEntry);
   if (!seedText) return "";
   return `i want to brainstorm about: ${seedText}`;
-}
-
-function repairLegacyTruncatedAssistantMessages(session, seedEntry) {
-  if (!session || typeof session !== "object") return session;
-  const sourceText = String(seedEntry?.raw_text || seedEntry?.description || "");
-  if (!sourceText.trim()) return session;
-  const transcript = parseBrainstormTranscriptFromText(sourceText);
-  if (!transcript?.messages?.length) return session;
-
-  const transcriptAssistantTexts = transcript.messages
-    .filter((message) => message?.sender === "assistant")
-    .map((message) => String(message?.text ?? "").trim())
-    .filter(Boolean);
-  if (transcriptAssistantTexts.length === 0) return session;
-
-  const sessionMessages = Array.isArray(session.messages) ? session.messages : [];
-  let assistantOrdinal = 0;
-  let hasChanges = false;
-  const repairedMessages = sessionMessages.map((message) => {
-    if (message?.role !== "assistant") return message;
-    const currentText = String(message?.content ?? "").trim();
-    const candidateText = transcriptAssistantTexts[assistantOrdinal] || "";
-    assistantOrdinal += 1;
-    if (!currentText || !candidateText || candidateText === currentText) {
-      return message;
-    }
-    const isLegacyMergedId = String(message?.id || "").includes("-merged");
-    const looksLikeTrimmedSuffix =
-      candidateText.length > currentText.length && candidateText.endsWith(currentText);
-    if (!isLegacyMergedId && !looksLikeTrimmedSuffix) {
-      return message;
-    }
-    hasChanges = true;
-    return {
-      ...message,
-      content: candidateText,
-    };
-  });
-
-  if (!hasChanges) return session;
-  return {
-    ...session,
-    messages: repairedMessages,
-  };
 }
 
 function buildEndFinalizePrompt() {
@@ -129,11 +85,20 @@ function looksLikeStructuredFinalizeResponse(text) {
   );
 }
 
+function getSubmittedDraftValue(overrideContent, draft) {
+  if (typeof overrideContent === "string") return overrideContent;
+  const submittedEventText = overrideContent?.nativeEvent?.text;
+  if (typeof submittedEventText === "string") return submittedEventText;
+  if (typeof draft === "string") return draft;
+  return "";
+}
+
 export default function SecondBrainBrainstormScreen({
   route,
   navigation,
   token,
 }) {
+  const FINALIZING_MIN_VISIBLE_MS = 450;
   const insets = useSafeAreaInsets();
   const COMPOSER_MIN_HEIGHT = 38;
   const existingSessionId = route?.params?.sessionId || "";
@@ -146,6 +111,7 @@ export default function SecondBrainBrainstormScreen({
   const [finalizingEnd, setFinalizingEnd] = useState(false);
   const [error, setError] = useState("");
   const [isTypebarFocused, setIsTypebarFocused] = useState(false);
+  const draftRef = useRef("");
   const finalizedRef = useRef(false);
   const sendInFlightRef = useRef(false);
   const finalizeInFlightRef = useRef({
@@ -185,7 +151,10 @@ export default function SecondBrainBrainstormScreen({
           nextSession = await readBrainstormSession(linkedSessionId);
         }
       }
-      nextSession = repairLegacyTruncatedAssistantMessages(nextSession, seedEntry);
+      nextSession = repairLegacyTruncatedAssistantMessages(
+        nextSession,
+        seedEntry,
+      );
       if (!nextSession) {
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
@@ -230,11 +199,7 @@ export default function SecondBrainBrainstormScreen({
     sessionRef.current = session;
   }, [session]);
 
-  function scrollConversationToLatestAssistantTail() {
-    const assistantMessageExists = messages.some(
-      (message) => message?.role === "assistant",
-    );
-    if (!assistantMessageExists) return;
+  function scrollConversationToBottom() {
     const contentHeight = listContentHeightRef.current;
     const viewportHeight = listViewportHeightRef.current;
     if (!contentHeight || !viewportHeight) {
@@ -255,6 +220,14 @@ export default function SecondBrainBrainstormScreen({
     });
   }
 
+  function scrollConversationToLatestAssistantTail() {
+    const assistantMessageExists = messages.some(
+      (message) => message?.role === "assistant",
+    );
+    if (!assistantMessageExists) return;
+    scrollConversationToBottom();
+  }
+
   useEffect(() => {
     if (!isTypebarFocused) return undefined;
     const assistantMessageExists = messages.some(
@@ -268,6 +241,17 @@ export default function SecondBrainBrainstormScreen({
       timeouts.forEach((timeoutId) => clearTimeout(timeoutId));
     };
   }, [isTypebarFocused, keyboardOffset, messages]);
+
+  useEffect(() => {
+    if (!finalizingEnd) return undefined;
+    const timeouts = [
+      setTimeout(scrollConversationToBottom, 0),
+      setTimeout(scrollConversationToBottom, 120),
+    ];
+    return () => {
+      timeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    };
+  }, [conversationMessages.length, finalizingEnd, keyboardOffset]);
 
   async function finalizeSession({ mode, sessionOverride }) {
     const activeSession = sessionOverride || sessionRef.current || session;
@@ -422,28 +406,54 @@ export default function SecondBrainBrainstormScreen({
   }
 
   async function sendMessage(overrideContent, baseSessionOverride) {
-    if (sendInFlightRef.current) return;
-    const content = (overrideContent ?? draft).trim();
+    const content = getSubmittedDraftValue(
+      overrideContent,
+      draftRef.current,
+    ).trim();
     const baseSession = baseSessionOverride || session;
-    if (!content || !baseSession || busy) return;
-    sendInFlightRef.current = true;
-    setError("");
+    const isEndCommand = /^\/end(?:\s+.*)?$/i.test(content);
+    if (!content || !baseSession) return;
 
-    if (content === "/end") {
+    if (isEndCommand) {
+      if (finalizingEnd || finalizeInFlightRef.current.ended) return;
+      const hadSendInFlight = sendInFlightRef.current;
+      const hadBusy = busy;
+      if (!hadSendInFlight) {
+        sendInFlightRef.current = true;
+      }
+      setError("");
+      const finalizeVisibleAt = Date.now();
       setBusy(true);
       setFinalizingEnd(true);
+      finalizedRef.current = true;
       try {
-        await finalizeSession({ mode: "end" });
+        const finalizePromise = finalizeSession({ mode: "end" });
+        await finalizePromise;
+        const finalizeElapsedMs = Date.now() - finalizeVisibleAt;
+        if (finalizeElapsedMs < FINALIZING_MIN_VISIBLE_MS) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, FINALIZING_MIN_VISIBLE_MS - finalizeElapsedMs);
+          });
+        }
         navigation?.goBack?.();
       } catch (err) {
+        finalizedRef.current = false;
         setError(String(err?.message || "Unable to end brainstorm."));
       } finally {
         setFinalizingEnd(false);
-        setBusy(false);
-        sendInFlightRef.current = false;
+        if (!hadBusy) {
+          setBusy(false);
+        }
+        if (!hadSendInFlight) {
+          sendInFlightRef.current = false;
+        }
       }
       return;
     }
+
+    if (sendInFlightRef.current || busy) return;
+    sendInFlightRef.current = true;
+    setError("");
 
     const createdAt = new Date().toISOString();
     const userMessage = {
@@ -465,6 +475,7 @@ export default function SecondBrainBrainstormScreen({
     };
 
     if (!overrideContent) {
+      draftRef.current = "";
       setDraft("");
     }
     setBusy(true);
@@ -571,8 +582,9 @@ export default function SecondBrainBrainstormScreen({
             bottom={typebarBottom}
             placeholder="Share your thought, or type /end"
             draft={draft}
+            submitDisabled={finalizingEnd}
             onChangeDraft={(value) => {
-              if (busy) return;
+              draftRef.current = value;
               setDraft(value);
             }}
             onSubmitDraft={sendMessage}
@@ -627,17 +639,17 @@ export default function SecondBrainBrainstormScreen({
                 onListLayout={(event) => {
                   listViewportHeightRef.current =
                     event?.nativeEvent?.layout?.height || 0;
-                  if (isTypebarFocused) {
+                  if (isTypebarFocused || finalizingEnd) {
                     requestAnimationFrame(() => {
-                      scrollConversationToLatestAssistantTail();
+                      scrollConversationToBottom();
                     });
                   }
                 }}
                 onListContentSizeChange={(_, contentHeight) => {
                   listContentHeightRef.current = contentHeight || 0;
-                  if (isTypebarFocused) {
+                  if (isTypebarFocused || finalizingEnd) {
                     requestAnimationFrame(() => {
-                      scrollConversationToLatestAssistantTail();
+                      scrollConversationToBottom();
                     });
                   }
                 }}
@@ -649,6 +661,17 @@ export default function SecondBrainBrainstormScreen({
                   { paddingBottom: messagesBottomPadding },
                   secondBrainScreenStyles.conversationWrap,
                 ]}
+                footer={
+                  finalizingEnd ? (
+                    <View
+                      style={styles.finalizingWrap}
+                      accessibilityLabel="Finalizing brainstorm"
+                    >
+                      <ActivityIndicator size="small" />
+                      <Text style={styles.finalizingText}>Finalizing...</Text>
+                    </View>
+                  ) : null
+                }
                 showWebHiddenMessageNotice
                 maxWebRenderedMessages={200}
                 hiddenMessageNoticeStyle={
@@ -657,15 +680,6 @@ export default function SecondBrainBrainstormScreen({
                 renderInline
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
-              {finalizingEnd ? (
-                <View
-                  style={styles.finalizingWrap}
-                  accessibilityLabel="Finalizing brainstorm"
-                >
-                  <ActivityIndicator size="small" />
-                  <Text style={styles.finalizingText}>Finalizing...</Text>
-                </View>
-              ) : null}
             </View>
           </SecondBrainTypebar>
         </KeyboardAvoidingView>

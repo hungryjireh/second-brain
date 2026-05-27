@@ -739,7 +739,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   typebarButtonDisabled: {
-    backgroundColor: theme.colors.bgRaised,
+    backgroundColor: "#A3A3A3",
+    borderColor: "#A3A3A3",
   },
   typebarButtonText: {
     color: "#fff",
@@ -749,7 +750,7 @@ const styles = StyleSheet.create({
   },
   typebarButtonIcon: { color: "#fff" },
   typebarButtonTextDisabled: { color: theme.colors.textMuted },
-  typebarButtonIconDisabled: { color: theme.colors.textMuted },
+  typebarButtonIconDisabled: { color: "#E5E7EB" },
   typebarUploadButtonText: { color: theme.colors.textSecondary, fontSize: 15 },
   typebarUploadButtonIcon: { color: theme.colors.textSecondary },
   settingsPanel: {

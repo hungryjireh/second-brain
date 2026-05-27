@@ -11,6 +11,7 @@ export default function SecondBrainTypebar({
   bottom,
   placeholder,
   draft,
+  submitDisabled = false,
   onChangeDraft,
   onSubmitDraft,
   closeOpenActionDrawer,
@@ -220,7 +221,15 @@ export default function SecondBrainTypebar({
           <TextInput
             value={draft}
             onChangeText={onChangeDraft}
-            onSubmitEditing={onSubmitDraft}
+            onSubmitEditing={(event) => {
+              if (submitDisabled) return;
+              const submittedText = event?.nativeEvent?.text;
+              if (typeof submittedText === "string") {
+                onSubmitDraft(submittedText);
+                return;
+              }
+              onSubmitDraft(draft);
+            }}
             onFocus={() => {
               closeOpenActionDrawer();
               setTypebarFocused(true);
@@ -247,13 +256,15 @@ export default function SecondBrainTypebar({
             <Pressable
               style={[
                 styles.typebarButton,
-                !draft.trim() && styles.typebarButtonDisabled,
+                (!draft.trim() || submitDisabled) &&
+                  styles.typebarButtonDisabled,
               ]}
               onPress={() => {
+                if (submitDisabled) return;
                 closeOpenActionDrawer();
                 onSubmitDraft();
               }}
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || submitDisabled}
               accessibilityRole="button"
               accessibilityLabel="Enter note"
               onHoverIn={() => setActionTooltip("enter")}
@@ -268,7 +279,8 @@ export default function SecondBrainTypebar({
                 size={15}
                 style={[
                   styles.typebarButtonIcon,
-                  !draft.trim() && styles.typebarButtonIconDisabled,
+                  (!draft.trim() || submitDisabled) &&
+                    styles.typebarButtonIconDisabled,
                 ]}
               />
             </Pressable>

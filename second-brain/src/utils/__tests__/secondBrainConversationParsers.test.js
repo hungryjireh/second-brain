@@ -1,4 +1,7 @@
-import { parseBrainstormTranscriptFromText } from "../secondBrainConversationParsers";
+import {
+  parseBrainstormTranscriptFromText,
+  repairLegacyTruncatedAssistantMessages,
+} from "../secondBrainConversationParsers";
 
 describe("secondBrainConversationParsers", () => {
   it("parses transcript lines with me/ai labels", () => {
@@ -125,5 +128,57 @@ describe("secondBrainConversationParsers", () => {
         },
       ],
     });
+  });
+
+  it("replaces truncated legacy merged assistant text using transcript source", () => {
+    const session = {
+      id: "session-1",
+      messages: [
+        {
+          id: "2026-05-26-assistant-1-0-merged",
+          role: "assistant",
+          content:
+            "AI-generated content.\nTo further develop this idea, can you tell me:",
+        },
+      ],
+    };
+    const entry = {
+      raw_text: [
+        "User: I am exploring app ideas for non-tech users.",
+        "Assistant: So, you want to create an app that bridges the gap between non-techies and AI, making it easier for them to discover and explore the possibilities of",
+        "AI-generated content.",
+        "To further develop this idea, can you tell me:",
+      ].join("\n"),
+    };
+
+    const repaired = repairLegacyTruncatedAssistantMessages(session, entry);
+
+    expect(repaired).toEqual({
+      ...session,
+      messages: [
+        {
+          ...session.messages[0],
+          content: [
+            "So, you want to create an app that bridges the gap between non-techies and AI, making it easier for them to discover and explore the possibilities of",
+            "AI-generated content.",
+            "To further develop this idea, can you tell me:",
+          ].join("\n"),
+        },
+      ],
+    });
+  });
+
+  it("keeps the same session object when no safe repair candidate exists", () => {
+    const session = {
+      id: "session-2",
+      messages: [{ role: "assistant", content: "Assistant: short answer" }],
+    };
+    const entry = {
+      raw_text: "User: prompt\nAssistant: completely different answer",
+    };
+
+    const repaired = repairLegacyTruncatedAssistantMessages(session, entry);
+
+    expect(repaired).toBe(session);
   });
 });

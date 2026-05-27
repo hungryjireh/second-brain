@@ -464,6 +464,7 @@ export default async function handler(req, res) {
           : parsedTags;
         const entry = await insertEntry({
           userId,
+          description: normalizedDescription,
           raw_text: rawTextOverride || derived.raw_text,
           category: finalCategory,
           title: titleOverride,
@@ -507,6 +508,7 @@ export default async function handler(req, res) {
         : candidateTags;
       const entry = await insertEntry({
         userId,
+        description: normalizedDescription,
         raw_text: rawTextOverride || classifiedDerived.raw_text,
         category: finalCategory,
         title:
@@ -591,6 +593,7 @@ export default async function handler(req, res) {
       const normalizedDescription =
         parsedStructuredSource?.description || nextDescriptionSource.trim();
       const derived = deriveEntryFields(normalizedDescription);
+      updates.description = normalizedDescription;
       updates.raw_text = derived.raw_text;
       updates.content = derived.raw_text;
       updates.title = derived.title;

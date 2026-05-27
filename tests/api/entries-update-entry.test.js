@@ -41,6 +41,7 @@ test("updateEntry PATCH includes updated_at unix timestamp", async () => {
           id: 42,
           user_id: "11111111-1111-4111-8111-111111111111",
           category: "note",
+          description: body?.description ?? null,
           raw_text: "updated text",
           title: "updated title",
           summary: "updated summary",
@@ -66,6 +67,7 @@ test("updateEntry PATCH includes updated_at unix timestamp", async () => {
       "11111111-1111-4111-8111-111111111111",
       42,
       {
+        description: "updated description",
         raw_text: "updated text",
         title: "updated title",
         content: "updated content",
@@ -80,6 +82,8 @@ test("updateEntry PATCH includes updated_at unix timestamp", async () => {
     assert.equal(patchBody.updated_at >= before, true);
     assert.equal(patchBody.updated_at <= after, true);
     assert.equal(patchBody.content, "updated content");
+    assert.equal(patchBody.description, "updated description");
+    assert.equal(entry?.description, "updated description");
     assert.equal(entry?.updated_at, patchBody.updated_at);
   } finally {
     global.fetch = originalFetch;
