@@ -48,6 +48,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 120,
   },
+  introWrap: {
+    alignItems: "center",
+    width: "100%",
+  },
+  introWrapHidden: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+  },
   heading: {
     color: "#0F172A",
     textAlign: "center",
@@ -64,6 +74,22 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     fontSize: 16,
     lineHeight: 25,
+  },
+  transcriptWrap: {
+    position: "absolute",
+    top: 120,
+    left: 24,
+    right: 24,
+    alignItems: "center",
+  },
+  transcriptText: {
+    maxWidth: 520,
+    color: "#0F172A",
+    textAlign: "center",
+    fontFamily: theme.fonts.semibold,
+    fontSize: 28,
+    lineHeight: 40,
+    letterSpacing: -0.4,
   },
 });
 

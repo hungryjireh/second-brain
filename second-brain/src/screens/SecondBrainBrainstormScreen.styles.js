@@ -79,11 +79,22 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.heading,
     fontSize: 14,
   },
-  error: {
-    color: theme.colors.danger,
-    fontFamily: theme.fonts.body,
-    marginHorizontal: 12,
+  errorBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
     marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.dangerBorder,
+    backgroundColor: theme.colors.dangerBg,
+  },
+  errorBannerText: {
+    color: theme.colors.dangerStrong,
+    fontFamily: theme.fonts.body,
+    fontSize: 13,
+    lineHeight: 18,
   },
   finalizingWrap: {
     flexDirection: "row",

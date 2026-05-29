@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -54,9 +56,9 @@ const TALK_STATE = {
 };
 const VOICE_RECORDING_PRESET =
   RecordingPresets.LOW_QUALITY ?? RecordingPresets.HIGH_QUALITY;
-const FINALIZING_MIN_VISIBLE_MS = 450;
 const TALK_CONTROLS_STACK_HEIGHT = 320;
-const PAUSE_AUTO_SUBMIT_DELAY_MS = 1200;
+const EMPTY_TRANSCRIPT_ERROR =
+  "I couldn't hear any words. Please speak again and then press Pause & transcribe.";
 
 function prefixedWipTitle(title) {
   const clean = String(title || "").trim();
@@ -101,31 +103,12 @@ function canStartListening(stateValue) {
   );
 }
 
-function formatTalkStateLabel(stateValue) {
-  switch (stateValue) {
-    case TALK_STATE.LISTENING:
-      return "Listening";
-    case TALK_STATE.PAUSED:
-      return "Paused";
-    case TALK_STATE.TRANSCRIBING:
-      return "Transcribing";
-    case TALK_STATE.WAITING_LLM:
-      return "Thinking";
-    case TALK_STATE.SPEAKING:
-      return "Speaking";
-    case TALK_STATE.ERROR:
-      return "Error";
-    case TALK_STATE.IDLE:
-    default:
-      return "Idle";
-  }
-}
-
 export default function SecondBrainBrainstormTalkScreen({
   route,
   navigation,
   token,
 }) {
+  const FINALIZING_MIN_VISIBLE_MS = 450;
   const insets = useSafeAreaInsets();
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
@@ -143,22 +126,29 @@ export default function SecondBrainBrainstormTalkScreen({
   const finalizeInFlightRef = useRef({ ended: false, wipSaved: false });
   const micPermissionGrantedRef = useRef(false);
   const audioRecordingModeEnabledRef = useRef(false);
-  const pendingAutoSubmitTimeoutRef = useRef(null);
   const audioRecorder = useAudioRecorder(VOICE_RECORDING_PRESET);
   const recorderState = useAudioRecorderState(audioRecorder);
   const recording = Boolean(recorderState?.isRecording);
   const conversationListRef = useRef(null);
   const listViewportHeightRef = useRef(0);
   const listContentHeightRef = useRef(0);
+  const micSlideY = useRef(new Animated.Value(0)).current;
 
   const conversationMessages = useMemo(
     () => parseBrainstormConversationFromSession(session)?.messages || [],
     [session],
   );
+  const shouldHideIntro = Boolean(
+    String(pendingUserTranscript || "").trim() || conversationMessages.length,
+  );
   const isWeb = Platform.OS === "web";
   const controlsBottomPadding =
     TALK_CONTROLS_STACK_HEIGHT + Math.max(insets.bottom, 0) + keyboardOffset;
   const messagesBottomPadding = controlsBottomPadding + 24;
+
+  function scrollConversationToBottom() {
+    conversationListRef.current?.scrollToEnd?.({ animated: false });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -212,26 +202,31 @@ export default function SecondBrainBrainstormTalkScreen({
     pendingUserTranscriptRef.current = pendingUserTranscript;
   }, [pendingUserTranscript]);
 
-  function scrollConversationToBottom() {
-    const contentHeight = listContentHeightRef.current;
-    const viewportHeight = listViewportHeightRef.current;
-    if (!contentHeight || !viewportHeight) {
-      conversationListRef.current?.scrollToEnd?.({ animated: false });
-      return;
-    }
-    const targetOffset = Math.max(0, contentHeight - viewportHeight);
-    if (typeof conversationListRef.current?.scrollToOffset === "function") {
-      conversationListRef.current.scrollToOffset({
-        offset: targetOffset,
-        animated: false,
-      });
-      return;
-    }
-    conversationListRef.current?.scrollTo?.({
-      y: targetOffset,
-      animated: false,
+  useEffect(() => {
+    Animated.timing(micSlideY, {
+      toValue: shouldHideIntro ? 32 : 0,
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [micSlideY, shouldHideIntro]);
+
+  useEffect(() => {
+    if (!finalizingEnd) return undefined;
+    requestAnimationFrame(() => {
+      scrollConversationToBottom();
     });
-  }
+    return undefined;
+  }, [conversationMessages.length, finalizingEnd]);
+
+  useEffect(() => {
+    if (!conversationMessages.length) return;
+    const lastMessage = conversationMessages[conversationMessages.length - 1];
+    if (lastMessage?.role !== "assistant") return;
+    requestAnimationFrame(() => {
+      scrollConversationToBottom();
+    });
+  }, [conversationMessages]);
 
   async function persistSession(next) {
     const normalized = normalizeBrainstormSession(next);
@@ -241,7 +236,6 @@ export default function SecondBrainBrainstormTalkScreen({
   }
 
   async function ensureRecordingModeEnabled() {
-    if (audioRecordingModeEnabledRef.current) return;
     await setAudioModeAsync({
       allowsRecording: true,
       playsInSilentMode: true,
@@ -267,10 +261,6 @@ export default function SecondBrainBrainstormTalkScreen({
     }
     if (talkState === TALK_STATE.SPEAKING) {
       await stopBrainstormTalkPlayback();
-    }
-    if (pendingAutoSubmitTimeoutRef.current) {
-      clearTimeout(pendingAutoSubmitTimeoutRef.current);
-      pendingAutoSubmitTimeoutRef.current = null;
     }
     setError("");
     try {
@@ -484,6 +474,10 @@ export default function SecondBrainBrainstormTalkScreen({
     const assistantText = String(
       response?.reply || "Let's keep exploring this idea.",
     ).trim();
+    const synthesisPromise = synthesizeBrainstormTalkAudio({
+      token,
+      text: assistantText,
+    });
     const nextSession = await appendAssistantMessage(
       assistantText,
       pendingSession,
@@ -491,10 +485,7 @@ export default function SecondBrainBrainstormTalkScreen({
 
     setTalkState(TALK_STATE.SPEAKING);
     try {
-      const audio = await synthesizeBrainstormTalkAudio({
-        token,
-        text: assistantText,
-      });
+      const audio = await synthesisPromise;
       await playBrainstormTalkAudio(audio);
     } finally {
       setTalkState(TALK_STATE.IDLE);
@@ -502,67 +493,15 @@ export default function SecondBrainBrainstormTalkScreen({
     return nextSession;
   }
 
-  async function submitTextOrCommand(contentText) {
-    const content = String(contentText || "").trim();
-    const activeSession = sessionRef.current || session;
-    if (!content || !activeSession) return;
-
-    setError("");
-
-    const isEndCommand = /^\/end(?:\s+.*)?$/i.test(content);
-    if (isEndCommand) {
-      if (pendingAutoSubmitTimeoutRef.current) {
-        clearTimeout(pendingAutoSubmitTimeoutRef.current);
-        pendingAutoSubmitTimeoutRef.current = null;
-      }
-      const pendingTranscript = String(pendingUserTranscriptRef.current || "");
-      if (pendingTranscript.trim()) {
-        await appendUserMessage(pendingTranscript, activeSession);
-        clearPendingTranscript();
-      }
-      if (finalizingEnd || finalizeInFlightRef.current.ended) return;
-      const startedAt = Date.now();
-      setFinalizingEnd(true);
-      finalizedRef.current = true;
-      try {
-        await finalizeSession({ mode: "end" });
-        const elapsed = Date.now() - startedAt;
-        if (elapsed < FINALIZING_MIN_VISIBLE_MS) {
-          await new Promise((resolve) => {
-            setTimeout(resolve, FINALIZING_MIN_VISIBLE_MS - elapsed);
-          });
-        }
-        const canGoBackFn = navigation?.canGoBack;
-        if (typeof canGoBackFn !== "function" || canGoBackFn()) {
-          navigation?.goBack?.();
-        } else {
-          navigation?.navigate?.("SecondBrain");
-        }
-      } catch (err) {
-        finalizedRef.current = false;
-        setError(String(err?.message || "Unable to end brainstorm talk."));
-        setTalkState(TALK_STATE.ERROR);
-      } finally {
-        setFinalizingEnd(false);
-      }
+  async function submitPendingTranscriptTurn({
+    allowWhileTranscribing = false,
+    contentOverride = "",
+  } = {}) {
+    if (!allowWhileTranscribing && talkStateRef.current !== TALK_STATE.PAUSED) {
       return;
     }
-
-    try {
-      clearPendingTranscript();
-      await runTalkTurnWithText(content, activeSession);
-    } catch (err) {
-      setError(
-        String(err?.message || "Unable to complete brainstorm talk turn."),
-      );
-      setTalkState(TALK_STATE.ERROR);
-    }
-  }
-
-  async function submitPendingTranscriptTurn() {
-    if (recording || talkStateRef.current !== TALK_STATE.PAUSED) return;
     const pendingContent = String(
-      pendingUserTranscriptRef.current || "",
+      contentOverride || pendingUserTranscriptRef.current || "",
     ).trim();
     if (!pendingContent) {
       setTalkState(TALK_STATE.IDLE);
@@ -570,25 +509,15 @@ export default function SecondBrainBrainstormTalkScreen({
     }
     const activeSession = sessionRef.current || session;
     if (!activeSession) return;
-    clearPendingTranscript();
     try {
       await runTalkTurnWithText(pendingContent, activeSession);
+      clearPendingTranscript();
     } catch (err) {
       setError(
         String(err?.message || "Unable to complete brainstorm talk turn."),
       );
       setTalkState(TALK_STATE.ERROR);
     }
-  }
-
-  function queuePendingTranscriptSubmit() {
-    if (pendingAutoSubmitTimeoutRef.current) {
-      clearTimeout(pendingAutoSubmitTimeoutRef.current);
-    }
-    pendingAutoSubmitTimeoutRef.current = setTimeout(() => {
-      pendingAutoSubmitTimeoutRef.current = null;
-      submitPendingTranscriptTurn().catch(() => {});
-    }, PAUSE_AUTO_SUBMIT_DELAY_MS);
   }
 
   async function pauseListeningAndTranscribe() {
@@ -605,9 +534,15 @@ export default function SecondBrainBrainstormTalkScreen({
         audioBase64,
         extension: "m4a",
       });
-      appendPendingTranscriptChunk(transcript);
+      if (!String(transcript || "").trim()) {
+        throw new Error(EMPTY_TRANSCRIPT_ERROR);
+      }
+      const pendingTranscript = appendPendingTranscriptChunk(transcript);
       setTalkState(TALK_STATE.PAUSED);
-      queuePendingTranscriptSubmit();
+      await submitPendingTranscriptTurn({
+        allowWhileTranscribing: true,
+        contentOverride: pendingTranscript,
+      });
     } catch (err) {
       setError(String(err?.message || "Unable to transcribe voice input."));
       setTalkState(TALK_STATE.ERROR);
@@ -620,6 +555,31 @@ export default function SecondBrainBrainstormTalkScreen({
       return;
     }
     await startListening();
+  }
+
+  async function handleEndPress() {
+    if (finalizingEnd || finalizeInFlightRef.current.ended) return;
+    const activeSession = sessionRef.current || session;
+    if (!activeSession) return;
+    setError("");
+    setFinalizingEnd(true);
+    finalizedRef.current = true;
+    const finalizeVisibleAt = Date.now();
+    try {
+      await finalizeSession({ mode: "end", sessionOverride: activeSession });
+      const finalizeElapsedMs = Date.now() - finalizeVisibleAt;
+      if (finalizeElapsedMs < FINALIZING_MIN_VISIBLE_MS) {
+        await new Promise((resolve) => {
+          setTimeout(resolve, FINALIZING_MIN_VISIBLE_MS - finalizeElapsedMs);
+        });
+      }
+      navigateBackToSecondBrain();
+    } catch (err) {
+      finalizedRef.current = false;
+      setError(String(err?.message || "Unable to end brainstorm talk."));
+    } finally {
+      setFinalizingEnd(false);
+    }
   }
 
   function navigateBackToSecondBrain() {
@@ -660,9 +620,6 @@ export default function SecondBrainBrainstormTalkScreen({
     return () => {
       stopBrainstormTalkPlayback().catch(() => {});
       disableRecordingMode().catch(() => {});
-      if (pendingAutoSubmitTimeoutRef.current) {
-        clearTimeout(pendingAutoSubmitTimeoutRef.current);
-      }
       const latestSession = sessionRef.current;
       if (!latestSession || finalizedRef.current) return;
       if (latestSession.lifecycle !== "active") return;
@@ -677,19 +634,23 @@ export default function SecondBrainBrainstormTalkScreen({
     };
   }, []);
 
-  const talkStateLabel = formatTalkStateLabel(talkState);
   const micButtonDisabled = finalizingEnd || !canStartListening(talkState);
+  const guidanceText = recording
+    ? "Press Pause & transcribe when you finish speaking."
+    : talkState === TALK_STATE.TRANSCRIBING ||
+        talkState === TALK_STATE.WAITING_LLM
+      ? "Processing your voice and preparing a response..."
+      : "Speak naturally. We will transcribe your thoughts and brainstorm with you in real time.";
 
   return (
     <SecondBrainVoiceCaptureLayout
       insetsTop={insets.top}
       screenTitle="Brainstorm talk"
       heading="Talk through your ideas"
-      description="Speak naturally. We will transcribe your thoughts and brainstorm with you in real time."
-      onBackPress={navigateBackToSecondBrain}
+      description={guidanceText}
       bodyStyle={styles.layoutBody}
-      headingStyle={styles.layoutHeading}
-      descriptionStyle={styles.layoutDescription}
+      hideIntro={shouldHideIntro}
+      onBackPress={navigateBackToSecondBrain}
     >
       <KeyboardAvoidingView
         style={styles.talkArea}
@@ -697,51 +658,64 @@ export default function SecondBrainBrainstormTalkScreen({
         enabled={Platform.OS !== "web"}
       >
         <View style={styles.container}>
-          <SecondBrainConversationList
-            listRef={conversationListRef}
-            onListLayout={(event) => {
-              listViewportHeightRef.current =
-                event?.nativeEvent?.layout?.height || 0;
-              if (finalizingEnd) {
-                requestAnimationFrame(() => {
-                  scrollConversationToBottom();
-                });
+          {conversationMessages.length ? (
+            <SecondBrainConversationList
+              listRef={conversationListRef}
+              onListLayout={(event) => {
+                listViewportHeightRef.current =
+                  event?.nativeEvent?.layout?.height || 0;
+                if (finalizingEnd) {
+                  requestAnimationFrame(() => {
+                    scrollConversationToBottom();
+                  });
+                }
+              }}
+              onListContentSizeChange={(_, contentHeight) => {
+                listContentHeightRef.current = contentHeight || 0;
+                if (finalizingEnd) {
+                  requestAnimationFrame(() => {
+                    scrollConversationToBottom();
+                  });
+                }
+              }}
+              messages={conversationMessages}
+              styles={secondBrainScreenStyles}
+              style={styles.messagesList}
+              contentContainerStyle={[
+                styles.messagesWrap,
+                { paddingBottom: messagesBottomPadding },
+                secondBrainScreenStyles.conversationWrap,
+              ]}
+              footer={
+                finalizingEnd ? (
+                  <View
+                    style={styles.finalizingWrap}
+                    accessibilityLabel="Finalizing brainstorm talk"
+                  >
+                    <ActivityIndicator size="small" />
+                    <Text style={styles.finalizingText}>Finalizing...</Text>
+                  </View>
+                ) : null
               }
-            }}
-            onListContentSizeChange={(_, contentHeight) => {
-              listContentHeightRef.current = contentHeight || 0;
-              if (finalizingEnd) {
-                requestAnimationFrame(() => {
-                  scrollConversationToBottom();
-                });
+              showWebHiddenMessageNotice
+              maxWebRenderedMessages={200}
+              hiddenMessageNoticeStyle={
+                secondBrainScreenStyles.entryPanelSummary
               }
-            }}
-            messages={conversationMessages}
-            styles={secondBrainScreenStyles}
-            style={styles.messagesList}
-            contentContainerStyle={[
-              styles.messagesWrap,
-              { paddingBottom: messagesBottomPadding },
-              secondBrainScreenStyles.conversationWrap,
+              renderInline
+            />
+          ) : null}
+          <Animated.View
+            style={[
+              styles.controlsWrap,
+              {
+                bottom: Math.max(insets.bottom, 0) + keyboardOffset,
+              },
+              { transform: [{ translateY: micSlideY }] },
             ]}
-            footer={
-              finalizingEnd ? (
-                <View
-                  style={styles.finalizingWrap}
-                  accessibilityLabel="Finalizing brainstorm talk"
-                >
-                  <ActivityIndicator size="small" />
-                  <Text style={styles.finalizingText}>Finalizing...</Text>
-                </View>
-              ) : null
-            }
-            showWebHiddenMessageNotice
-            maxWebRenderedMessages={200}
-            hiddenMessageNoticeStyle={secondBrainScreenStyles.entryPanelSummary}
-            renderInline
-          />
-          <View style={styles.controlsWrap}>
+          >
             <SecondBrainMicrophoneButton
+              containerStyle={styles.micWrap}
               onPress={handleMicrophoneButtonPress}
               disabled={micButtonDisabled}
               active={recording}
@@ -754,22 +728,33 @@ export default function SecondBrainBrainstormTalkScreen({
                     : "Listen"
               }
             />
-            <Text style={styles.stateText}>{talkStateLabel}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="End brainstorm talk"
-              onPress={() => submitTextOrCommand("/end")}
-              disabled={finalizingEnd}
-              style={[
-                styles.controlButton,
-                styles.primaryControlButton,
-                finalizingEnd && styles.controlButtonDisabled,
-              ]}
-            >
-              <Text style={styles.primaryControlButtonText}>End</Text>
-            </Pressable>
-          </View>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+            {conversationMessages.length ? (
+              <Pressable
+                style={[
+                  styles.endButton,
+                  finalizingEnd ? styles.endButtonDisabled : null,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="End brainstorm talk"
+                onPress={handleEndPress}
+                disabled={finalizingEnd}
+              >
+                {finalizingEnd ? (
+                  <View style={styles.endButtonBusyWrap}>
+                    <ActivityIndicator
+                      style={styles.endButtonBusyIndicator}
+                      size="small"
+                      color={secondBrainScreenStyles.typebarButtonText.color}
+                    />
+                    <Text style={styles.endButtonText}>Ending...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.endButtonText}>End</Text>
+                )}
+              </Pressable>
+            ) : null}
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </SecondBrainVoiceCaptureLayout>

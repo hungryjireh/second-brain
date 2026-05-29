@@ -207,12 +207,7 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainBrainstormTalk"
-                  options={({ navigation }) =>
-                    buildSecondBrainHeaderOptions({
-                      navigation,
-                      hideDate: hideSecondBrainHeaderDate,
-                    })
-                  }
+                  options={{ headerShown: false }}
                 >
                   {(props) => (
                     <SecondBrainBrainstormTalkScreen {...props} token={token} />

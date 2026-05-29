@@ -42,7 +42,7 @@ describe("useVoiceCapture", () => {
   beforeEach(() => {
     latestValue = null;
     jest.clearAllMocks();
-    useAudioRecorderState.mockReturnValue({ isRecording: false });
+    useAudioRecorderState.mockImplementation(() => ({ isRecording: false }));
     requestRecordingPermissionsAsync.mockResolvedValue({ granted: true });
     apiRequest.mockResolvedValue({});
   });
@@ -62,6 +62,45 @@ describe("useVoiceCapture", () => {
     });
     expect(recorder.prepareToRecordAsync).toHaveBeenCalled();
     expect(recorder.record).toHaveBeenCalled();
+  });
+
+  it("re-enables recording mode on every start attempt", async () => {
+    let recordingState = false;
+    useAudioRecorderState.mockImplementation(() => ({
+      isRecording: recordingState,
+    }));
+    const view = render(<Harness />);
+    const recorder = useAudioRecorder();
+
+    await act(async () => {
+      await latestValue.startVoiceCapture();
+    });
+
+    recordingState = true;
+    view.rerender(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    recordingState = false;
+    view.rerender(<Harness />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await latestValue.startVoiceCapture();
+    });
+
+    expect(setAudioModeAsync).toHaveBeenNthCalledWith(1, {
+      allowsRecording: true,
+      playsInSilentMode: true,
+    });
+    expect(setAudioModeAsync).toHaveBeenNthCalledWith(2, {
+      allowsRecording: true,
+      playsInSilentMode: true,
+    });
+    expect(recorder.record).toHaveBeenCalledTimes(2);
   });
 
   it("shows error and does not record when permission is denied", async () => {

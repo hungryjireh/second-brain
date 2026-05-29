@@ -82,13 +82,11 @@ export function useVoiceCapture({
         }
         hasMicrophonePermissionRef.current = true;
       }
-      if (!audioRecordingModeEnabledRef.current) {
-        await setAudioModeAsync({
-          allowsRecording: true,
-          playsInSilentMode: true,
-        });
-        audioRecordingModeEnabledRef.current = true;
-      }
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      audioRecordingModeEnabledRef.current = true;
       await audioRecorder.prepareToRecordAsync(VOICE_RECORDING_PRESET);
       await audioRecorder.record();
     } catch (err) {

@@ -656,6 +656,11 @@ export default function SecondBrainBrainstormScreen({
             alwaysExpanded
           >
             <View style={styles.container}>
+              {error ? (
+                <View style={styles.errorBanner} accessibilityRole="alert">
+                  <Text style={styles.errorBannerText}>{error}</Text>
+                </View>
+              ) : null}
               <SecondBrainConversationList
                 listRef={conversationListRef}
                 onListLayout={(event) => {
@@ -701,7 +706,6 @@ export default function SecondBrainBrainstormScreen({
                 }
                 renderInline
               />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
               <Pressable
                 style={styles.launchTalkButton}
                 accessibilityRole="button"

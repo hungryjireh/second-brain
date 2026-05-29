@@ -31,6 +31,25 @@ function resolveAudioExtension(mimeType) {
   return "mp3";
 }
 
+function decodeBase64ToBytes(base64Value) {
+  const normalized = String(base64Value || "").trim();
+  if (!normalized) return new Uint8Array();
+  const decoded =
+    typeof globalThis.atob === "function"
+      ? globalThis.atob(normalized)
+      : typeof Buffer !== "undefined"
+        ? Buffer.from(normalized, "base64").toString("binary")
+        : "";
+  if (!decoded) {
+    throw new Error("Unable to decode synthesized audio payload.");
+  }
+  const bytes = new Uint8Array(decoded.length);
+  for (let index = 0; index < decoded.length; index += 1) {
+    bytes[index] = decoded.charCodeAt(index);
+  }
+  return bytes;
+}
+
 async function waitForPlaybackToFinish(player) {
   return new Promise((resolve) => {
     const startedAtMs = Date.now();
@@ -77,6 +96,7 @@ export async function transcribeBrainstormTalkAudio({
         error,
         "Unable to transcribe voice input right now.",
       ),
+      { cause: error },
     );
   }
 }
@@ -84,7 +104,7 @@ export async function transcribeBrainstormTalkAudio({
 export async function synthesizeBrainstormTalkAudio({
   token,
   text,
-  voiceId = "Scarlett",
+  voiceId = "Sierra",
   timeoutMs,
 }) {
   const normalizedText = String(text || "").trim();
@@ -115,6 +135,7 @@ export async function synthesizeBrainstormTalkAudio({
         error,
         "Unable to synthesize assistant response right now.",
       ),
+      { cause: error },
     );
   }
 }
@@ -164,7 +185,7 @@ export async function playBrainstormTalkAudio({
   const fileName = `brainstorm-talk-${Date.now()}-${Math.random().toString(16).slice(2)}.${extension}`;
   const audioFile = new File(Paths.cache, fileName);
   audioFile.create({ overwrite: true, intermediates: true });
-  audioFile.write(normalizedAudio, { encoding: "base64" });
+  audioFile.write(decodeBase64ToBytes(normalizedAudio));
   activeAudioFile = audioFile;
 
   const player = createAudioPlayer(audioFile.uri, {
