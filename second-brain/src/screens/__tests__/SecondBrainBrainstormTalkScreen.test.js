@@ -6,6 +6,7 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import SecondBrainBrainstormTalkScreen from "../SecondBrainBrainstormTalkScreen";
+import SecondBrainConversationList from "../../components/SecondBrainConversationList";
 import { apiRequest } from "../../api";
 import {
   synthesizeBrainstormTalkAudio,
@@ -17,7 +18,25 @@ jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
 
+jest.mock("../../components/SecondBrainConversationList", () => {
+  const React = require("react");
+  const { View } = require("react-native");
+
+  return {
+    __esModule: true,
+    default: jest.fn(function MockSecondBrainConversationList(props) {
+      return (
+        <>
+          <View testID="mock-conversation-list" />
+          {props?.footer || null}
+        </>
+      );
+    }),
+  };
+});
+
 jest.mock("../../services/unrealSpeechService", () => ({
+  BRAINSTORM_TALK_STREAMING_ENABLED: false,
   playBrainstormTalkAudio: jest.fn(async () => {}),
   stopBrainstormTalkPlayback: jest.fn(async () => {}),
   synthesizeBrainstormTalkAudio: jest.fn(async () => ({
@@ -452,6 +471,67 @@ describe("SecondBrainBrainstormTalkScreen", () => {
     expect(synthesisOrder).toBeLessThan(assistantWriteOrder);
   });
 
+  it("starts LLM request before persisting the user turn", async () => {
+    isRecording = true;
+    transcribeBrainstormTalkAudio.mockResolvedValueOnce("hello");
+
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(view.getByLabelText("Pause & transcribe"));
+
+    await waitFor(() => {
+      expect(transcribeBrainstormTalkAudio).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.objectContaining({ message: "hello" }),
+        }),
+      );
+    });
+
+    const brainstormCallIndex = apiRequest.mock.calls.findIndex(
+      ([path, options]) =>
+        path === "/brainstorm" &&
+        options?.method === "POST" &&
+        options?.body?.message === "hello",
+    );
+    const brainstormCallOrder =
+      brainstormCallIndex >= 0
+        ? apiRequest.mock.invocationCallOrder[brainstormCallIndex]
+        : undefined;
+
+    const userWriteCall = writeBrainstormSession.mock.calls.find(
+      ([sessionArg]) =>
+        Array.isArray(sessionArg?.messages) &&
+        sessionArg.messages.some(
+          (message) => message?.role === "user" && message?.content === "hello",
+        ),
+    );
+    const userWriteOrder =
+      userWriteCall &&
+      writeBrainstormSession.mock.invocationCallOrder[
+        writeBrainstormSession.mock.calls.indexOf(userWriteCall)
+      ];
+
+    expect(brainstormCallOrder).toBeDefined();
+    expect(userWriteOrder).toBeDefined();
+    expect(brainstormCallOrder).toBeLessThan(userWriteOrder);
+  });
+
   it("re-enables recording mode again before resuming from paused state", async () => {
     isRecording = false;
     transcribeBrainstormTalkAudio.mockResolvedValueOnce("hello");
@@ -684,5 +764,36 @@ describe("SecondBrainBrainstormTalkScreen", () => {
       resolveFinalize?.();
       await Promise.resolve();
     });
+  });
+
+  it("uses virtualized conversation rendering by not passing renderInline", async () => {
+    isRecording = true;
+    transcribeBrainstormTalkAudio.mockResolvedValueOnce("hello");
+
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(view.getByLabelText("Pause & transcribe"));
+
+    await waitFor(() => {
+      expect(transcribeBrainstormTalkAudio).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(SecondBrainConversationList).toHaveBeenCalled();
+    });
+
+    const lastCall = SecondBrainConversationList.mock.calls.at(-1);
+    const lastProps = lastCall?.[0] || {};
+    expect(lastProps.renderInline).toBeUndefined();
   });
 });

@@ -451,4 +451,27 @@ revoke all on function public.lookup_telegram_link_by_chat_id(text) from public;
 grant execute on function public.lookup_telegram_link_by_chat_id(text) to anon;
 grant execute on function public.lookup_telegram_link_by_chat_id(text) to authenticated;
 
+drop function if exists public.get_entry_category_counts(uuid);
+create function public.get_entry_category_counts(p_user_id uuid)
+returns table (category text, total bigint)
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select
+    e.category,
+    count(*)::bigint as total
+  from public.entries e
+  where e.user_id = p_user_id
+    and e.is_deleted = false
+    and e.is_archived = false
+    and e.category in ('reminder', 'todo', 'thought', 'note')
+  group by e.category;
+$$;
+
+revoke all on function public.get_entry_category_counts(uuid) from public;
+grant execute on function public.get_entry_category_counts(uuid) to anon;
+grant execute on function public.get_entry_category_counts(uuid) to authenticated;
+
 commit;

@@ -440,6 +440,141 @@ test("entries handler: OPTIONS preflight and bearer token guard", async () => {
   assert.deepEqual(jsonBody(noTokenRes), { error: "missing bearer token" });
 });
 
+test("entries handler: GET supports include_stats with paginated response", async () => {
+  const { default: entriesHandler } = await importFresh(
+    "../../api/entries.js",
+    "entries-include-stats-pagination",
+  );
+
+  const userId = "123e4567-e89b-42d3-a456-426614174000";
+  const bearer = createTestJwt({ sub: userId });
+  const originalFetch = global.fetch;
+
+  function createJsonResponse(body, { status = 200, headers = {} } = {}) {
+    const normalizedHeaders = new Map(
+      Object.entries(headers).map(([key, value]) => [
+        key.toLowerCase(),
+        String(value),
+      ]),
+    );
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: {
+        get(name) {
+          return normalizedHeaders.get(String(name).toLowerCase()) ?? null;
+        },
+      },
+      async text() {
+        return JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (
+      url.pathname !== "/rest/v1/entries" &&
+      url.pathname !== "/rest/v1/entry_tags" &&
+      url.pathname !== "/rest/v1/rpc/get_entry_category_counts"
+    ) {
+      return createJsonResponse([], { status: 200 });
+    }
+
+    if (url.pathname === "/rest/v1/rpc/get_entry_category_counts") {
+      return createJsonResponse([
+        { category: "reminder", total: 7 },
+        { category: "todo", total: 3 },
+        { category: "thought", total: 11 },
+        { category: "note", total: 5 },
+      ]);
+    }
+
+    if (url.pathname === "/rest/v1/entries") {
+      return createJsonResponse(
+        [
+          {
+            id: 200,
+            user_id: userId,
+            category: "thought",
+            title: "A title",
+            summary: "A summary",
+            content: "A summary",
+            description: "A summary",
+            raw_text: "A summary",
+            created_at: 200,
+            updated_at: 200,
+            priority: 0,
+            is_archived: false,
+            is_deleted: false,
+          },
+          {
+            id: 199,
+            user_id: userId,
+            category: "todo",
+            title: "B title",
+            summary: "B summary",
+            content: "B summary",
+            description: "B summary",
+            raw_text: "B summary",
+            created_at: 199,
+            updated_at: 199,
+            priority: 0,
+            is_archived: false,
+            is_deleted: false,
+          },
+          {
+            id: 198,
+            user_id: userId,
+            category: "note",
+            title: "C title",
+            summary: "C summary",
+            content: "C summary",
+            description: "C summary",
+            raw_text: "C summary",
+            created_at: 198,
+            updated_at: 198,
+            priority: 0,
+            is_archived: false,
+            is_deleted: false,
+          },
+        ],
+        { status: 200 },
+      );
+    }
+
+    return createJsonResponse([], { status: 200 });
+  };
+
+  try {
+    const req = createReq({
+      method: "GET",
+      headers: { authorization: `Bearer ${bearer}` },
+      query: {
+        limit: "2",
+        include_stats: "true",
+      },
+    });
+    const res = createRes();
+    await entriesHandler(req, res);
+
+    assert.equal(res.statusCode, 200);
+    const payload = jsonBody(res);
+    assert.equal(Array.isArray(payload?.entries), true);
+    assert.equal(payload.entries.length, 2);
+    assert.deepEqual(payload.stats, {
+      reminder: 7,
+      todo: 3,
+      thought: 11,
+      note: 5,
+    });
+    assert.equal(payload.page?.has_more, true);
+    assert.equal(typeof payload.page?.next_cursor, "string");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("ics handler: method guard and bearer token guard", async () => {
   const { default: icsHandler } = await importFresh(
     "../../api/ics.js",

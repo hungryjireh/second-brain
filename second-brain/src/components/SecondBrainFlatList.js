@@ -130,6 +130,9 @@ export default function SecondBrainFlatList({
   swipeActionWidth,
   closeAnyActionDrawer,
   pullRefreshing = false,
+  onEndReached,
+  loadingMoreEntries = false,
+  hasMoreEntries = false,
 }) {
   const isWeb = Platform.OS === "web";
   const [isSwipeInteracting, setIsSwipeInteracting] = useState(false);
@@ -246,6 +249,20 @@ export default function SecondBrainFlatList({
     styles.listEmptyText,
   ]);
 
+  const listFooterComponent = useMemo(() => {
+    if (!hasMoreEntries || !loadingMoreEntries) return null;
+    return (
+      <View style={styles.listEmptyCentered}>
+        <Text style={styles.listEmptyText}>Loading more entries...</Text>
+      </View>
+    );
+  }, [
+    hasMoreEntries,
+    loadingMoreEntries,
+    styles.listEmptyCentered,
+    styles.listEmptyText,
+  ]);
+
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
@@ -267,6 +284,9 @@ export default function SecondBrainFlatList({
           onRefresh={onRefresh}
           refreshing={pullRefreshing}
           scrollEnabled={!isSwipeInteracting}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={listFooterComponent}
         />
       </View>
     </View>

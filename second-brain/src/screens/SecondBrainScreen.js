@@ -87,12 +87,16 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     entries,
     setEntries,
     loadingEntries,
+    loadingMoreEntries,
+    hasMoreEntries,
+    categoryCounts,
     userTags,
     userTagsLoaded,
     busyId,
     offlineMode,
     offlineQueueSize,
     loadEntries,
+    loadMoreEntries,
     toggleArchive,
     deleteEntry,
     applyOfflineCreateFallback,
@@ -437,7 +441,6 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
     [openActionDrawerId],
   );
   const {
-    counts,
     visibleEntries,
     tagUsageCounts,
     globalTags,
@@ -571,7 +574,7 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
           styles={styles}
           isSmallScreen={isSmallScreen}
           activeCategory={activeCategory}
-          counts={counts}
+          counts={categoryCounts}
           closeOpenActionDrawer={closeOpenActionDrawer}
           setActiveCategory={setActiveCategory}
         />
@@ -603,6 +606,9 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
           swipeActionWidth={SWIPE_ACTION_WIDTH}
           closeAnyActionDrawer={closeOpenActionDrawer}
           pullRefreshing={pullRefreshing}
+          onEndReached={loadMoreEntries}
+          loadingMoreEntries={loadingMoreEntries}
+          hasMoreEntries={hasMoreEntries}
         />
       </SecondBrainTypebar>
     </View>

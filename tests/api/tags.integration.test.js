@@ -617,6 +617,71 @@ test("replaceEntryTags deletes user tags that are no longer referenced", async (
   }
 });
 
+test("getEntryCategoryCounts uses single RPC call and normalizes missing categories", async () => {
+  const originalFetch = global.fetch;
+  const originalEnv = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "test-publishable-key";
+
+  const observedPaths = [];
+
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      async text() {
+        return body === null ? "" : JSON.stringify(body);
+      },
+    };
+  }
+
+  global.fetch = async (input, options = {}) => {
+    const method = options.method || "GET";
+    const url = new URL(String(input));
+    observedPaths.push(`${method} ${url.pathname}`);
+    if (url.pathname === "/rest/v1/rpc/get_entry_category_counts") {
+      const body = options.body ? JSON.parse(options.body) : {};
+      assert.equal(body.p_user_id, "11111111-1111-4111-8111-111111111111");
+      return jsonResponse(200, [
+        { category: "todo", total: "9" },
+        { category: "thought", total: 2 },
+      ]);
+    }
+    throw new Error(`Unhandled fetch: ${method} ${url.pathname}`);
+  };
+
+  try {
+    const { getEntryCategoryCounts } = await importFresh(
+      "../../lib/db.js",
+      "get-entry-category-counts-rpc",
+    );
+    const counts = await getEntryCategoryCounts(
+      "11111111-1111-4111-8111-111111111111",
+      "token",
+    );
+
+    assert.deepEqual(counts, {
+      reminder: 0,
+      todo: 9,
+      thought: 2,
+      note: 0,
+    });
+    assert.deepEqual(observedPaths, [
+      "POST /rest/v1/rpc/get_entry_category_counts",
+    ]);
+  } finally {
+    global.fetch = originalFetch;
+    process.env.EXPO_PUBLIC_SUPABASE_URL = originalEnv.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      originalEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  }
+});
+
 test("replaceEntryTags allows adding new tags even when user already has 10 tags", async () => {
   const originalFetch = global.fetch;
   const originalEnv = {

@@ -18,7 +18,6 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
-import { File } from "expo-file-system";
 import styles from "./SecondBrainBrainstormTalkScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import SecondBrainVoiceCaptureLayout from "../components/SecondBrainVoiceCaptureLayout";
@@ -39,11 +38,15 @@ import {
   writeBrainstormSession,
 } from "../utils/brainstormSessions";
 import {
+  BRAINSTORM_TALK_STREAMING_ENABLED,
   playBrainstormTalkAudio,
+  requestBrainstormTalkStreamTurn,
   stopBrainstormTalkPlayback,
   synthesizeBrainstormTalkAudio,
   transcribeBrainstormTalkAudio,
 } from "../services/unrealSpeechService";
+import useBrainstormTalkStreaming from "../hooks/useBrainstormTalkStreaming";
+import { createBrainstormTalkStreamingTransport } from "../services/brainstormTalkStreamingTransport";
 
 const TALK_STATE = {
   IDLE: "idle",
@@ -59,6 +62,7 @@ const VOICE_RECORDING_PRESET =
 const TALK_CONTROLS_STACK_HEIGHT = 320;
 const EMPTY_TRANSCRIPT_ERROR =
   "I couldn't hear any words. Please speak again and then press Pause & transcribe.";
+const STREAMING_PREFETCH_MIN_WORDS = 8;
 
 function prefixedWipTitle(title) {
   const clean = String(title || "").trim();
@@ -133,6 +137,12 @@ export default function SecondBrainBrainstormTalkScreen({
   const listViewportHeightRef = useRef(0);
   const listContentHeightRef = useRef(0);
   const micSlideY = useRef(new Animated.Value(0)).current;
+  const speculativeDraftReplyRef = useRef("");
+  const speculativeDraftSourceRef = useRef("");
+  const streamingTransportRef = useRef(null);
+  if (!streamingTransportRef.current) {
+    streamingTransportRef.current = createBrainstormTalkStreamingTransport();
+  }
 
   const conversationMessages = useMemo(
     () => parseBrainstormConversationFromSession(session)?.messages || [],
@@ -262,6 +272,7 @@ export default function SecondBrainBrainstormTalkScreen({
     if (talkState === TALK_STATE.SPEAKING) {
       await stopBrainstormTalkPlayback();
     }
+    await stopStreamingTransport();
     setError("");
     try {
       if (!micPermissionGrantedRef.current) {
@@ -274,6 +285,7 @@ export default function SecondBrainBrainstormTalkScreen({
       await ensureRecordingModeEnabled();
       await audioRecorder.prepareToRecordAsync(VOICE_RECORDING_PRESET);
       await audioRecorder.record();
+      await startStreamingTransport(sessionRef.current || session);
       setTalkState(TALK_STATE.LISTENING);
     } catch (err) {
       setError(String(err?.message || "Unable to start listening."));
@@ -294,9 +306,55 @@ export default function SecondBrainBrainstormTalkScreen({
 
   function clearPendingTranscript() {
     setPendingUserTranscript("");
+    speculativeDraftReplyRef.current = "";
+    speculativeDraftSourceRef.current = "";
+    resetStreamingProgress();
   }
 
-  async function appendUserMessage(content, baseSession) {
+  async function maybePrefetchStreamingDraft(partialText, pendingSession) {
+    if (!BRAINSTORM_TALK_STREAMING_ENABLED) return;
+    const normalizedPartialText = String(partialText || "").trim();
+    if (!normalizedPartialText) return;
+    const history = buildBrainstormHistory(pendingSession.messages, {
+      excludeLast: true,
+    });
+    try {
+      const result = await requestBrainstormTalkStreamTurn({
+        token,
+        partialText: normalizedPartialText,
+        history,
+        commitTurn: false,
+      });
+      if (result?.deferred) return;
+      const draftReply = String(result?.draftReply || "").trim();
+      if (!draftReply) return;
+      speculativeDraftReplyRef.current = draftReply;
+      speculativeDraftSourceRef.current = normalizedPartialText;
+    } catch {
+      // Best-effort draft warmup for streaming path.
+    }
+  }
+
+  async function handlePartialTranscriptUpdate(partialText, baseSession) {
+    const normalized = String(partialText || "").trim();
+    if (!normalized) return;
+    const pendingSession = buildPendingUserSession(normalized, baseSession);
+    await maybePrefetchStreamingDraft(normalized, pendingSession);
+  }
+
+  const {
+    ingestResolvedTranscript,
+    resetStreamingProgress,
+    startStreamingTransport,
+    stopStreamingTransport,
+  } = useBrainstormTalkStreaming({
+    enabled: BRAINSTORM_TALK_STREAMING_ENABLED,
+    minimumWords: STREAMING_PREFETCH_MIN_WORDS,
+    onStablePartial: handlePartialTranscriptUpdate,
+    transport: streamingTransportRef.current,
+  });
+
+  function buildPendingUserSession(content, baseSession) {
     const createdAt = new Date().toISOString();
     const userMessage = {
       id: `${Date.now()}-user`,
@@ -304,7 +362,7 @@ export default function SecondBrainBrainstormTalkScreen({
       content,
       createdAt,
     };
-    const pendingSession = {
+    return {
       ...baseSession,
       mode: BRAINSTORM_SESSION_MODES.TALK,
       messages: [...(baseSession.messages || []), userMessage],
@@ -315,7 +373,6 @@ export default function SecondBrainBrainstormTalkScreen({
         wipSaved: false,
       },
     };
-    return persistSession(pendingSession);
   }
 
   async function appendAssistantMessage(content, baseSession) {
@@ -460,25 +517,38 @@ export default function SecondBrainBrainstormTalkScreen({
   }
 
   async function runTalkTurnWithText(content, baseSession) {
-    const pendingSession = await appendUserMessage(content, baseSession);
+    const pendingSession = buildPendingUserSession(content, baseSession);
+    const userPersistPromise = Promise.resolve().then(() =>
+      persistSession(pendingSession),
+    );
     setTalkState(TALK_STATE.WAITING_LLM);
 
     const history = buildBrainstormHistory(pendingSession.messages, {
       excludeLast: true,
     });
-    const response = await apiRequest("/brainstorm", {
-      method: "POST",
-      token,
-      body: { message: content, history },
-    });
+    const normalizedContent = String(content || "").trim();
+    const shouldUseSpeculativeDraft =
+      BRAINSTORM_TALK_STREAMING_ENABLED &&
+      speculativeDraftSourceRef.current === normalizedContent &&
+      speculativeDraftReplyRef.current;
+    const response = shouldUseSpeculativeDraft
+      ? { reply: speculativeDraftReplyRef.current }
+      : await apiRequest("/brainstorm", {
+          method: "POST",
+          token,
+          body: { message: content, history },
+        });
+    await userPersistPromise;
     const assistantText = String(
       response?.reply || "Let's keep exploring this idea.",
     ).trim();
+    speculativeDraftReplyRef.current = "";
+    speculativeDraftSourceRef.current = "";
     const synthesisPromise = synthesizeBrainstormTalkAudio({
       token,
       text: assistantText,
     });
-    const nextSession = await appendAssistantMessage(
+    const assistantPersistPromise = appendAssistantMessage(
       assistantText,
       pendingSession,
     );
@@ -490,6 +560,7 @@ export default function SecondBrainBrainstormTalkScreen({
     } finally {
       setTalkState(TALK_STATE.IDLE);
     }
+    const nextSession = await assistantPersistPromise;
     return nextSession;
   }
 
@@ -524,20 +595,24 @@ export default function SecondBrainBrainstormTalkScreen({
     if (!recording) return;
     setTalkState(TALK_STATE.TRANSCRIBING);
     try {
+      await stopStreamingTransport();
       await audioRecorder.stop();
       const uri = audioRecorder.uri;
       if (!uri) throw new Error("Failed to read recording");
-      const recordedAudio = new File(uri);
-      const audioBase64 = await recordedAudio.base64();
       const transcript = await transcribeBrainstormTalkAudio({
         token,
-        audioBase64,
+        audioUri: uri,
         extension: "m4a",
       });
       if (!String(transcript || "").trim()) {
         throw new Error(EMPTY_TRANSCRIPT_ERROR);
       }
+      const activeSession = sessionRef.current || session;
+      if (!activeSession) {
+        throw new Error("Unable to load brainstorm session.");
+      }
       const pendingTranscript = appendPendingTranscriptChunk(transcript);
+      await ingestResolvedTranscript(pendingTranscript, activeSession);
       setTalkState(TALK_STATE.PAUSED);
       await submitPendingTranscriptTurn({
         allowWhileTranscribing: true,
@@ -561,6 +636,7 @@ export default function SecondBrainBrainstormTalkScreen({
     if (finalizingEnd || finalizeInFlightRef.current.ended) return;
     const activeSession = sessionRef.current || session;
     if (!activeSession) return;
+    await stopStreamingTransport();
     setError("");
     setFinalizingEnd(true);
     finalizedRef.current = true;
@@ -619,6 +695,7 @@ export default function SecondBrainBrainstormTalkScreen({
   useEffect(() => {
     return () => {
       stopBrainstormTalkPlayback().catch(() => {});
+      stopStreamingTransport().catch(() => {});
       disableRecordingMode().catch(() => {});
       const latestSession = sessionRef.current;
       if (!latestSession || finalizedRef.current) return;
@@ -702,7 +779,6 @@ export default function SecondBrainBrainstormTalkScreen({
               hiddenMessageNoticeStyle={
                 secondBrainScreenStyles.entryPanelSummary
               }
-              renderInline
             />
           ) : null}
           <Animated.View

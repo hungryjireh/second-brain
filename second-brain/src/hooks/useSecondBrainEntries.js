@@ -8,10 +8,35 @@ import { resolveStorageOwnerSegmentFromToken } from "../utils/jwt";
 
 const OFFLINE_STORAGE_PREFIX = "secondBrainOffline:";
 const OFFLINE_QUEUE_VERSION = 1;
+const DEFAULT_CATEGORY_COUNTS = {
+  reminder: 0,
+  todo: 0,
+  thought: 0,
+  note: 0,
+};
+
+function countActiveEntriesByCategory(entries) {
+  if (!Array.isArray(entries)) return DEFAULT_CATEGORY_COUNTS;
+  return entries.reduce(
+    (acc, entry) => {
+      if (entry?.is_archived) return acc;
+      if (entry?.category === "reminder") acc.reminder += 1;
+      if (entry?.category === "todo") acc.todo += 1;
+      if (entry?.category === "thought") acc.thought += 1;
+      if (entry?.category === "note") acc.note += 1;
+      return acc;
+    },
+    { reminder: 0, todo: 0, thought: 0, note: 0 },
+  );
+}
 
 export function useSecondBrainEntries({ token, onError }) {
   const [entries, setEntries] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState(DEFAULT_CATEGORY_COUNTS);
   const [loadingEntries, setLoadingEntries] = useState(true);
+  const [loadingMoreEntries, setLoadingMoreEntries] = useState(false);
+  const [hasMoreEntries, setHasMoreEntries] = useState(false);
+  const [nextEntriesCursor, setNextEntriesCursor] = useState(null);
   const [userTags, setUserTags] = useState([]);
   const [userTagsLoaded, setUserTagsLoaded] = useState(false);
   const [busyId, setBusyId] = useState(null);
@@ -273,8 +298,16 @@ export function useSecondBrainEntries({ token, onError }) {
       try {
         onError("");
         await flushOfflineQueue();
-        const [data, tagsData] = await Promise.all([
+        const [data, statsData, tagsData] = await Promise.all([
           apiRequest("/entries?limit=60", {
+            token,
+            cache: {
+              ttlMs: CACHE_TTL_MS.FEED,
+              bypass: bypassCache,
+              staleOnError: !bypassCache,
+            },
+          }),
+          apiRequest("/entries?limit=1&include_stats=true", {
             token,
             cache: {
               ttlMs: CACHE_TTL_MS.FEED,
@@ -298,6 +331,20 @@ export function useSecondBrainEntries({ token, onError }) {
             : [];
         const sortedEntries = sortEntriesByUpdatedAt(list);
         setEntries(sortedEntries);
+        setHasMoreEntries(Boolean(data?.page?.has_more));
+        setNextEntriesCursor(
+          typeof data?.page?.next_cursor === "string"
+            ? data.page.next_cursor
+            : null,
+        );
+        const stats = statsData?.stats;
+        setCategoryCounts({
+          reminder:
+            typeof stats?.reminder === "number" ? stats.reminder : 0,
+          todo: typeof stats?.todo === "number" ? stats.todo : 0,
+          thought: typeof stats?.thought === "number" ? stats.thought : 0,
+          note: typeof stats?.note === "number" ? stats.note : 0,
+        });
 
         const normalizedUserTags = (
           Array.isArray(tagsData?.tags) ? tagsData.tags : []
@@ -316,7 +363,9 @@ export function useSecondBrainEntries({ token, onError }) {
           setOfflineMode(true);
           const snapshot = await readOfflineState();
           if (Array.isArray(snapshot?.entries) && snapshot.entries.length > 0) {
-            setEntries(sortEntriesByUpdatedAt(snapshot.entries));
+            const fallbackEntries = sortEntriesByUpdatedAt(snapshot.entries);
+            setEntries(fallbackEntries);
+            setCategoryCounts(countActiveEntriesByCategory(fallbackEntries));
             setUserTags(
               Array.isArray(snapshot.userTags) ? snapshot.userTags : [],
             );
@@ -350,6 +399,68 @@ export function useSecondBrainEntries({ token, onError }) {
       token,
     ],
   );
+
+  const loadMoreEntries = useCallback(async () => {
+    if (loadingEntries || loadingMoreEntries || !hasMoreEntries) return;
+    if (!nextEntriesCursor) return;
+
+    setLoadingMoreEntries(true);
+    try {
+      const data = await apiRequest(
+        `/entries?limit=60&cursor=${encodeURIComponent(nextEntriesCursor)}`,
+        {
+          token,
+          cache: {
+            ttlMs: CACHE_TTL_MS.FEED,
+            bypass: true,
+            staleOnError: false,
+          },
+        },
+      );
+      const list = Array.isArray(data?.entries)
+        ? data.entries
+        : Array.isArray(data)
+          ? data
+          : [];
+      if (list.length === 0) {
+        setHasMoreEntries(false);
+        setNextEntriesCursor(null);
+        return;
+      }
+
+      const nextEntries = sortEntriesByUpdatedAt(
+        [
+          ...entries,
+          ...list.filter(
+            (incoming) =>
+              !entries.some((existing) => existing.id === incoming.id),
+          ),
+        ],
+      );
+      setEntries(nextEntries);
+      setHasMoreEntries(Boolean(data?.page?.has_more));
+      setNextEntriesCursor(
+        typeof data?.page?.next_cursor === "string"
+          ? data.page.next_cursor
+          : null,
+      );
+      await persistCurrentOfflineState(nextEntries, userTags);
+    } catch (err) {
+      if (!isLikelyOfflineError(err)) onError(err.message);
+    } finally {
+      setLoadingMoreEntries(false);
+    }
+  }, [
+    entries,
+    hasMoreEntries,
+    loadingEntries,
+    loadingMoreEntries,
+    nextEntriesCursor,
+    onError,
+    persistCurrentOfflineState,
+    token,
+    userTags,
+  ]);
 
   const toggleArchive = useCallback(
     async (entry) => {
@@ -469,6 +580,9 @@ export function useSecondBrainEntries({ token, onError }) {
     entries,
     setEntries,
     loadingEntries,
+    loadingMoreEntries,
+    hasMoreEntries,
+    categoryCounts,
     userTags,
     userTagsLoaded,
     busyId,
@@ -476,6 +590,7 @@ export function useSecondBrainEntries({ token, onError }) {
     offlineQueueSize,
     queuedEntries,
     loadEntries,
+    loadMoreEntries,
     toggleArchive,
     deleteEntry,
     applyOfflineCreateFallback,

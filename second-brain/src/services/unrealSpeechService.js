@@ -5,6 +5,9 @@ import { apiRequest } from "../api";
 const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
 const PLAYBACK_POLL_INTERVAL_MS = 120;
 const PLAYBACK_MAX_WAIT_MS = 120000;
+export const BRAINSTORM_TALK_STREAMING_ENABLED =
+  String(process.env.EXPO_PUBLIC_BRAINSTORM_TALK_STREAMING_V1 || "").trim() ===
+  "1";
 
 let activePlayer = null;
 let activeAudioFile = null;
@@ -67,12 +70,12 @@ async function waitForPlaybackToFinish(player) {
 
 export async function transcribeBrainstormTalkAudio({
   token,
-  audioBase64,
+  audioUri,
   extension = "m4a",
   timeoutMs,
 }) {
-  const normalizedAudio = String(audioBase64 || "").trim();
-  if (!normalizedAudio) {
+  const normalizedAudioUri = String(audioUri || "").trim();
+  if (!normalizedAudioUri) {
     throw new Error("Missing audio payload for transcription.");
   }
   try {
@@ -80,7 +83,7 @@ export async function transcribeBrainstormTalkAudio({
       method: "POST",
       token,
       body: {
-        audio_base64: normalizedAudio,
+        audio_uri: normalizedAudioUri,
         extension,
         timeout_ms: normalizeTimeoutMs(timeoutMs),
       },
@@ -134,6 +137,46 @@ export async function synthesizeBrainstormTalkAudio({
       normalizeErrorMessage(
         error,
         "Unable to synthesize assistant response right now.",
+      ),
+      { cause: error },
+    );
+  }
+}
+
+export async function requestBrainstormTalkStreamTurn({
+  token,
+  partialText,
+  history = [],
+  commitTurn = false,
+  minimumWordsForDraft = 8,
+}) {
+  const normalizedPartialText = String(partialText || "").trim();
+  if (!normalizedPartialText) {
+    throw new Error("Missing partial transcript text.");
+  }
+  try {
+    const response = await apiRequest("/brainstorm?action=stream-turn", {
+      method: "POST",
+      token,
+      body: {
+        partial_text: normalizedPartialText,
+        history,
+        commit_turn: commitTurn,
+        minimum_words_for_draft: minimumWordsForDraft,
+      },
+    });
+    return {
+      draftReply: String(response?.draftReply || "").trim(),
+      deferred: Boolean(response?.deferred),
+      wordCount: Number(response?.wordCount) || 0,
+      minimumWordsForDraft: Number(response?.minimumWordsForDraft) || 0,
+      committed: Boolean(response?.committed),
+    };
+  } catch (error) {
+    throw new Error(
+      normalizeErrorMessage(
+        error,
+        "Unable to process brainstorming stream turn right now.",
       ),
       { cause: error },
     );

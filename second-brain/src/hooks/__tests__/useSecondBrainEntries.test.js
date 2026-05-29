@@ -83,6 +83,104 @@ describe("useSecondBrainEntries", () => {
     });
   });
 
+  it("loads full category counts from include_stats payload", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") {
+        return {
+          entries: [{ id: 2, created_at: 200, category: "todo" }],
+          page: { has_more: true, next_cursor: "200:2" },
+        };
+      }
+      if (url === "/entries?limit=1&include_stats=true") {
+        return {
+          stats: { reminder: 7, todo: 10, thought: 3, note: 5 },
+        };
+      }
+      if (url === "/tags") return { tags: [] };
+      return {};
+    });
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries({ bypassCache: true });
+    });
+
+    await waitFor(() => {
+      expect(latestValue.categoryCounts).toEqual({
+        reminder: 7,
+        todo: 10,
+        thought: 3,
+        note: 5,
+      });
+      expect(latestValue.hasMoreEntries).toBe(true);
+    });
+  });
+
+  it("loads additional entries using next cursor", async () => {
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") {
+        return {
+          entries: [{ id: 2, created_at: 200, updated_at: 200 }],
+          page: { has_more: true, next_cursor: "200:2" },
+        };
+      }
+      if (url === "/entries?limit=1&include_stats=true") {
+        return {
+          stats: { reminder: 0, todo: 1, thought: 0, note: 0 },
+        };
+      }
+      if (url === "/entries?limit=60&cursor=200%3A2") {
+        return {
+          entries: [
+            { id: 1, created_at: 100, updated_at: 100 },
+            { id: 2, created_at: 200, updated_at: 200 },
+          ],
+          page: { has_more: false, next_cursor: null },
+        };
+      }
+      if (url === "/tags") return { tags: [] };
+      return {};
+    });
+
+    render(
+      <Harness
+        authToken={token}
+        onUpdate={(value) => {
+          latestValue = value;
+        }}
+        onHookError={onError}
+      />,
+    );
+
+    await act(async () => {
+      await latestValue.loadEntries({ bypassCache: true });
+    });
+    await act(async () => {
+      await latestValue.loadMoreEntries();
+    });
+
+    await waitFor(() => {
+      expect(latestValue.entries.map((item) => item.id)).toEqual([2, 1]);
+      expect(latestValue.hasMoreEntries).toBe(false);
+    });
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/entries?limit=60&cursor=200%3A2",
+      expect.objectContaining({
+        token,
+      }),
+    );
+  });
+
   it("falls back to cached entries when offline", async () => {
     const storageKey = `secondBrainOffline:${token}`;
     const cachedState = {

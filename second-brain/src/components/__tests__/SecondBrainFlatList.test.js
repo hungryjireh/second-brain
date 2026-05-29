@@ -183,6 +183,58 @@ describe("SecondBrainFlatList", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
+  it("calls onEndReached when list reaches end", () => {
+    const onEndReached = jest.fn();
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByTestId } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({ groupedRows, onEndReached })}
+      />,
+    );
+
+    fireEvent(getByTestId("second-brain-flat-list"), "endReached");
+    expect(onEndReached).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows loading-more footer only when more entries are loading", () => {
+    const groupedRows = [
+      {
+        type: "entry",
+        key: "entry-1",
+        entry: { id: 1, title: "First entry", is_archived: false },
+      },
+    ];
+
+    const { getByText, rerender, queryByText } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          hasMoreEntries: true,
+          loadingMoreEntries: true,
+        })}
+      />,
+    );
+    expect(getByText("Loading more entries...")).toBeTruthy();
+
+    rerender(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          groupedRows,
+          hasMoreEntries: true,
+          loadingMoreEntries: false,
+        })}
+      />,
+    );
+    expect(queryByText("Loading more entries...")).toBeNull();
+  });
+
   it("enables native pull-refresh while keeping list scrolling available", () => {
     const groupedRows = [
       {
