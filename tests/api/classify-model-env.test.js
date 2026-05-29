@@ -15,7 +15,7 @@ test("getGroqModel returns default model when GROQ_MODEL is not set", async () =
 
   try {
     const { getGroqModel } = await importFresh(
-      "../../lib/classify.js",
+      "../../lib/api/second-brain/classify.js",
       "default-model",
     );
     assert.equal(getGroqModel(), "llama-3.1-8b-instant");
@@ -35,7 +35,7 @@ test("getGroqModel returns GROQ_MODEL from env when provided", async () => {
 
   try {
     const { getGroqModel } = await importFresh(
-      "../../lib/classify.js",
+      "../../lib/api/second-brain/classify.js",
       "override-model",
     );
     assert.equal(getGroqModel(), "llama-3.3-70b-versatile");

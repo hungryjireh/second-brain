@@ -186,6 +186,15 @@ export default function SecondBrainEditEntryScreen({
     }
   }
 
+  function handleCancelPress() {
+    const canGoBackFn = navigation?.canGoBack;
+    if (typeof canGoBackFn !== "function" || canGoBackFn()) {
+      navigation?.goBack?.();
+      return;
+    }
+    navigation?.navigate?.("SecondBrain");
+  }
+
   function updateReminderDate(nextDate) {
     if (!(nextDate instanceof Date) || Number.isNaN(nextDate.getTime())) return;
     setEditRemindAt(unixToDatetimeLocal(Math.floor(nextDate.getTime() / 1000)));
@@ -421,10 +430,7 @@ export default function SecondBrainEditEntryScreen({
         />
         {!!error && <Text style={styles.error}>{error}</Text>}
         <View style={styles.editActionRow}>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => navigation.goBack()}
-          >
+          <Pressable style={styles.secondaryButton} onPress={handleCancelPress}>
             <Text style={styles.secondaryButtonText}>Cancel</Text>
           </Pressable>
           <Pressable style={styles.editSaveButton} onPress={saveEdit}>

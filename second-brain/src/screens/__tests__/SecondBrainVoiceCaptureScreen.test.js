@@ -16,6 +16,7 @@ describe("SecondBrainVoiceCaptureScreen", () => {
     voiceStarting = false,
     voiceElapsedMs = 0,
     voiceMaxDurationMs = 120000,
+    canGoBack = true,
     startVoiceCapture = jest.fn(),
     stopVoiceCaptureAndSubmit = jest.fn(async () => {}),
     cancelVoiceCapture = jest.fn(async () => {}),
@@ -34,7 +35,11 @@ describe("SecondBrainVoiceCaptureScreen", () => {
       };
     });
 
-    const navigation = { goBack: jest.fn() };
+    const navigation = {
+      canGoBack: jest.fn(() => canGoBack),
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
     const utils = render(
       <SecondBrainVoiceCaptureScreen token={token} navigation={navigation} />,
     );
@@ -105,6 +110,25 @@ describe("SecondBrainVoiceCaptureScreen", () => {
     expect(navigation.goBack).not.toHaveBeenCalled();
   });
 
+  it("navigates to SecondBrain when submission succeeds without back stack", async () => {
+    const stopVoiceCaptureAndSubmit = jest.fn(async () => {
+      latestVoiceHookOptions?.onVoiceEntryCreated?.({ id: 42 });
+    });
+    const { getByLabelText, navigation } = setup({
+      canGoBack: false,
+      recording: true,
+      stopVoiceCaptureAndSubmit,
+    });
+
+    fireEvent.press(getByLabelText("Stop and submit voice note"));
+
+    await waitFor(() => {
+      expect(stopVoiceCaptureAndSubmit).toHaveBeenCalledTimes(1);
+      expect(navigation.navigate).toHaveBeenCalledWith("SecondBrain");
+    });
+    expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+
   it("cancels active recording when back is pressed", async () => {
     const cancelVoiceCapture = jest.fn(async () => {});
     const { getByLabelText, navigation } = setup({
@@ -133,6 +157,24 @@ describe("SecondBrainVoiceCaptureScreen", () => {
 
     expect(cancelVoiceCapture).not.toHaveBeenCalled();
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("navigates to SecondBrain on back press when there is no back stack", async () => {
+    const cancelVoiceCapture = jest.fn(async () => {});
+    const { getByLabelText, navigation } = setup({
+      canGoBack: false,
+      recording: true,
+      voiceBusy: false,
+      cancelVoiceCapture,
+    });
+
+    fireEvent.press(getByLabelText("Back"));
+
+    await waitFor(() => {
+      expect(cancelVoiceCapture).toHaveBeenCalledTimes(1);
+      expect(navigation.navigate).toHaveBeenCalledWith("SecondBrain");
+    });
+    expect(navigation.goBack).not.toHaveBeenCalled();
   });
 
   it("cancels active recording on unmount cleanup", async () => {

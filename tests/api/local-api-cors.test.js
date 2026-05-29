@@ -15,3 +15,10 @@ test("local API CORS allow-methods header includes PATCH", () => {
     /Access-Control-Allow-Methods["'],\s*["']GET,POST,PATCH,DELETE,OPTIONS["']/,
   );
 });
+
+test("local API no longer maps import-llm-share to deprecated second-brain action route", () => {
+  const localApiPath = path.resolve(__dirname, "../../scripts/local-api.js");
+  const source = fs.readFileSync(localApiPath, "utf8");
+
+  assert.doesNotMatch(source, /\/api\/second-brain\/import-llm-share/);
+});

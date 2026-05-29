@@ -183,6 +183,31 @@ describe("SecondBrainScreen", () => {
     });
   });
 
+  it("routes /brainstorm-talk input to brainstorm talk screen", async () => {
+    const navigate = jest.fn();
+    apiRequest.mockImplementation(async (url) => {
+      if (url === "/entries?limit=60") return { entries: [] };
+      if (url === "/tags") return { tags: [] };
+      if (url === "/settings") return {};
+      return {};
+    });
+
+    const { getByPlaceholderText, getByLabelText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    fireEvent.press(getByLabelText("Expand typebar"));
+    fireEvent.changeText(
+      getByPlaceholderText("Type a note, reminder or thought..."),
+      "/brainstorm-talk",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstormTalk");
+    });
+  });
+
   it("renders the main typebar without inline height state", async () => {
     apiRequest.mockImplementation(async (url) => {
       if (url === "/entries?limit=60") return { entries: [] };
@@ -253,6 +278,55 @@ describe("SecondBrainScreen", () => {
 
     expect(navigate).not.toHaveBeenCalledWith("SecondBrainBrainstorm");
     expect(getByText("Brainstorm is unavailable while offline.")).toBeTruthy();
+  });
+
+  it("does not route /brainstorm-talk input while offline", async () => {
+    const navigate = jest.fn();
+    const nowTs = Math.floor(Date.now() / 1000);
+    const savedSnapshot = {
+      version: 1,
+      entries: [
+        {
+          id: 7,
+          title: "Offline note",
+          summary: "Saved snapshot",
+          raw_text: "Saved snapshot",
+          is_archived: false,
+          category: "note",
+          created_at: nowTs,
+        },
+      ],
+      userTags: ["work"],
+      queue: [],
+    };
+
+    jest
+      .spyOn(AsyncStorage, "getItem")
+      .mockImplementation(async () => JSON.stringify(savedSnapshot));
+    jest.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {});
+    isLikelyOfflineError.mockImplementation(() => true);
+    apiRequest.mockImplementation(async () => {
+      throw new Error("Network request failed");
+    });
+
+    const { getByPlaceholderText, getByLabelText, getByText } = render(
+      <SecondBrainScreen token={token} navigation={{ navigate }} />,
+    );
+
+    await waitFor(() =>
+      expect(getByText("Offline · no changes queued")).toBeTruthy(),
+    );
+    fireEvent.press(getByLabelText("Expand typebar"));
+    fireEvent.changeText(
+      getByPlaceholderText("Type a note, reminder or thought..."),
+      "/brainstorm-talk",
+    );
+    fireEvent.press(getByLabelText("Enter note"));
+
+    expect(navigate).not.toHaveBeenCalledWith("SecondBrainBrainstormTalk");
+    expect(
+      getByText("Brainstorm talk is unavailable while offline."),
+    ).toBeTruthy();
   });
 
   it("navigates to queued edits screen when offline banner is pressed", async () => {

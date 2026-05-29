@@ -244,6 +244,16 @@ export default function SecondBrainScreen({ token, navigation, onLogout }) {
       navigation.navigate("SecondBrainBrainstorm");
       return;
     }
+    if (description === "/brainstorm-talk") {
+      if (isNativeOfflineMode) {
+        setError("Brainstorm talk is unavailable while offline.");
+        return;
+      }
+      setDraft("");
+      setIsTypebarExpanded(false);
+      navigation.navigate("SecondBrainBrainstormTalk");
+      return;
+    }
     const creatingId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const creatingTitle = formatCreatingTitle(description);
     setCreatingEntries((prev) => [

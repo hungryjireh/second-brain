@@ -263,6 +263,22 @@ describe("SecondBrainEditEntryScreen", () => {
     expect(apiRequest).not.toHaveBeenCalledWith("/tags", expect.anything());
   });
 
+  it("navigates to SecondBrain from cancel when no back stack exists", () => {
+    const goBack = jest.fn();
+    const navigate = jest.fn();
+    const { getByText } = render(
+      <SecondBrainEditEntryScreen
+        route={{ params: { entry, token } }}
+        navigation={{ canGoBack: () => false, goBack, navigate }}
+      />,
+    );
+
+    fireEvent.press(getByText("Cancel"));
+
+    expect(navigate).toHaveBeenCalledWith("SecondBrain");
+    expect(goBack).not.toHaveBeenCalled();
+  });
+
   it("reloads latest entry by entryId even when route entry exists", async () => {
     apiRequest.mockResolvedValueOnce({
       ...entry,

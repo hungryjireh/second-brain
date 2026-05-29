@@ -18,6 +18,7 @@ import SecondBrainScreen from "./src/screens/SecondBrainScreen";
 import SecondBrainEntryDetailsScreen from "./src/screens/SecondBrainEntryDetailsScreen";
 import SecondBrainEditEntryScreen from "./src/screens/SecondBrainEditEntryScreen";
 import SecondBrainBrainstormScreen from "./src/screens/SecondBrainBrainstormScreen";
+import SecondBrainBrainstormTalkScreen from "./src/screens/SecondBrainBrainstormTalkScreen";
 import SecondBrainQueuedEditsScreen from "./src/screens/SecondBrainQueuedEditsScreen";
 import SecondBrainVoiceCaptureScreen from "./src/screens/SecondBrainVoiceCaptureScreen";
 import { buildSecondBrainHeaderOptions } from "./src/components/SecondBrainTopMenu";
@@ -59,6 +60,7 @@ export default function App() {
           SecondBrainEntryDetails: "second-brain/entry/:entryId",
           SecondBrainEditEntry: "second-brain/edit/:entryId",
           SecondBrainBrainstorm: "second-brain/brainstorm",
+          SecondBrainBrainstormTalk: "second-brain/brainstorm-talk",
           SecondBrainQueuedEdits: "second-brain/queued-edits",
           SecondBrainVoiceCapture: "second-brain/voice-capture",
         },
@@ -200,6 +202,20 @@ export default function App() {
                 >
                   {(props) => (
                     <SecondBrainBrainstormScreen {...props} token={token} />
+                  )}
+                </Stack.Screen>
+
+                <Stack.Screen
+                  name="SecondBrainBrainstormTalk"
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
+                >
+                  {(props) => (
+                    <SecondBrainBrainstormTalkScreen {...props} token={token} />
                   )}
                 </Stack.Screen>
 

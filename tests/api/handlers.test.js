@@ -466,7 +466,7 @@ test("bot handler: method guard and no-message noop", async () => {
   const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   process.env.TELEGRAM_WEBHOOK_SECRET = "";
   const { default: botHandler } = await importFresh(
-    "../../api/bot.js",
+    "../../lib/api/telegram/webhook.js",
     "bot-guards",
   );
 
@@ -494,7 +494,7 @@ test("bot handler rejects invalid telegram webhook secret when configured", asyn
 
   try {
     const { default: botHandler } = await importFresh(
-      "../../api/bot.js",
+      "../../lib/api/telegram/webhook.js",
       "bot-webhook-secret-guard",
     );
 
@@ -562,7 +562,7 @@ test("launch signups rate limits repeated requests for same email", async () => 
 
 test("bot handler enforces and communicates 120-second voice note limit", () => {
   const botSource = fs.readFileSync(
-    new URL("../../api/bot.js", import.meta.url),
+    new URL("../../lib/api/telegram/webhook.js", import.meta.url),
     "utf8",
   );
   const voiceConstantsSource = fs.readFileSync(
@@ -572,11 +572,11 @@ test("bot handler enforces and communicates 120-second voice note limit", () => 
 
   assert.match(
     botSource,
-    /MAX_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
+    /MAX_VOICE_NOTE_DURATION_SECONDS[^;]*from ["'][^"']*constants\/voice\.js["']/,
   );
   assert.match(
     botSource,
-    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
+    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["'][^"']*constants\/voice\.js["']/,
   );
   assert.match(
     voiceConstantsSource,
@@ -607,7 +607,7 @@ test("bot handler enforces and communicates 120-second voice note limit", () => 
 
 test("bot handler persists rotated telegram refresh token after session refresh", () => {
   const botSource = fs.readFileSync(
-    new URL("../../api/bot.js", import.meta.url),
+    new URL("../../lib/api/telegram/webhook.js", import.meta.url),
     "utf8",
   );
 
@@ -621,7 +621,7 @@ test("bot handler persists rotated telegram refresh token after session refresh"
 
 test("voice handler rejects too-short audio and one-word transcripts before creating entries", () => {
   const voiceSource = fs.readFileSync(
-    new URL("../../api/voice.js", import.meta.url),
+    new URL("../../lib/api/second-brain/voice.js", import.meta.url),
     "utf8",
   );
   const voiceConstantsSource = fs.readFileSync(
@@ -631,7 +631,7 @@ test("voice handler rejects too-short audio and one-word transcripts before crea
 
   assert.match(
     voiceSource,
-    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["']\.\.\/lib\/constants\/voice\.js["']/,
+    /MIN_VOICE_NOTE_DURATION_SECONDS[^;]*from ["'][^"']*constants\/voice\.js["']/,
   );
   assert.match(
     voiceConstantsSource,

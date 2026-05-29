@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { extractCategoryOverride } from "../../lib/category-override.js";
+import { extractCategoryOverride } from "../../lib/api/second-brain/category-override.js";
 
 test("extractCategoryOverride parses typed slash prefixes", () => {
   assert.deepEqual(extractCategoryOverride("/reminder buy tomatoes at 8pm"), {

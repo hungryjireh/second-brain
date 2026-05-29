@@ -14,6 +14,14 @@ jest.mock("../../api", () => ({
 }));
 jest.mock("../../utils/brainstormSessions", () => ({
   getLinkedBrainstormSessionId: jest.fn(),
+  isBrainstormTalkEntry: jest.fn((entry) =>
+    Array.isArray(entry?.tags)
+      ? entry.tags.includes("brainstorm-conversation")
+      : false,
+  ),
+  normalizeBrainstormMode: jest.fn((value) =>
+    value === "talk" ? "talk" : "text",
+  ),
   readBrainstormSession: jest.fn(),
 }));
 
@@ -1138,6 +1146,27 @@ Raw text JSON description."
     fireEvent.press(getByText("Continue Brainstorming"));
 
     expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstorm", {
+      seedEntry: entry,
+    });
+  });
+
+  it("navigates to brainstorm talk screen from continue action for brainstorm conversation entries", () => {
+    const navigate = jest.fn();
+    const entry = {
+      id: 92,
+      title: "Brainstorm Conversation",
+      raw_text: "User: Hi",
+      tags: ["brainstorm-conversation"],
+    };
+    const { getByText, pressHeaderActionButton } = renderWithHeaderAction({
+      entry,
+      navigationOverrides: { navigate },
+    });
+
+    pressHeaderActionButton();
+    fireEvent.press(getByText("Continue Brainstorming"));
+
+    expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstormTalk", {
       seedEntry: entry,
     });
   });

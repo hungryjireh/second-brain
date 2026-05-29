@@ -15,6 +15,22 @@ dotenv.config({ path: path.join(rootDir, ".env") });
 
 const app = express();
 app.use(express.json());
+
+const LEGACY_API_ROUTE_ALIASES = {
+  "/api/brainstorm-talk-transcribe": "/api/brainstorm?action=transcribe",
+  "/api/brainstorm-talk-synthesize": "/api/brainstorm?action=synthesize",
+};
+
+app.use((req, res, next) => {
+  const alias = LEGACY_API_ROUTE_ALIASES[req.path];
+  if (alias) {
+    const queryStart = req.url.indexOf("?");
+    const query = queryStart === -1 ? "" : req.url.slice(queryStart);
+    req.url = `${alias}${query}`;
+  }
+  next();
+});
+
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");

@@ -8,7 +8,7 @@ import {
   extractChatGptShareConversation,
   stripTagsToMarkdown,
   writeChatGptShareConversationFile,
-} from "../../lib/extract-chatgpt-share-html.js";
+} from "../../lib/api/second-brain/extract-chatgpt-share-html.js";
 
 test("stripTagsToMarkdown converts relevant HTML blocks to Markdown", () => {
   const html = `

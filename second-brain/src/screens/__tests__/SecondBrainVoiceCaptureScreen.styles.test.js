@@ -1,8 +1,8 @@
 import { StyleSheet } from "react-native";
-import styles from "../SecondBrainVoiceCaptureScreen.styles";
+import styles from "../../components/SecondBrainMicrophoneButton.styles";
 import { theme } from "../../theme";
 
-describe("SecondBrainVoiceCaptureScreen styles", () => {
+describe("SecondBrainMicrophoneButton styles", () => {
   it("uses brand color for mic button surface and shadow", () => {
     const micButton = StyleSheet.flatten(styles.micButton);
 

@@ -4,6 +4,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   Text,
   View,
 } from "react-native";
@@ -16,10 +17,13 @@ import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
 import { repairLegacyTruncatedAssistantMessages } from "../utils/secondBrainConversationParsers";
+import { buildBrainstormHistory } from "../utils/brainstormPrompting";
 import {
+  BRAINSTORM_SESSION_MODES,
   createBrainstormSession,
   getLinkedBrainstormSessionId,
   linkEntryToBrainstormSession,
+  normalizeBrainstormSession,
   readBrainstormSession,
   toBrainstormTranscript,
   writeBrainstormSession,
@@ -159,9 +163,16 @@ export default function SecondBrainBrainstormScreen({
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
           seedText: "",
+          mode: BRAINSTORM_SESSION_MODES.TEXT,
         });
         seedPrompt = buildInitialBrainstormPrompt(seedEntry);
         shouldAutoSendSeedPrompt = Boolean(seedPrompt);
+      }
+      if (nextSession?.mode !== BRAINSTORM_SESSION_MODES.TEXT) {
+        nextSession = normalizeBrainstormSession({
+          ...nextSession,
+          mode: BRAINSTORM_SESSION_MODES.TEXT,
+        });
       }
       if (!cancelled) {
         initialMessageCountRef.current = Array.isArray(nextSession?.messages)
@@ -277,10 +288,7 @@ export default function SecondBrainBrainstormScreen({
 
     if (isEnd) {
       try {
-        const history = (activeSession.messages || []).map((item) => ({
-          role: item.role === "assistant" ? "assistant" : "user",
-          content: item.content,
-        }));
+        const history = buildBrainstormHistory(activeSession.messages);
         const endResponse = await apiRequest("/brainstorm", {
           method: "POST",
           token,
@@ -482,10 +490,9 @@ export default function SecondBrainBrainstormScreen({
 
     try {
       await persistSession(pendingSession);
-      const history = pendingSession.messages.slice(0, -1).map((item) => ({
-        role: item.role,
-        content: item.content,
-      }));
+      const history = buildBrainstormHistory(pendingSession.messages, {
+        excludeLast: true,
+      });
       const response = await apiRequest("/brainstorm", {
         method: "POST",
         token,
@@ -517,6 +524,21 @@ export default function SecondBrainBrainstormScreen({
   }
 
   function noop() {}
+
+  async function handleLaunchBrainstormTalk() {
+    const activeSession = sessionRef.current || session;
+    if (!activeSession?.id) return;
+    const textModeSession = normalizeBrainstormSession({
+      ...activeSession,
+      mode: BRAINSTORM_SESSION_MODES.TEXT,
+      updatedAt: new Date().toISOString(),
+    });
+    await writeBrainstormSession(textModeSession);
+    navigation?.navigate?.("SecondBrainBrainstormTalk", {
+      sessionId: textModeSession.id,
+      seedEntry,
+    });
+  }
 
   useEffect(() => {
     return () => {
@@ -680,6 +702,17 @@ export default function SecondBrainBrainstormScreen({
                 renderInline
               />
               {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Pressable
+                style={styles.launchTalkButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open brainstorm talk"
+                onPress={handleLaunchBrainstormTalk}
+                disabled={busy || finalizingEnd}
+              >
+                <Text style={styles.launchTalkButtonText}>
+                  /brainstorm-talk
+                </Text>
+              </Pressable>
             </View>
           </SecondBrainTypebar>
         </KeyboardAvoidingView>

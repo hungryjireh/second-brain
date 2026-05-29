@@ -7,7 +7,7 @@ import test from "node:test";
 import {
   extractClaudeShareConversation,
   writeClaudeShareConversationFile,
-} from "../../lib/extract-claude-share-html.js";
+} from "../../lib/api/second-brain/extract-claude-share-html.js";
 
 test("extractClaudeShareConversation uses Claude share id as conversation uuid", () => {
   const html = `

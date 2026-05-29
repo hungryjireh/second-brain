@@ -103,6 +103,22 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.body,
     fontSize: 13,
   },
+  launchTalkButton: {
+    alignSelf: "flex-end",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.bgRaised,
+  },
+  launchTalkButtonText: {
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.mono,
+    fontSize: 12,
+  },
 });
 
 export default styles;

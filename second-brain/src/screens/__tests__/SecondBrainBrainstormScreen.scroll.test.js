@@ -1,15 +1,21 @@
-import { act, fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import SecondBrainBrainstormScreen from "../SecondBrainBrainstormScreen";
+import { writeBrainstormSession } from "../../utils/brainstormSessions";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
 }));
 
 jest.mock("../../utils/brainstormSessions", () => ({
+  BRAINSTORM_SESSION_MODES: {
+    TEXT: "text",
+    TALK: "talk",
+  },
   createBrainstormSession: jest.fn(
     async ({ entryId = null, seedText = "" } = {}) => ({
       id: "session-1",
       entryId,
+      mode: "text",
       lifecycle: "active",
       updatedAt: new Date().toISOString(),
       finalizeGuards: { ended: false, wipSaved: false },
@@ -28,6 +34,7 @@ jest.mock("../../utils/brainstormSessions", () => ({
   getLinkedBrainstormSessionId: jest.fn(async () => ""),
   linkEntryToBrainstormSession: jest.fn(async () => {}),
   readBrainstormSession: jest.fn(async () => null),
+  normalizeBrainstormSession: jest.fn((session) => session),
   toBrainstormTranscript: jest.fn(() => ""),
   writeBrainstormSession: jest.fn(async () => {}),
 }));
@@ -126,5 +133,30 @@ describe("SecondBrainBrainstormScreen scroll behavior", () => {
 
     expect(mockScrollToOffset).not.toHaveBeenCalled();
     expect(mockScrollToEnd).not.toHaveBeenCalled();
+  });
+
+  it("opens brainstorm talk route from the brainstorm screen launch control", async () => {
+    const navigate = jest.fn();
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn(), navigate }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(view.getByLabelText("Open brainstorm talk"));
+
+    await waitFor(() => {
+      expect(writeBrainstormSession).toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstormTalk", {
+        sessionId: "session-1",
+        seedEntry: null,
+      });
+    });
   });
 });

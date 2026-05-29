@@ -3,8 +3,13 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { chromium } from "playwright-extra";
 
-function createReq({ method = "GET", body = {}, headers = {} } = {}) {
-  return { method, body, headers, query: {} };
+function createReq({
+  method = "GET",
+  body = {},
+  headers = {},
+  query = { action: "import-llm-share" },
+} = {}) {
+  return { method, body, headers, query };
 }
 
 function createRes() {
@@ -180,7 +185,7 @@ test("POST /api/import-llm-share imports a shared conversation URL", async () =>
   };
 
   const { default: handler } = await importFresh(
-    "../../api/import-llm-share.js",
+    "../../lib/api/second-brain/actions.js",
     "import-chatgpt-share-success",
   );
 
@@ -338,7 +343,7 @@ test("POST /api/import-llm-share routes Claude share URLs to Claude extractor", 
   };
 
   const { default: handler } = await importFresh(
-    "../../api/import-llm-share.js",
+    "../../lib/api/second-brain/actions.js",
     "import-chatgpt-share-claude-success",
   );
 
@@ -371,7 +376,7 @@ test("POST /api/import-llm-share routes Claude share URLs to Claude extractor", 
 
 test("POST /api/import-llm-share validates chat_url", async () => {
   const { default: handler } = await importFresh(
-    "../../api/import-llm-share.js",
+    "../../lib/api/second-brain/actions.js",
     "import-chatgpt-share-invalid-url",
   );
 
@@ -381,6 +386,43 @@ test("POST /api/import-llm-share validates chat_url", async () => {
       authorization: `Bearer ${createTestJwt({ id: "11111111-1111-4111-8111-111111111111" })}`,
     },
     body: { chat_url: "https://example.com/abc" },
+  });
+  const res = createRes();
+
+  const originalFetch = global.fetch;
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  global.fetch = async () => {
+    throw new Error("No network call expected for invalid URL");
+  };
+
+  try {
+    await handler(req, res);
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(
+    jsonBody(res).error,
+    "chat_url must be a valid ChatGPT or Claude public share URL",
+  );
+});
+
+test("POST /api/import-llm-share route module accepts direct calls", async () => {
+  const { default: handler } = await importFresh(
+    "../../api/import-llm-share.js",
+    "import-llm-share-direct-route",
+  );
+
+  const req = createReq({
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${createTestJwt({ id: "11111111-1111-4111-8111-111111111111" })}`,
+    },
+    body: { chat_url: "https://example.com/abc" },
+    query: {},
   });
   const res = createRes();
 

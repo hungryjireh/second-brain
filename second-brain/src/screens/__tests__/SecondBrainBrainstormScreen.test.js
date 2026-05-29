@@ -22,12 +22,17 @@ jest.mock("../../utils/brainstormSessions", () => {
   }
 
   return {
+    BRAINSTORM_SESSION_MODES: {
+      TEXT: "text",
+      TALK: "talk",
+    },
     createBrainstormSession: jest.fn(
       async ({ entryId = null, seedText = "" } = {}) => {
         counter += 1;
         const session = {
           id: `session-${counter}`,
           entryId,
+          mode: "text",
           lifecycle: "active",
           updatedAt: new Date().toISOString(),
           finalizeGuards: { ended: false, wipSaved: false },
@@ -55,6 +60,7 @@ jest.mock("../../utils/brainstormSessions", () => {
     readBrainstormSession: jest.fn(async (sessionId) => {
       return cloneSession(sessionsById.get(sessionId) || null);
     }),
+    normalizeBrainstormSession: jest.fn((session) => cloneSession(session)),
     toBrainstormTranscript: jest.fn((messages) =>
       (Array.isArray(messages) ? messages : [])
         .map((message) => String(message?.content || ""))

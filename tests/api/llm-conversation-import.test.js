@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   importLlmConversationsAsEntries,
   parseClaudeConversationsImport,
-} from "../../lib/llm-conversation-import.js";
+} from "../../lib/api/second-brain/llm-conversation-import.js";
 
 function jsonResponse(status, body) {
   return {

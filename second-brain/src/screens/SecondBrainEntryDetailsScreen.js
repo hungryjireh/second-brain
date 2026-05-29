@@ -8,6 +8,8 @@ import { confirmAction } from "../utils/confirmAction";
 import { formatPublishedDateTime } from "../utils/dateTimeUtils";
 import {
   getLinkedBrainstormSessionId,
+  isBrainstormTalkEntry,
+  normalizeBrainstormMode,
   readBrainstormSession,
 } from "../utils/brainstormSessions";
 import { normalizeTagValue, parseTagInput } from "../utils/secondBrainTagUtils";
@@ -365,6 +367,13 @@ export default function SecondBrainEntryDetailsScreen({
 
   function handleContinueBrainstorming() {
     closeActionDrawer();
+    const shouldResumeTalk =
+      isBrainstormTalkEntry(entry) ||
+      normalizeBrainstormMode(brainstormSessionMeta?.mode) === "talk";
+    if (shouldResumeTalk) {
+      navigation?.navigate?.("SecondBrainBrainstormTalk", { seedEntry: entry });
+      return;
+    }
     navigation?.navigate?.("SecondBrainBrainstorm", { seedEntry: entry });
   }
 

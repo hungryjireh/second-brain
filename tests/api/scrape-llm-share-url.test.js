@@ -6,7 +6,7 @@ import {
   isLlmShareUrl,
   isChatGptShareUrl,
   patchWebGLFingerprint,
-} from "../../lib/scrape-llm-share-url.js";
+} from "../../lib/api/second-brain/scrape-llm-share-url.js";
 
 test("isChatGptShareUrl validates ChatGPT and Claude share URLs", () => {
   assert.equal(
