@@ -47,6 +47,7 @@ import {
 } from "../services/unrealSpeechService";
 import useBrainstormTalkStreaming from "../hooks/useBrainstormTalkStreaming";
 import { createBrainstormTalkStreamingTransport } from "../services/brainstormTalkStreamingTransport";
+import { buildEndFinalizePrompt } from "../../../lib/prompts/second-brain";
 
 const TALK_STATE = {
   IDLE: "idle",
@@ -69,24 +70,6 @@ function prefixedWipTitle(title) {
   if (!clean) return "[BRAINSTORMING] Untitled";
   if (clean.startsWith("[BRAINSTORMING]")) return clean;
   return `[BRAINSTORMING] ${clean}`;
-}
-
-function buildEndFinalizePrompt() {
-  return [
-    "Summarise this conversation between a human and an AI and generate structured entry fields.",
-    'Return ONLY valid JSON with this exact shape: {"description":"...","title":"...","summary":"...","content":"..."}',
-    "",
-    "description must be a markdown string in this exact structure:",
-    "# Conversation Summary\\nOne sentence overview.\\n\\n## Goal\\n- ...\\n\\n## Outputs & Decisions\\n- ...\\n\\n## To Revisit\\n- ...\\n\\n## Context to Remember\\n- ...",
-    "",
-    "Field rules:",
-    "- Keep it concise and specific.",
-    "- If a section has nothing to report, write: - None.",
-    "- title: 3-8 words, specific, no markdown.",
-    "- summary: one concise sentence, no markdown.",
-    "- content: concise cleaned note in plain text, preserving important context and decisions.",
-    "- description: use \\n for newlines, no code blocks, valid JSON string.",
-  ].join("\n");
 }
 
 function parseEndFinalizeFromReply(replyText) {

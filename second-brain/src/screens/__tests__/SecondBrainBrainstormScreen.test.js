@@ -1450,6 +1450,45 @@ A personal knowledge app for sharing and discovering daily thoughts and wisdom.
     expect(brainstormCalls).toHaveLength(0);
   });
 
+  it("rehydrates transcript-style raw_text instead of sending it as a seed prompt", async () => {
+    apiRequest.mockResolvedValue({ reply: "Assistant reply" });
+
+    render(
+      <SecondBrainBrainstormScreen
+        route={{
+          params: {
+            seedEntry: {
+              id: 445,
+              raw_text:
+                "User: Help me brainstorm launch ideas.\n\nAssistant: Start with audience first.",
+            },
+          },
+        }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(createBrainstormSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entryId: 445,
+          seedText: "",
+          mode: "text",
+          messages: [
+            { role: "user", content: "Help me brainstorm launch ideas." },
+            { role: "assistant", content: "Start with audience first." },
+          ],
+        }),
+      );
+    });
+
+    const brainstormCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/brainstorm" && options?.method === "POST",
+    );
+    expect(brainstormCalls).toHaveLength(0);
+  });
+
   it("renders resumed messages when id and createdAt are missing", async () => {
     readBrainstormSession.mockResolvedValueOnce({
       id: "legacy-3",

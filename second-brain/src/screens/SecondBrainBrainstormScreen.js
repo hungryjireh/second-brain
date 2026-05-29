@@ -16,8 +16,12 @@ import { apiRequest } from "../api";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
-import { repairLegacyTruncatedAssistantMessages } from "../utils/secondBrainConversationParsers";
+import {
+  parseBrainstormTranscriptFromEntry,
+  repairLegacyTruncatedAssistantMessages,
+} from "../utils/secondBrainConversationParsers";
 import { buildBrainstormHistory } from "../utils/brainstormPrompting";
+import { buildEndFinalizePrompt } from "../../../lib/prompts/second-brain";
 import {
   BRAINSTORM_SESSION_MODES,
   createBrainstormSession,
@@ -45,24 +49,6 @@ function buildInitialBrainstormPrompt(seedEntry) {
   const seedText = getSeedEntryText(seedEntry);
   if (!seedText) return "";
   return `i want to brainstorm about: ${seedText}`;
-}
-
-function buildEndFinalizePrompt() {
-  return [
-    "Summarise this conversation between a human and an AI and generate structured entry fields.",
-    'Return ONLY valid JSON with this exact shape: {"description":"...","title":"...","summary":"...","content":"..."}',
-    "",
-    "description must be a markdown string in this exact structure:",
-    "# Conversation Summary\\nOne sentence overview.\\n\\n## Goal\\n- ...\\n\\n## Outputs & Decisions\\n- ...\\n\\n## To Revisit\\n- ...\\n\\n## Context to Remember\\n- ...",
-    "",
-    "Field rules:",
-    "- Keep it concise and specific.",
-    "- If a section has nothing to report, write: - None.",
-    "- title: 3-8 words, specific, no markdown.",
-    "- summary: one concise sentence, no markdown.",
-    "- content: concise cleaned note in plain text, preserving important context and decisions.",
-    "- description: use \\n for newlines, no code blocks, valid JSON string.",
-  ].join("\n");
 }
 
 function parseEndFinalizeFromReply(replyText) {
@@ -160,13 +146,28 @@ export default function SecondBrainBrainstormScreen({
         seedEntry,
       );
       if (!nextSession) {
+        const seededTranscript = parseBrainstormTranscriptFromEntry(seedEntry);
+        const transcriptMessages = Array.isArray(seededTranscript?.messages)
+          ? seededTranscript.messages
+              .map((message) => {
+                const role =
+                  message?.sender === "assistant" ? "assistant" : "user";
+                const content = String(message?.text || "").trim();
+                if (!content) return null;
+                return { role, content };
+              })
+              .filter(Boolean)
+          : [];
         nextSession = await createBrainstormSession({
           entryId: seedEntry?.id,
           seedText: "",
           mode: BRAINSTORM_SESSION_MODES.TEXT,
+          messages: transcriptMessages,
         });
-        seedPrompt = buildInitialBrainstormPrompt(seedEntry);
-        shouldAutoSendSeedPrompt = Boolean(seedPrompt);
+        if (!transcriptMessages.length) {
+          seedPrompt = buildInitialBrainstormPrompt(seedEntry);
+          shouldAutoSendSeedPrompt = Boolean(seedPrompt);
+        }
       }
       if (nextSession?.mode !== BRAINSTORM_SESSION_MODES.TEXT) {
         nextSession = normalizeBrainstormSession({
