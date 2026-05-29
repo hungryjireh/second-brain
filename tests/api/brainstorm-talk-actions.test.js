@@ -171,6 +171,82 @@ test("brainstorm transcribe still accepts audio_base64 fallback", async () => {
   }
 });
 
+test("brainstorm transcribe-raw accepts binary body and forwards base64 to configured STT endpoint", async () => {
+  const originalApiKey = process.env.UNREAL_SPEECH_API_KEY;
+  const originalSttUrl = process.env.UNREAL_SPEECH_STT_URL;
+  const originalFetch = global.fetch;
+
+  process.env.UNREAL_SPEECH_API_KEY = "test-api-key";
+  process.env.UNREAL_SPEECH_STT_URL = "https://stt.example.com/transcribe";
+
+  const fetchCalls = [];
+  global.fetch = async (url, options = {}) => {
+    fetchCalls.push({ url, options });
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => "application/json" },
+      json: async () => ({ transcript: "hello from raw" }),
+      text: async () => "",
+    };
+  };
+
+  try {
+    const { default: handler } = await importFresh(
+      "../../api/brainstorm.js",
+      "transcribe-audio-raw",
+    );
+    const token = createTestJwt({
+      sub: "11111111-1111-4111-8111-111111111111",
+    });
+    const res = createRes();
+
+    await handler(
+      createReq({
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        query: { action: "transcribe-raw", extension: "m4a" },
+        body: Buffer.from([1, 2, 3, 4]),
+      }),
+      res,
+    );
+
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(jsonBody(res), { transcript: "hello from raw" });
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(fetchCalls[0].url, "https://stt.example.com/transcribe");
+    assert.match(String(fetchCalls[0].options?.body || ""), /"audio_base64"/);
+  } finally {
+    process.env.UNREAL_SPEECH_API_KEY = originalApiKey;
+    process.env.UNREAL_SPEECH_STT_URL = originalSttUrl;
+    global.fetch = originalFetch;
+  }
+});
+
+test("brainstorm transcribe-raw rejects empty binary body", async () => {
+  const { default: handler } = await importFresh(
+    "../../api/brainstorm.js",
+    "transcribe-audio-raw-empty-body",
+  );
+  const token = createTestJwt({
+    sub: "11111111-1111-4111-8111-111111111111",
+  });
+  const res = createRes();
+
+  await handler(
+    createReq({
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      query: { action: "transcribe-raw", extension: "m4a" },
+      body: Buffer.alloc(0),
+    }),
+    res,
+  );
+
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(jsonBody(res), { error: "Audio body is required" });
+});
+
 test("transcribeWithUnrealSpeech falls back to audio_uri when STT URL is unset", async () => {
   const originalSttUrl = process.env.UNREAL_SPEECH_STT_URL;
   const originalFetch = global.fetch;

@@ -9,6 +9,7 @@ import {
 } from "expo-audio";
 import { File } from "expo-file-system";
 import { apiRequest } from "../api";
+import { stopBrainstormTalkPlayback } from "../services/unrealSpeechService";
 
 const MAX_VOICE_NOTE_DURATION_SECONDS = 2 * 60;
 const VOICE_RECORDING_PRESET =
@@ -73,6 +74,7 @@ export function useVoiceCapture({
     setVoiceStarting(true);
     try {
       onError("");
+      await stopBrainstormTalkPlayback();
       if (!hasMicrophonePermissionRef.current) {
         const permission = await requestRecordingPermissionsAsync();
         if (!permission.granted) {

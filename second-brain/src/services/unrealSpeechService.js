@@ -1,6 +1,6 @@
 import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 import { File, Paths } from "expo-file-system";
-import { apiRequest } from "../api";
+import { apiRequest, buildApiUrl, createAuthHeaders } from "../api";
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
 const PLAYBACK_POLL_INTERVAL_MS = 120;
@@ -79,16 +79,39 @@ export async function transcribeBrainstormTalkAudio({
     throw new Error("Missing audio payload for transcription.");
   }
   try {
-    const response = await apiRequest("/brainstorm?action=transcribe", {
-      method: "POST",
-      token,
-      body: {
-        audio_uri: normalizedAudioUri,
-        extension,
-        timeout_ms: normalizeTimeoutMs(timeoutMs),
-      },
+    const audioFile = new File(normalizedAudioUri);
+    const audioBytes = await audioFile.arrayBuffer();
+    if (!audioBytes || audioBytes.byteLength === 0) {
+      throw new Error("Failed to read recording");
+    }
+    const query = new URLSearchParams({
+      action: "transcribe-raw",
+      extension: String(extension || "m4a"),
+      timeout_ms: String(normalizeTimeoutMs(timeoutMs)),
     });
-    const transcript = String(response?.transcript || "").trim();
+    const response = await fetch(
+      buildApiUrl(`/brainstorm?${query.toString()}`),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          ...createAuthHeaders(token),
+        },
+        body: audioBytes,
+      },
+    );
+
+    const raw = await response.text();
+    let payload = {};
+    try {
+      payload = raw ? JSON.parse(raw) : {};
+    } catch {
+      payload = {};
+    }
+    if (!response.ok) {
+      throw new Error(String(payload?.error || "Failed to transcribe audio"));
+    }
+    const transcript = String(payload?.transcript || "").trim();
     if (!transcript) {
       throw new Error("Transcription returned empty text.");
     }
@@ -231,10 +254,12 @@ export async function playBrainstormTalkAudio({
   audioFile.write(decodeBase64ToBytes(normalizedAudio));
   activeAudioFile = audioFile;
 
-  const player = createAudioPlayer(audioFile.uri, {
-    keepAudioSessionActive: true,
-  });
+  const player = createAudioPlayer(audioFile.uri);
   activePlayer = player;
-  player.play();
-  await waitForPlaybackToFinish(player);
+  try {
+    player.play();
+    await waitForPlaybackToFinish(player);
+  } finally {
+    await stopBrainstormTalkPlayback();
+  }
 }

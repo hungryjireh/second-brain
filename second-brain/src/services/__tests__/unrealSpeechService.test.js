@@ -1,26 +1,35 @@
 import { apiRequest } from "../../api";
+import { createAudioPlayer } from "expo-audio";
 import {
+  playBrainstormTalkAudio,
   requestBrainstormTalkStreamTurn,
   transcribeBrainstormTalkAudio,
 } from "../unrealSpeechService";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
+  buildApiUrl: jest.fn((path) => `http://localhost:3000/api${path}`),
+  createAuthHeaders: jest.fn((token) =>
+    token ? { Authorization: `Bearer ${token}` } : undefined,
+  ),
 }));
 
 describe("unrealSpeechService streaming turn", () => {
   const originalStreamingFlagEnv =
     process.env.EXPO_PUBLIC_BRAINSTORM_TALK_STREAMING_V1;
+  const originalFetch = global.fetch;
 
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.EXPO_PUBLIC_BRAINSTORM_TALK_STREAMING_V1 =
       originalStreamingFlagEnv;
+    global.fetch = jest.fn();
   });
 
   afterAll(() => {
     process.env.EXPO_PUBLIC_BRAINSTORM_TALK_STREAMING_V1 =
       originalStreamingFlagEnv;
+    global.fetch = originalFetch;
   });
 
   it("submits stream-turn payload and normalizes response", async () => {
@@ -105,8 +114,11 @@ describe("unrealSpeechService streaming turn", () => {
     });
   });
 
-  it("submits transcribe payload with audio_uri", async () => {
-    apiRequest.mockResolvedValueOnce({ transcript: "hello world" });
+  it("submits transcribe payload as raw audio body", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => JSON.stringify({ transcript: "hello world" }),
+    });
 
     const result = await transcribeBrainstormTalkAudio({
       token: "token",
@@ -114,15 +126,15 @@ describe("unrealSpeechService streaming turn", () => {
       extension: "m4a",
     });
 
-    expect(apiRequest).toHaveBeenCalledWith(
-      "/brainstorm?action=transcribe",
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/brainstorm?action=transcribe-raw"),
       expect.objectContaining({
         method: "POST",
-        token: "token",
-        body: expect.objectContaining({
-          audio_uri: "file:///tmp/test-recording.m4a",
-          extension: "m4a",
+        headers: expect.objectContaining({
+          Authorization: "Bearer token",
+          "Content-Type": "application/octet-stream",
         }),
+        body: expect.any(ArrayBuffer),
       }),
     );
     expect(result).toBe("hello world");
@@ -136,5 +148,46 @@ describe("unrealSpeechService streaming turn", () => {
       }),
     ).rejects.toThrow("Missing audio payload for transcription.");
     expect(apiRequest).not.toHaveBeenCalled();
+  });
+
+  it("throws backend error message when raw transcribe request fails", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      text: async () => JSON.stringify({ error: "upstream failed" }),
+    });
+
+    await expect(
+      transcribeBrainstormTalkAudio({
+        token: "token",
+        audioUri: "file:///tmp/test-recording.m4a",
+      }),
+    ).rejects.toThrow("upstream failed");
+  });
+
+  it("throws when raw transcribe response has empty transcript", async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      text: async () => JSON.stringify({ transcript: "   " }),
+    });
+
+    await expect(
+      transcribeBrainstormTalkAudio({
+        token: "token",
+        audioUri: "file:///tmp/test-recording.m4a",
+      }),
+    ).rejects.toThrow("Transcription returned empty text.");
+  });
+
+  it("creates playback player without keeping audio session pinned", async () => {
+    await playBrainstormTalkAudio({
+      audioBase64: "ZmFrZQ==",
+      mimeType: "audio/mpeg",
+    });
+
+    expect(createAudioPlayer).toHaveBeenCalledWith(expect.any(String));
+    expect(createAudioPlayer).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ keepAudioSessionActive: true }),
+    );
   });
 });

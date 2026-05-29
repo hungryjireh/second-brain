@@ -252,9 +252,7 @@ export default function SecondBrainBrainstormTalkScreen({
       setTalkState(TALK_STATE.ERROR);
       return;
     }
-    if (talkState === TALK_STATE.SPEAKING) {
-      await stopBrainstormTalkPlayback();
-    }
+    await stopBrainstormTalkPlayback();
     await stopStreamingTransport();
     setError("");
     try {

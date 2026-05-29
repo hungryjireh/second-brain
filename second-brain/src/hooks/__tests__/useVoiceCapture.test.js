@@ -7,10 +7,15 @@ import {
   useAudioRecorderState,
 } from "expo-audio";
 import { apiRequest } from "../../api";
+import { stopBrainstormTalkPlayback } from "../../services/unrealSpeechService";
 import { useVoiceCapture } from "../useVoiceCapture";
 
 jest.mock("../../api", () => ({
   apiRequest: jest.fn(),
+}));
+
+jest.mock("../../services/unrealSpeechService", () => ({
+  stopBrainstormTalkPlayback: jest.fn(async () => {}),
 }));
 
 describe("useVoiceCapture", () => {
@@ -56,12 +61,17 @@ describe("useVoiceCapture", () => {
     });
 
     expect(requestRecordingPermissionsAsync).toHaveBeenCalled();
+    expect(stopBrainstormTalkPlayback).toHaveBeenCalledTimes(1);
     expect(setAudioModeAsync).toHaveBeenCalledWith({
       allowsRecording: true,
       playsInSilentMode: true,
     });
     expect(recorder.prepareToRecordAsync).toHaveBeenCalled();
     expect(recorder.record).toHaveBeenCalled();
+    const stopPlaybackCallOrder =
+      stopBrainstormTalkPlayback.mock.invocationCallOrder[0];
+    const setAudioModeCallOrder = setAudioModeAsync.mock.invocationCallOrder[0];
+    expect(stopPlaybackCallOrder).toBeLessThan(setAudioModeCallOrder);
   });
 
   it("re-enables recording mode on every start attempt", async () => {

@@ -10,6 +10,7 @@ import SecondBrainConversationList from "../../components/SecondBrainConversatio
 import { apiRequest } from "../../api";
 import {
   synthesizeBrainstormTalkAudio,
+  stopBrainstormTalkPlayback,
   transcribeBrainstormTalkAudio,
 } from "../../services/unrealSpeechService";
 import { writeBrainstormSession } from "../../utils/brainstormSessions";
@@ -141,6 +142,31 @@ describe("SecondBrainBrainstormTalkScreen", () => {
     expect(view.queryByText("Idle")).toBeNull();
     expect(view.queryByText("Listening")).toBeNull();
     expect(view.queryByText("Paused")).toBeNull();
+  });
+
+  it("stops playback before starting a new listening turn", async () => {
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(view.getByLabelText("Listen"));
+
+    await waitFor(() => {
+      expect(stopBrainstormTalkPlayback).toHaveBeenCalledTimes(1);
+      expect(useAudioRecorder().record).toHaveBeenCalledTimes(1);
+    });
+    const stopPlaybackCallOrder =
+      stopBrainstormTalkPlayback.mock.invocationCallOrder[0];
+    const setAudioModeCallOrder = setAudioModeAsync.mock.invocationCallOrder[0];
+    expect(stopPlaybackCallOrder).toBeLessThan(setAudioModeCallOrder);
   });
 
   it("shows pause and transcribe control while recording", async () => {

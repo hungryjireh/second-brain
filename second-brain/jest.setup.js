@@ -43,7 +43,19 @@ jest.mock("expo-file-system", () => {
       return "ZmFrZQ==";
     }
 
+    async arrayBuffer() {
+      return new Uint8Array([1, 2, 3, 4]).buffer;
+    }
+
     write() {
+      return undefined;
+    }
+
+    create() {
+      return undefined;
+    }
+
+    delete() {
       return undefined;
     }
   }
