@@ -170,3 +170,78 @@ test("brainstorm transcribe still accepts audio_base64 fallback", async () => {
     global.fetch = originalFetch;
   }
 });
+
+test("transcribeWithUnrealSpeech falls back to audio_uri when STT URL is unset", async () => {
+  const originalSttUrl = process.env.UNREAL_SPEECH_STT_URL;
+  const originalFetch = global.fetch;
+
+  delete process.env.UNREAL_SPEECH_STT_URL;
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => "audio/m4a" },
+    arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+    text: async () => "",
+    json: async () => ({}),
+  });
+
+  try {
+    const { transcribeWithUnrealSpeech } = await importFresh(
+      "../../lib/unreal-speech.js",
+      "transcribe-uri-fallback-success",
+    );
+    const transcript = await transcribeWithUnrealSpeech({
+      audioUri: "https://cdn.example.com/audio.m4a",
+      extension: "m4a",
+      transcribeFromBufferFn: async (buffer, ext) => {
+        assert.ok(Buffer.isBuffer(buffer));
+        assert.equal(ext, "m4a");
+        return "hello from fallback uri";
+      },
+    });
+
+    assert.equal(transcript, "hello from fallback uri");
+  } finally {
+    process.env.UNREAL_SPEECH_STT_URL = originalSttUrl;
+    global.fetch = originalFetch;
+  }
+});
+
+test("transcribeWithUnrealSpeech returns explicit error when fallback audio_uri is empty", async () => {
+  const originalSttUrl = process.env.UNREAL_SPEECH_STT_URL;
+  const originalFetch = global.fetch;
+
+  delete process.env.UNREAL_SPEECH_STT_URL;
+
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    headers: { get: () => "audio/m4a" },
+    arrayBuffer: async () => new ArrayBuffer(0),
+    text: async () => "",
+    json: async () => ({}),
+  });
+
+  try {
+    const { transcribeWithUnrealSpeech } = await importFresh(
+      "../../lib/unreal-speech.js",
+      "transcribe-uri-fallback-empty-audio",
+    );
+    await assert.rejects(
+      () =>
+        transcribeWithUnrealSpeech({
+          audioUri: "https://cdn.example.com/empty-audio.m4a",
+          extension: "m4a",
+          transcribeFromBufferFn: async () => "should not execute",
+        }),
+      (error) => {
+        assert.equal(error?.code, "unreal_speech_audio_uri_empty");
+        return true;
+      },
+    );
+  } finally {
+    process.env.UNREAL_SPEECH_STT_URL = originalSttUrl;
+    global.fetch = originalFetch;
+  }
+});
