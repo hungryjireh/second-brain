@@ -11,7 +11,7 @@ const SectionHeaderRow = memo(function SectionHeaderRow({ title }) {
   );
 });
 
-export default function OpenBrainSectionedThoughtList({
+function OpenBrainSectionedThoughtList({
   data,
   keyExtractor,
   renderThoughtItem,
@@ -45,3 +45,5 @@ export default function OpenBrainSectionedThoughtList({
     />
   );
 }
+
+export default memo(OpenBrainSectionedThoughtList);

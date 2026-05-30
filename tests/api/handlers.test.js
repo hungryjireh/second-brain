@@ -839,22 +839,17 @@ test("open-brain profile handler allows anonymous username lookup", async () => 
           ]),
       };
     }
-    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
       return {
         ok: true,
         status: 200,
         text: async () =>
-          JSON.stringify([
-            { id: "22222222-2222-4222-8222-222222222222" },
-            { id: "33333333-3333-4333-8333-333333333333" },
-          ]),
-      };
-    }
-    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify([{ id: "save-1" }, { id: "save-2" }]),
+          JSON.stringify({
+            profile_counts: {
+              "11111111-1111-4111-8111-111111111111": 2,
+            },
+            thought_counts: {},
+          }),
       };
     }
 
@@ -921,18 +916,17 @@ test("open-brain profile handler rejects non-boolean username_changed_once from 
           ]),
       };
     }
-    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify([]),
-      };
-    }
-    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify([]),
+        text: async () =>
+          JSON.stringify({
+            profile_counts: {
+              "11111111-1111-4111-8111-111111111111": 0,
+            },
+            thought_counts: {},
+          }),
       };
     }
 
@@ -1046,8 +1040,26 @@ test("open-brain feed handler returns per-thought save_count from thought_second
       return { ok: true, status: 200, text: async () => JSON.stringify([]) };
     }
 
-    if (parsed.pathname.endsWith("/rest/v1/reactions")) {
-      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            summary: {
+              [thoughtId]: {
+                felt_this: 2,
+                me_too: 1,
+                made_me_think: 3,
+                mine: {
+                  felt_this: true,
+                  me_too: false,
+                  made_me_think: true,
+                },
+              },
+            },
+          }),
+      };
     }
 
     if (parsed.pathname.endsWith("/rest/v1/profiles")) {
@@ -1134,6 +1146,17 @@ test("open-brain feed handler returns per-thought save_count from thought_second
           ]),
       };
     }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            profile_counts: { [authorId]: 3 },
+            thought_counts: { [thoughtId]: 3 },
+          }),
+      };
+    }
 
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
@@ -1171,6 +1194,14 @@ test("open-brain feed handler returns per-thought save_count from thought_second
   assert.equal(jsonBody(res)?.everyone?.[0]?.save_count, 3);
   assert.equal(
     jsonBody(res)?.everyone?.[0]?.viewer_has_added_to_second_brain,
+    true,
+  );
+  assert.equal(jsonBody(res)?.everyone?.[0]?.reactions?.felt_this, 2);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.reactions?.me_too, 1);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.reactions?.made_me_think, 3);
+  assert.equal(jsonBody(res)?.everyone?.[0]?.reactions?.mine?.felt_this, true);
+  assert.equal(
+    jsonBody(res)?.everyone?.[0]?.reactions?.mine?.made_me_think,
     true,
   );
 });
@@ -1214,8 +1245,36 @@ test("open-brain feed handler excludes self-authored thoughts from following fee
       };
     }
 
-    if (parsed.pathname.endsWith("/rest/v1/reactions")) {
-      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            summary: {
+              [viewerThoughtId]: {
+                felt_this: 0,
+                me_too: 0,
+                made_me_think: 0,
+                mine: {
+                  felt_this: false,
+                  me_too: false,
+                  made_me_think: false,
+                },
+              },
+              [otherThoughtId]: {
+                felt_this: 0,
+                me_too: 0,
+                made_me_think: 0,
+                mine: {
+                  felt_this: false,
+                  me_too: false,
+                  made_me_think: false,
+                },
+              },
+            },
+          }),
+      };
     }
 
     if (parsed.pathname.endsWith("/rest/v1/profiles")) {
@@ -1315,6 +1374,23 @@ test("open-brain feed handler excludes self-authored thoughts from following fee
     if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
       return { ok: true, status: 200, text: async () => JSON.stringify([]) };
     }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            profile_counts: {
+              [viewerId]: 0,
+              [otherAuthorId]: 0,
+            },
+            thought_counts: {
+              [viewerThoughtId]: 0,
+              [otherThoughtId]: 0,
+            },
+          }),
+      };
+    }
 
     throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
   };
@@ -1343,6 +1419,193 @@ test("open-brain feed handler excludes self-authored thoughts from following fee
   assert.equal(Array.isArray(jsonBody(res)?.following), true);
   assert.equal(jsonBody(res)?.following?.length, 1);
   assert.equal(jsonBody(res)?.following?.[0]?.user_id, otherAuthorId);
+});
+
+test("open-brain feed handler scopes author save_count loading to visible authors", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  const visibleAuthorId = "22222222-2222-4222-8222-222222222222";
+  const notVisibleFollowedId = "33333333-3333-4333-8333-333333333333";
+  const thoughtId = "44444444-4444-4444-8444-444444444444";
+  let capturedRpcProfileIds = [];
+  let capturedReactionThoughtIds = [];
+
+  global.fetch = async (url, options = {}) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            { following_id: visibleAuthorId },
+            { following_id: notVisibleFollowedId },
+          ]),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      const rpcBody = options.body ? JSON.parse(options.body) : {};
+      capturedReactionThoughtIds = Array.isArray(rpcBody?.thought_ids)
+        ? rpcBody.thought_ids
+        : [];
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            summary: {
+              [thoughtId]: {
+                felt_this: 0,
+                me_too: 0,
+                made_me_think: 0,
+                mine: {
+                  felt_this: false,
+                  me_too: false,
+                  made_me_think: false,
+                },
+              },
+            },
+          }),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const idEq = parsed.searchParams.get("id");
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: "UTC" }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            {
+              id: visibleAuthorId,
+              username: "visible",
+              avatar_url: null,
+              streak_count: 2,
+            },
+          ]),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      const selected = parsed.searchParams.get("select");
+      const visibility = parsed.searchParams.get("visibility");
+      const userEq = parsed.searchParams.get("user_id");
+
+      if (selected === "created_at" && userEq === `eq.${viewerId}`) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+
+      if (
+        selected === "id,user_id,content,created_at,visibility,share_slug" &&
+        visibility === "eq.public"
+      ) {
+        if (userEq && userEq.startsWith("in.(")) {
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              JSON.stringify([
+                {
+                  id: thoughtId,
+                  user_id: visibleAuthorId,
+                  content: { text: "Visible author thought" },
+                  created_at: "2026-01-02T00:00:00.000Z",
+                  visibility: "public",
+                  share_slug: null,
+                },
+              ]),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify([
+              {
+                id: thoughtId,
+                user_id: visibleAuthorId,
+                content: { text: "Visible author thought" },
+                created_at: "2026-01-02T00:00:00.000Z",
+                visibility: "public",
+                share_slug: null,
+              },
+            ]),
+        };
+      }
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      const rpcBody = options.body ? JSON.parse(options.body) : {};
+      capturedRpcProfileIds = Array.isArray(rpcBody?.profile_ids)
+        ? rpcBody.profile_ids
+        : [];
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            profile_counts: { [visibleAuthorId]: 0 },
+            thought_counts: { [thoughtId]: 0 },
+          }),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh(
+    "../../lib/open-brain/routes/feed.js",
+    "open-brain-feed-visible-author-save-scope",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(capturedRpcProfileIds.includes(visibleAuthorId), true);
+  assert.equal(capturedRpcProfileIds.includes(notVisibleFollowedId), false);
+  assert.deepEqual(capturedReactionThoughtIds, [thoughtId]);
 });
 
 test("open-brain search handler returns boolean is_self and is_following flags", async () => {
@@ -1469,6 +1732,117 @@ test("open-brain search handler returns boolean is_self and is_following flags",
   );
   assert.equal(
     payload?.users?.find((user) => user.id === followedId)?.is_following,
+    true,
+  );
+});
+
+test("open-brain search handler scopes follows lookup to candidate result users", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  const matchedUserId = "22222222-2222-4222-8222-222222222222";
+  let capturedFollowsInFilter = "";
+  let capturedFollowsFollowerFilter = "";
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      capturedFollowsFollowerFilter =
+        parsed.searchParams.get("follower_id") || "";
+      capturedFollowsInFilter = parsed.searchParams.get("following_id") || "";
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ following_id: matchedUserId }]),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const usernameFilter = parsed.searchParams.get("username");
+      const idIn = parsed.searchParams.get("id");
+      if (usernameFilter) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify([
+              {
+                id: matchedUserId,
+                username: "matched",
+                avatar_url: null,
+                streak_count: 8,
+              },
+            ]),
+        };
+      }
+      if (idIn && idIn.includes(matchedUserId)) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify([
+              {
+                id: matchedUserId,
+                username: "matched",
+                avatar_url: null,
+                streak_count: 8,
+              },
+            ]),
+        };
+      }
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: searchHandler } = await importFresh(
+    "../../lib/open-brain/routes/search.js",
+    "open-brain-search-follow-scope",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+    query: { q: "ma" },
+  });
+  const res = createRes();
+
+  try {
+    await searchHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(capturedFollowsFollowerFilter, `eq.${viewerId}`);
+  assert.equal(capturedFollowsInFilter, `in.(${matchedUserId})`);
+  assert.equal(
+    jsonBody(res)?.users?.find((user) => user.id === matchedUserId)
+      ?.is_following,
     true,
   );
 });

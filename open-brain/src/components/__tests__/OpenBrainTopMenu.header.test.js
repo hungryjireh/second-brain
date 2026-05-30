@@ -1,5 +1,5 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 import OpenBrainTopMenu from "../OpenBrainTopMenu";
 
 const mockApiRequest = jest.fn();
@@ -116,5 +116,53 @@ describe("OpenBrainTopMenu header", () => {
     await waitFor(() => {
       expect(screen.getByText("99+")).toBeTruthy();
     });
+  });
+
+  it("renders notifications in a virtualized FlatList when opening notifications", async () => {
+    const notifications = [
+      {
+        id: "n-1",
+        type: "follow",
+        actor_id: "u1",
+        read_at: null,
+        created_at: "2026-01-01T00:00:00.000Z",
+        profiles: { username: "alice" },
+        payload: {},
+      },
+      {
+        id: "n-2",
+        type: "reaction",
+        actor_id: "u2",
+        read_at: null,
+        created_at: "2026-01-01T00:01:00.000Z",
+        profiles: { username: "bob" },
+        payload: { reaction_type: "felt_this" },
+        thought: { id: "t1", share_slug: "slug-1" },
+      },
+    ];
+    mockApiRequest.mockResolvedValue({ notifications });
+
+    const screen = render(
+      <OpenBrainTopMenu token="token-value" navigation={createNavigation()} />,
+    );
+
+    fireEvent.press(screen.getByLabelText("Notifications"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Notifications")).toBeTruthy();
+      expect(screen.getByText("@alice")).toBeTruthy();
+      expect(screen.getByText("@bob")).toBeTruthy();
+    });
+
+    const lists = screen.UNSAFE_getAllByType(FlatList);
+    const notificationsList = lists.find(
+      (list) =>
+        Array.isArray(list.props.data) &&
+        list.props.data.length === notifications.length &&
+        list.props.data[0]?.id === "n-1",
+    );
+
+    expect(notificationsList).toBeTruthy();
+    expect(notificationsList.props.keyExtractor(notifications[0])).toBe("n-1");
   });
 });

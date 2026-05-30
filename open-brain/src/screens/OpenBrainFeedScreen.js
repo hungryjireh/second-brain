@@ -17,8 +17,14 @@ import { executeOpenBrainFollowToggle } from "../utils/openBrainFollow";
 import styles from "./OpenBrainFeedScreenStyles";
 
 function updateThoughtAcrossFeed(feed, thoughtId, updater) {
-  const updateList = (list) =>
-    list.map((item) => (item?.id === thoughtId ? updater(item) : item));
+  const updateList = (list) => {
+    const index = list.findIndex((item) => item?.id === thoughtId);
+    if (index < 0) return list;
+    const next = list.slice();
+    next[index] = updater(next[index]);
+    return next;
+  };
+
   return {
     following: updateList(feed.following || []),
     everyone: updateList(feed.everyone || []),
@@ -26,17 +32,28 @@ function updateThoughtAcrossFeed(feed, thoughtId, updater) {
 }
 
 function updateUserAcrossFeed(feed, userId, updater) {
-  const updateList = (list) =>
-    list.map((item) =>
-      item?.user_id === userId || item?.profile?.id === userId
-        ? updater(item)
-        : item,
-    );
+  const updateList = (list) => {
+    let didChange = false;
+    const next = list.map((item) => {
+      if (item?.user_id === userId || item?.profile?.id === userId) {
+        didChange = true;
+        return updater(item);
+      }
+      return item;
+    });
+    return didChange ? next : list;
+  };
+
   return {
     following: updateList(feed.following || []),
     everyone: updateList(feed.everyone || []),
   };
 }
+
+export const __testables = {
+  updateThoughtAcrossFeed,
+  updateUserAcrossFeed,
+};
 
 function normalizeFeedPayload(data) {
   const payload =

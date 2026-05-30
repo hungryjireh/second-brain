@@ -218,3 +218,116 @@ test("open-brain helpers: supabaseRequest throws when env is missing", async () 
       original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   }
 });
+
+test("open-brain reaction summary loader calls RPC and normalizes response", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const thoughtA = "11111111-1111-4111-8111-111111111111";
+  const thoughtB = "22222222-2222-4222-8222-222222222222";
+  const viewerId = "33333333-3333-4333-8333-333333333333";
+  let capturedBody = null;
+
+  global.fetch = async (_input, init = {}) => {
+    capturedBody = init.body ? JSON.parse(init.body) : null;
+    return new Response(
+      JSON.stringify({
+        summary: {
+          [thoughtA]: {
+            felt_this: 2,
+            me_too: 1,
+            made_me_think: 0,
+            mine: {
+              felt_this: true,
+              me_too: false,
+              made_me_think: false,
+            },
+          },
+        },
+      }),
+      { status: 200 },
+    );
+  };
+
+  try {
+    const { loadOpenBrainReactionSummary } = await importFresh(
+      "../../lib/open-brain/reaction-summary.js",
+      "reaction-summary-loader",
+    );
+    const summary = await loadOpenBrainReactionSummary({
+      token: "viewer-token",
+      thoughtIds: [thoughtA, thoughtB],
+      viewerId,
+    });
+
+    assert.deepEqual(capturedBody, {
+      thought_ids: [thoughtA, thoughtB],
+      viewer_id: viewerId,
+    });
+    assert.deepEqual(summary.get(thoughtA), {
+      felt_this: 2,
+      me_too: 1,
+      made_me_think: 0,
+      mine: {
+        felt_this: true,
+        me_too: false,
+        made_me_think: false,
+      },
+    });
+    assert.deepEqual(summary.get(thoughtB), {
+      felt_this: 0,
+      me_too: 0,
+      made_me_think: 0,
+      mine: {
+        felt_this: false,
+        me_too: false,
+        made_me_think: false,
+      },
+    });
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+});
+
+test("open-brain reaction summary loader returns early when viewer or thought ids are missing", async () => {
+  const originalFetch = global.fetch;
+  let fetchCalled = false;
+  global.fetch = async () => {
+    fetchCalled = true;
+    return new Response(JSON.stringify({ summary: {} }), { status: 200 });
+  };
+
+  try {
+    const { loadOpenBrainReactionSummary } = await importFresh(
+      "../../lib/open-brain/reaction-summary.js",
+      "reaction-summary-loader-empty-input",
+    );
+
+    const noViewer = await loadOpenBrainReactionSummary({
+      token: "token",
+      thoughtIds: ["11111111-1111-4111-8111-111111111111"],
+      viewerId: "",
+    });
+    const noThoughts = await loadOpenBrainReactionSummary({
+      token: "token",
+      thoughtIds: [],
+      viewerId: "33333333-3333-4333-8333-333333333333",
+    });
+
+    assert.equal(noViewer.size, 0);
+    assert.equal(noThoughts.size, 0);
+    assert.equal(fetchCalled, false);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

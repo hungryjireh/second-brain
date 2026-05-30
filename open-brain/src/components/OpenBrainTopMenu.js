@@ -3,7 +3,6 @@ import {
   FlatList,
   Modal,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -312,7 +311,6 @@ export default function OpenBrainTopMenu({
     if (Date.now() - searchOpenedAtRef.current < 180) return;
     closeSearch();
   }
-
   useEffect(() => {
     if (!token) {
       setNotifications([]);
@@ -491,12 +489,18 @@ export default function OpenBrainTopMenu({
               {!notificationsLoading &&
               !notificationsError &&
               notifications.length > 0 ? (
-                <ScrollView
+                <FlatList
+                  data={notifications}
+                  keyExtractor={(item) => item.id}
                   style={styles.notificationsScroll}
                   contentContainerStyle={styles.notificationsScrollContent}
                   showsVerticalScrollIndicator
-                >
-                  {notifications.map((item) => {
+                  initialNumToRender={12}
+                  maxToRenderPerBatch={8}
+                  updateCellsBatchingPeriod={50}
+                  windowSize={7}
+                  removeClippedSubviews
+                  renderItem={({ item }) => {
                     const unread = !item?.read_at;
                     const timestamp = formatRelativeTime(
                       item?.created_at || item?.inserted_at || item?.updated_at,
@@ -504,7 +508,6 @@ export default function OpenBrainTopMenu({
                     const model = buildNotificationViewModel(item);
                     return (
                       <Pressable
-                        key={item.id}
                         style={styles.notificationsRow}
                         onPress={() => {
                           if (unread) markNotificationAsRead(item.id);
@@ -563,8 +566,8 @@ export default function OpenBrainTopMenu({
                         ) : null}
                       </Pressable>
                     );
-                  })}
-                </ScrollView>
+                  }}
+                />
               ) : null}
             </View>
           </Pressable>
