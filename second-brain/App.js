@@ -207,7 +207,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainBrainstormTalk"
-                  options={{ headerShown: false }}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainBrainstormTalkScreen {...props} token={token} />
@@ -230,7 +235,12 @@ export default function App() {
 
                 <Stack.Screen
                   name="SecondBrainVoiceCapture"
-                  options={{ headerShown: false }}
+                  options={({ navigation }) =>
+                    buildSecondBrainHeaderOptions({
+                      navigation,
+                      hideDate: hideSecondBrainHeaderDate,
+                    })
+                  }
                 >
                   {(props) => (
                     <SecondBrainVoiceCaptureScreen {...props} token={token} />

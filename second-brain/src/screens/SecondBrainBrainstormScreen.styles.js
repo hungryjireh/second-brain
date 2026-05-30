@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     padding: 0,
     gap: 0,
-    backgroundColor: theme.colors.bgBase,
+    backgroundColor: theme.colors.bgSurface,
   },
   container: { flex: 1 },
   messagesList: { flex: 1 },

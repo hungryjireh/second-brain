@@ -284,6 +284,72 @@ describe("SecondBrainEntryCard", () => {
     expect(queryByTestId("entry-action-trigger-41")).toBeNull();
   });
 
+  it("shows plain category label on mobile without symbol prefix", () => {
+    const entry = {
+      id: 42,
+      category: "reminder",
+      title: "Reminder label",
+      summary: "Label only",
+      priority: 1,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        isSmallScreenOverride
+      />,
+    );
+
+    expect(getByText("Reminder")).toBeTruthy();
+    expect(queryByText("◷ Reminder")).toBeNull();
+  });
+
+  it("falls back to plain Note label on mobile for unknown categories", () => {
+    const entry = {
+      id: 43,
+      category: "unknown",
+      title: "Fallback label",
+      summary: "Unknown category",
+      priority: 1,
+      tags: [],
+      is_archived: false,
+    };
+
+    const { getByText, queryByText } = render(
+      <SecondBrainEntryCard
+        entry={entry}
+        styles={styles}
+        theme={theme}
+        isBusy={false}
+        isSwipeOpen={false}
+        isDeleteConfirm={false}
+        onOpenEntry={jest.fn()}
+        onCloseSwipe={jest.fn()}
+        onStartEdit={jest.fn()}
+        onToggleArchive={jest.fn()}
+        onDownloadIcs={jest.fn()}
+        onRequestDelete={jest.fn()}
+        isSmallScreenOverride
+      />,
+    );
+
+    expect(getByText("Note")).toBeTruthy();
+    expect(queryByText("◇ Note")).toBeNull();
+  });
+
   it("applies category-colored left border on the entry card", () => {
     const entry = {
       id: 51,

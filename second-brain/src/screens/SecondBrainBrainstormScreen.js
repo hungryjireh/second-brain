@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import styles from "./SecondBrainBrainstormScreen.styles";
 import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import SecondBrainConversationList from "../components/SecondBrainConversationList";
+import SecondBrainSaveAsNoteToggle from "../components/SecondBrainSaveAsNoteToggle";
 import { apiRequest } from "../api";
 import SecondBrainTypebar from "../components/SecondBrainTypebar";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
@@ -96,6 +97,7 @@ export default function SecondBrainBrainstormScreen({
   const [session, setSession] = useState(null);
   const [draft, setDraft] = useState("");
   const [isTypebarExpanded, setIsTypebarExpanded] = useState(true);
+  const [saveAsNoteEnabled, setSaveAsNoteEnabled] = useState(true);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [finalizingEnd, setFinalizingEnd] = useState(false);
@@ -109,6 +111,7 @@ export default function SecondBrainBrainstormScreen({
     wipSaved: false,
   });
   const sessionRef = useRef(null);
+  const saveAsNoteEnabledRef = useRef(true);
   const initialMessageCountRef = useRef(null);
   const conversationListRef = useRef(null);
   const listViewportHeightRef = useRef(0);
@@ -210,6 +213,10 @@ export default function SecondBrainBrainstormScreen({
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  useEffect(() => {
+    saveAsNoteEnabledRef.current = saveAsNoteEnabled;
+  }, [saveAsNoteEnabled]);
 
   function scrollConversationToBottom() {
     const contentHeight = listContentHeightRef.current;
@@ -338,6 +345,7 @@ export default function SecondBrainBrainstormScreen({
 
     finalizedRef.current = true;
     await persistSession(nextSession);
+    if (!saveAsNoteEnabledRef.current) return;
 
     const hasExistingEntryId =
       nextSession?.entryId !== null && nextSession?.entryId !== undefined;
@@ -600,6 +608,10 @@ export default function SecondBrainBrainstormScreen({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           enabled={Platform.OS !== "web"}
         >
+          <SecondBrainSaveAsNoteToggle
+            value={saveAsNoteEnabled}
+            onValueChange={setSaveAsNoteEnabled}
+          />
           <SecondBrainTypebar
             styles={secondBrainScreenStyles}
             bottom={typebarBottom}

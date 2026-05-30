@@ -51,12 +51,6 @@ const CATEGORY_ICONS = {
   note: "edit-3",
 };
 
-const CATEGORY_SYMBOLS = {
-  reminder: "◷",
-  todo: "◻",
-  thought: "◈",
-  note: "◇",
-};
 const TAG_PILL_GAP = 6;
 
 const TwoLineClampText = memo(function TwoLineClampText({
@@ -103,7 +97,6 @@ function SecondBrainEntryCard({
   const { width } = useWindowDimensions();
   const tag = TAG_STYLES[entry.category] ?? TAG_STYLES.note;
   const icon = CATEGORY_ICONS[entry.category] ?? "edit-3";
-  const categorySymbol = CATEGORY_SYMBOLS[entry.category] ?? "◇";
   const priority = Number.isInteger(entry.priority) ? entry.priority : 0;
   const archiveLabel =
     entry.category === "reminder"
@@ -297,7 +290,7 @@ function SecondBrainEntryCard({
                 <View style={styles.cardMetaLead}>
                   <View style={[styles.tagPill, { backgroundColor: tag.bg }]}>
                     <Text style={[styles.tagPillText, { color: tag.color }]}>
-                      {`${categorySymbol} ${tag.label}`}
+                      {tag.label}
                     </Text>
                   </View>
                   {hidePriority ? null : (

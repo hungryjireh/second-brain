@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Text } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useVoiceCapture } from "../hooks/useVoiceCapture";
 import SecondBrainMicrophoneButton from "../components/SecondBrainMicrophoneButton";
 import SecondBrainVoiceCaptureLayout from "../components/SecondBrainVoiceCaptureLayout";
@@ -8,7 +7,6 @@ import { formatElapsedTime } from "../utils/dateTimeUtils";
 import styles from "./SecondBrainVoiceCaptureScreen.styles";
 
 export default function SecondBrainVoiceCaptureScreen({ token, navigation }) {
-  const insets = useSafeAreaInsets();
   const [error, setError] = useState("");
   const shouldGoBackAfterSubmitRef = useRef(false);
   const isRecordingRef = useRef(false);
@@ -77,20 +75,13 @@ export default function SecondBrainVoiceCaptureScreen({ token, navigation }) {
     startVoiceCapture();
   }
 
-  async function handleBackPress() {
-    if (recording && !voiceBusy) {
-      await cancelVoiceCapture();
-    }
-    navigateBackToSecondBrain();
-  }
-
   return (
     <SecondBrainVoiceCaptureLayout
-      insetsTop={insets.top}
-      screenTitle="Voice capture"
+      hideTopRow
       heading={recording ? "Tap to stop and submit" : "Tap to start recording"}
       description="Your voice will be transcribed and automatically sorted into entries"
-      onBackPress={handleBackPress}
+      headingStyle={styles.heading}
+      descriptionStyle={styles.description}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {recording ? <Text style={styles.timer}>{timerLabel}</Text> : null}

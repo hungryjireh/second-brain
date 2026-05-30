@@ -20,12 +20,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.regular,
     paddingRight: 12,
   },
-  headerBackButton: {
-    minWidth: 72,
-    paddingVertical: 6,
-    paddingLeft: 12,
-    justifyContent: "center",
-  },
+  headerBackButton: {},
   headerLiveDot: {
     color: theme.colors.brand,
     fontSize: 12,

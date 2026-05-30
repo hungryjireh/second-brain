@@ -23,6 +23,7 @@ import secondBrainScreenStyles from "./SecondBrainScreen.styles";
 import SecondBrainVoiceCaptureLayout from "../components/SecondBrainVoiceCaptureLayout";
 import SecondBrainConversationList from "../components/SecondBrainConversationList";
 import SecondBrainMicrophoneButton from "../components/SecondBrainMicrophoneButton";
+import SecondBrainSaveAsNoteToggle from "../components/SecondBrainSaveAsNoteToggle";
 import { apiRequest } from "../api";
 import { parseBrainstormConversationFromSession } from "../utils/secondBrainConversationRendering";
 import { parseStructuredEntryPayload } from "../utils/secondBrainStructuredEntryPayload";
@@ -105,8 +106,10 @@ export default function SecondBrainBrainstormTalkScreen({
   const [finalizingEnd, setFinalizingEnd] = useState(false);
   const [error, setError] = useState("");
   const [pendingUserTranscript, setPendingUserTranscript] = useState("");
+  const [saveAsNoteEnabled, setSaveAsNoteEnabled] = useState(true);
   const pendingUserTranscriptRef = useRef("");
   const sessionRef = useRef(null);
+  const saveAsNoteEnabledRef = useRef(true);
   const talkStateRef = useRef(TALK_STATE.IDLE);
   const finalizedRef = useRef(false);
   const initialMessageCountRef = useRef(0);
@@ -186,6 +189,10 @@ export default function SecondBrainBrainstormTalkScreen({
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  useEffect(() => {
+    saveAsNoteEnabledRef.current = saveAsNoteEnabled;
+  }, [saveAsNoteEnabled]);
 
   useEffect(() => {
     talkStateRef.current = talkState;
@@ -436,6 +443,7 @@ export default function SecondBrainBrainstormTalkScreen({
     };
     finalizedRef.current = true;
     const savedSession = await persistSession(nextSession);
+    if (!saveAsNoteEnabledRef.current) return;
 
     const payload = {
       description: descriptionToSave,
@@ -702,13 +710,20 @@ export default function SecondBrainBrainstormTalkScreen({
 
   return (
     <SecondBrainVoiceCaptureLayout
-      insetsTop={insets.top}
-      screenTitle="Brainstorm talk"
+      hideTopRow
       heading="Talk through your ideas"
       description={guidanceText}
+      headingStyle={styles.heading}
+      descriptionStyle={styles.description}
       bodyStyle={styles.layoutBody}
       hideIntro={shouldHideIntro}
-      onBackPress={navigateBackToSecondBrain}
+      headerAccessory={
+        <SecondBrainSaveAsNoteToggle
+          value={saveAsNoteEnabled}
+          onValueChange={setSaveAsNoteEnabled}
+          style={styles.saveAsNoteToggle}
+        />
+      }
     >
       <KeyboardAvoidingView
         style={styles.talkArea}

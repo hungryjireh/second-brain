@@ -130,13 +130,13 @@ describe("SecondBrainBrainstormTalkScreen", () => {
       await Promise.resolve();
     });
 
-    expect(view.getByText("Brainstorm talk")).toBeTruthy();
     expect(view.getByText("Talk through your ideas")).toBeTruthy();
     expect(
       view.getByText(
         "Speak naturally. We will transcribe your thoughts and brainstorm with you in real time.",
       ),
     ).toBeTruthy();
+    expect(view.queryByLabelText("Back")).toBeNull();
     expect(view.getByLabelText("Listen")).toBeTruthy();
     expect(view.queryByLabelText("End brainstorm talk")).toBeNull();
     expect(view.queryByText("Idle")).toBeNull();
@@ -821,5 +821,57 @@ describe("SecondBrainBrainstormTalkScreen", () => {
     const lastCall = SecondBrainConversationList.mock.calls.at(-1);
     const lastProps = lastCall?.[0] || {};
     expect(lastProps.renderInline).toBeUndefined();
+  });
+
+  it("skips /entries writes when Save as Note is disabled before ending", async () => {
+    isRecording = true;
+    transcribeBrainstormTalkAudio.mockResolvedValueOnce("hello");
+    const goBack = jest.fn();
+
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent(view.getByLabelText("Save as Note"), "valueChange", false);
+    fireEvent.press(view.getByLabelText("Pause & transcribe"));
+
+    await waitFor(() => {
+      expect(transcribeBrainstormTalkAudio).toHaveBeenCalledTimes(1);
+    });
+
+    isRecording = false;
+    view.rerender(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: {} }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByLabelText("End brainstorm talk")).toBeTruthy();
+    });
+
+    fireEvent.press(view.getByLabelText("End brainstorm talk"));
+
+    await waitFor(() => {
+      expect(goBack).toHaveBeenCalled();
+    });
+
+    expect(
+      apiRequest.mock.calls.some(
+        ([path, options]) =>
+          path.startsWith("/entries") &&
+          (options?.method === "POST" || options?.method === "PATCH"),
+      ),
+    ).toBe(false);
   });
 });

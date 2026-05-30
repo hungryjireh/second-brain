@@ -1,7 +1,7 @@
-import { Animated, Pressable, Text, View } from "react-native";
+import { Animated, Text, View } from "react-native";
 import { useEffect, useRef } from "react";
-import { Feather } from "@expo/vector-icons";
 import styles from "./SecondBrainVoiceCaptureLayout.styles";
+import SecondBrainBackButton from "./SecondBrainBackButton";
 
 export default function SecondBrainVoiceCaptureLayout({
   insetsTop = 0,
@@ -15,6 +15,8 @@ export default function SecondBrainVoiceCaptureLayout({
   descriptionStyle,
   transcriptText,
   hideIntro = false,
+  headerAccessory,
+  hideTopRow = false,
 }) {
   const hasTranscript = Boolean(String(transcriptText || "").trim());
   const shouldHideIntro = hasTranscript || hideIntro;
@@ -38,17 +40,19 @@ export default function SecondBrainVoiceCaptureLayout({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topRow, { marginTop: Math.max(insetsTop, 8) + 4 }]}>
-        <Pressable
-          style={styles.backButton}
-          onPress={onBackPress}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
+      {!hideTopRow ? (
+        <View
+          style={[styles.topRow, { marginTop: Math.max(insetsTop, 8) + 4 }]}
         >
-          <Feather name="chevron-left" size={28} style={styles.backIcon} />
-        </Pressable>
-        <Text style={styles.title}>{screenTitle}</Text>
-      </View>
+          <SecondBrainBackButton
+            style={styles.backButton}
+            onPress={onBackPress}
+            accessibilityLabel="Back"
+          />
+          <Text style={styles.title}>{screenTitle}</Text>
+        </View>
+      ) : null}
+      {headerAccessory || null}
 
       <View style={[styles.body, bodyStyle]}>
         <Animated.View

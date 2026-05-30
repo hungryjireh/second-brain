@@ -58,10 +58,11 @@ describe("SecondBrainVoiceCaptureScreen", () => {
   });
 
   it("renders the idle prompt and starts recording when mic is pressed", () => {
-    const { getByText, getByLabelText, startVoiceCapture } = setup();
+    const { getByText, getByLabelText, queryByLabelText, startVoiceCapture } =
+      setup();
 
-    expect(getByText("Voice capture")).toBeTruthy();
     expect(getByText("Tap to start recording")).toBeTruthy();
+    expect(queryByLabelText("Back")).toBeNull();
     fireEvent.press(getByLabelText("Record voice note"));
 
     expect(startVoiceCapture).toHaveBeenCalledTimes(1);
@@ -124,54 +125,6 @@ describe("SecondBrainVoiceCaptureScreen", () => {
 
     await waitFor(() => {
       expect(stopVoiceCaptureAndSubmit).toHaveBeenCalledTimes(1);
-      expect(navigation.navigate).toHaveBeenCalledWith("SecondBrain");
-    });
-    expect(navigation.goBack).not.toHaveBeenCalled();
-  });
-
-  it("cancels active recording when back is pressed", async () => {
-    const cancelVoiceCapture = jest.fn(async () => {});
-    const { getByLabelText, navigation } = setup({
-      recording: true,
-      voiceBusy: false,
-      cancelVoiceCapture,
-    });
-
-    fireEvent.press(getByLabelText("Back"));
-
-    await waitFor(() => {
-      expect(cancelVoiceCapture).toHaveBeenCalledTimes(1);
-      expect(navigation.goBack).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it("skips cancel on back press while voice submission is busy", () => {
-    const cancelVoiceCapture = jest.fn(async () => {});
-    const { getByLabelText, navigation } = setup({
-      recording: true,
-      voiceBusy: true,
-      cancelVoiceCapture,
-    });
-
-    fireEvent.press(getByLabelText("Back"));
-
-    expect(cancelVoiceCapture).not.toHaveBeenCalled();
-    expect(navigation.goBack).toHaveBeenCalledTimes(1);
-  });
-
-  it("navigates to SecondBrain on back press when there is no back stack", async () => {
-    const cancelVoiceCapture = jest.fn(async () => {});
-    const { getByLabelText, navigation } = setup({
-      canGoBack: false,
-      recording: true,
-      voiceBusy: false,
-      cancelVoiceCapture,
-    });
-
-    fireEvent.press(getByLabelText("Back"));
-
-    await waitFor(() => {
-      expect(cancelVoiceCapture).toHaveBeenCalledTimes(1);
       expect(navigation.navigate).toHaveBeenCalledWith("SecondBrain");
     });
     expect(navigation.goBack).not.toHaveBeenCalled();

@@ -1,7 +1,7 @@
-import { Image, Pressable, Text } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Image, Text } from "react-native";
 import { theme } from "../theme";
 import appStyles from "../../App.styles";
+import SecondBrainBackButton from "./SecondBrainBackButton";
 
 export function SecondBrainHeaderBrand() {
   return (
@@ -26,7 +26,7 @@ export function SecondBrainHeaderLiveStatus() {
 
 export function SecondBrainHeaderBack({ navigation }) {
   return (
-    <Pressable
+    <SecondBrainBackButton
       onPress={() => {
         if (navigation?.canGoBack?.()) {
           navigation.goBack();
@@ -34,12 +34,9 @@ export function SecondBrainHeaderBack({ navigation }) {
         }
         navigation?.navigate?.("SecondBrain");
       }}
-      accessibilityRole="button"
       accessibilityLabel="Back to Second Brain"
       style={appStyles.headerBackButton}
-    >
-      <Feather name="arrow-left" size={20} color={theme.colors.textSecondary} />
-    </Pressable>
+    />
   );
 }
 

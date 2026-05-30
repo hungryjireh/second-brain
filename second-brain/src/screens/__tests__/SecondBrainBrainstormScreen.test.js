@@ -1720,4 +1720,50 @@ A personal knowledge app for sharing and discovering daily thoughts and wisdom.
       "Original assistant context",
     );
   });
+
+  it("skips /entries persistence when Save as Note is disabled", async () => {
+    apiRequest.mockResolvedValue({ reply: "Assistant reply" });
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: {} }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent(view.getByRole("switch", { name: "Save as Note" }), "valueChange", false);
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "Test thought",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(
+        apiRequest.mock.calls.some(
+          ([path, options]) =>
+            path === "/brainstorm" && options?.method === "POST",
+        ),
+      ).toBe(true);
+    });
+
+    view.unmount();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      apiRequest.mock.calls.some(
+        ([path, options]) =>
+          path.startsWith("/entries") &&
+          (options?.method === "POST" || options?.method === "PATCH"),
+      ),
+    ).toBe(false);
+  });
 });

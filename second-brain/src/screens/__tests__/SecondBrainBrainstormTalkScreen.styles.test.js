@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 import styles from "../SecondBrainBrainstormTalkScreen.styles";
+import { theme } from "../../theme";
 
 describe("SecondBrainBrainstormTalkScreen styles", () => {
   it("keeps controls wrapper centered", () => {
@@ -18,6 +19,12 @@ describe("SecondBrainBrainstormTalkScreen styles", () => {
     const micWrap = StyleSheet.flatten(styles.micWrap);
 
     expect(micWrap.marginTop).toBe(44);
+  });
+
+  it("matches save-as-note toggle background to talk screen background", () => {
+    const saveAsNoteToggle = StyleSheet.flatten(styles.saveAsNoteToggle);
+
+    expect(saveAsNoteToggle.backgroundColor).toBe("transparent");
   });
 
   it("centers end button text in both idle and ending states", () => {
