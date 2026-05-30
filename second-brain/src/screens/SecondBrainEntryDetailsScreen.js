@@ -371,10 +371,16 @@ export default function SecondBrainEntryDetailsScreen({
       isBrainstormTalkEntry(entry) ||
       normalizeBrainstormMode(brainstormSessionMeta?.mode) === "talk";
     if (shouldResumeTalk) {
-      navigation?.navigate?.("SecondBrainBrainstormTalk", { seedEntry: entry });
+      navigation?.navigate?.("SecondBrainBrainstormTalk", {
+        seedEntry: entry,
+        continueBrainstorming: true,
+      });
       return;
     }
-    navigation?.navigate?.("SecondBrainBrainstorm", { seedEntry: entry });
+    navigation?.navigate?.("SecondBrainBrainstorm", {
+      seedEntry: entry,
+      continueBrainstorming: true,
+    });
   }
 
   async function handleToggleArchive() {

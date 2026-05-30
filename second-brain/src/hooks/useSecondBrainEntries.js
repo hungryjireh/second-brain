@@ -339,8 +339,7 @@ export function useSecondBrainEntries({ token, onError }) {
         );
         const stats = statsData?.stats;
         setCategoryCounts({
-          reminder:
-            typeof stats?.reminder === "number" ? stats.reminder : 0,
+          reminder: typeof stats?.reminder === "number" ? stats.reminder : 0,
           todo: typeof stats?.todo === "number" ? stats.todo : 0,
           thought: typeof stats?.thought === "number" ? stats.thought : 0,
           note: typeof stats?.note === "number" ? stats.note : 0,
@@ -428,15 +427,13 @@ export function useSecondBrainEntries({ token, onError }) {
         return;
       }
 
-      const nextEntries = sortEntriesByUpdatedAt(
-        [
-          ...entries,
-          ...list.filter(
-            (incoming) =>
-              !entries.some((existing) => existing.id === incoming.id),
-          ),
-        ],
-      );
+      const nextEntries = sortEntriesByUpdatedAt([
+        ...entries,
+        ...list.filter(
+          (incoming) =>
+            !entries.some((existing) => existing.id === incoming.id),
+        ),
+      ]);
       setEntries(nextEntries);
       setHasMoreEntries(Boolean(data?.page?.has_more));
       setNextEntriesCursor(

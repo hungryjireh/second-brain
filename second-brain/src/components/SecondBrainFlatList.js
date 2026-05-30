@@ -1,5 +1,11 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import { FlatList, Platform, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  Text,
+  View,
+} from "react-native";
 import { theme } from "../theme";
 import SecondBrainEntryCard from "./SecondBrainEntryCard";
 import SwipeToDeleteRow from "./SwipeToDeleteRow";
@@ -136,6 +142,7 @@ export default function SecondBrainFlatList({
 }) {
   const isWeb = Platform.OS === "web";
   const [isSwipeInteracting, setIsSwipeInteracting] = useState(false);
+  const isEntriesLoading = loadingEntries || loadingMoreEntries;
 
   const closeSwipe = useCallback(() => {
     setOpenSwipeId(null);
@@ -210,7 +217,7 @@ export default function SecondBrainFlatList({
   const listContentContainerStyle = useMemo(
     () => [
       styles.listContent,
-      groupedRows.length === 0 && (loadingEntries || hasActiveFilters)
+      groupedRows.length === 0 && (isEntriesLoading || hasActiveFilters)
         ? styles.listContentEmpty
         : null,
       { paddingBottom: listBottomPadding },
@@ -218,8 +225,8 @@ export default function SecondBrainFlatList({
     [
       groupedRows.length,
       hasActiveFilters,
+      isEntriesLoading,
       listBottomPadding,
-      loadingEntries,
       pullRefreshing,
       styles.listContent,
       styles.listContentEmpty,
@@ -227,7 +234,7 @@ export default function SecondBrainFlatList({
   );
 
   const listEmptyComponent = useMemo(() => {
-    if (loadingEntries) {
+    if (isEntriesLoading) {
       return (
         <View style={styles.listEmptyCentered}>
           <Text style={styles.listEmptyText}>Loading thoughts...</Text>
@@ -244,23 +251,29 @@ export default function SecondBrainFlatList({
     return null;
   }, [
     hasActiveFilters,
-    loadingEntries,
+    isEntriesLoading,
     styles.listEmptyCentered,
     styles.listEmptyText,
   ]);
 
   const listFooterComponent = useMemo(() => {
-    if (!hasMoreEntries || !loadingMoreEntries) return null;
+    if (groupedRows.length === 0 || !hasMoreEntries || !loadingMoreEntries) {
+      return null;
+    }
     return (
       <View style={styles.listEmptyCentered}>
-        <Text style={styles.listEmptyText}>Loading more entries...</Text>
+        <ActivityIndicator
+          testID="loading-more-spinner"
+          size="small"
+          color={theme.colors.primary}
+        />
       </View>
     );
   }, [
+    groupedRows.length,
     hasMoreEntries,
     loadingMoreEntries,
     styles.listEmptyCentered,
-    styles.listEmptyText,
   ]);
 
   return (

@@ -113,6 +113,22 @@ describe("SecondBrainFlatList", () => {
     expect(queryByText("Loading thoughts...")).toBeNull();
   });
 
+  it("prioritizes loading state over no-match state while loading more", () => {
+    const { getByText, queryByTestId, queryByText } = render(
+      <SecondBrainFlatList
+        {...createBaseProps({
+          hasActiveFilters: true,
+          loadingMoreEntries: true,
+          hasMoreEntries: true,
+        })}
+      />,
+    );
+
+    expect(getByText("Loading thoughts...")).toBeTruthy();
+    expect(queryByText("No matching entries")).toBeNull();
+    expect(queryByTestId("loading-more-spinner")).toBeNull();
+  });
+
   it("renders group header rows from groupedRows", () => {
     const groupedRows = [
       { type: "header", key: "header-today", group: "Today", count: 2 },
@@ -212,7 +228,7 @@ describe("SecondBrainFlatList", () => {
       },
     ];
 
-    const { getByText, rerender, queryByText } = render(
+    const { getByTestId, rerender, queryByTestId } = render(
       <SecondBrainFlatList
         {...createBaseProps({
           groupedRows,
@@ -221,7 +237,7 @@ describe("SecondBrainFlatList", () => {
         })}
       />,
     );
-    expect(getByText("Loading more entries...")).toBeTruthy();
+    expect(getByTestId("loading-more-spinner")).toBeTruthy();
 
     rerender(
       <SecondBrainFlatList
@@ -232,7 +248,7 @@ describe("SecondBrainFlatList", () => {
         })}
       />,
     );
-    expect(queryByText("Loading more entries...")).toBeNull();
+    expect(queryByTestId("loading-more-spinner")).toBeNull();
   });
 
   it("enables native pull-refresh while keeping list scrolling available", () => {

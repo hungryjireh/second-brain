@@ -100,6 +100,7 @@ export default function SecondBrainBrainstormTalkScreen({
   const insets = useSafeAreaInsets();
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
+  const continueBrainstorming = Boolean(route?.params?.continueBrainstorming);
   const [session, setSession] = useState(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [talkState, setTalkState] = useState(TALK_STATE.IDLE);
@@ -718,11 +719,13 @@ export default function SecondBrainBrainstormTalkScreen({
       bodyStyle={styles.layoutBody}
       hideIntro={shouldHideIntro}
       headerAccessory={
-        <SecondBrainSaveAsNoteToggle
-          value={saveAsNoteEnabled}
-          onValueChange={setSaveAsNoteEnabled}
-          style={styles.saveAsNoteToggle}
-        />
+        continueBrainstorming ? null : (
+          <SecondBrainSaveAsNoteToggle
+            value={saveAsNoteEnabled}
+            onValueChange={setSaveAsNoteEnabled}
+            style={styles.saveAsNoteToggle}
+          />
+        )
       }
     >
       <KeyboardAvoidingView

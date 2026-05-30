@@ -20,7 +20,6 @@ jest.mock("../../api", () => ({
 }));
 
 jest.mock("../../components/SecondBrainConversationList", () => {
-  const React = require("react");
   const { View } = require("react-native");
 
   return {
@@ -142,6 +141,70 @@ describe("SecondBrainBrainstormTalkScreen", () => {
     expect(view.queryByText("Idle")).toBeNull();
     expect(view.queryByText("Listening")).toBeNull();
     expect(view.queryByText("Paused")).toBeNull();
+  });
+
+  it("hides save as note toggle when continuing brainstorming", async () => {
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: { continueBrainstorming: true } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.queryByLabelText("Save as Note")).toBeNull();
+  });
+
+  it("keeps save enabled by default when continuing brainstorming", async () => {
+    isRecording = true;
+    transcribeBrainstormTalkAudio.mockResolvedValueOnce("continued thought");
+    const goBack = jest.fn();
+
+    const view = render(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: { continueBrainstorming: true } }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(view.getByLabelText("Pause & transcribe"));
+
+    await waitFor(() => {
+      expect(transcribeBrainstormTalkAudio).toHaveBeenCalledTimes(1);
+    });
+
+    isRecording = false;
+    view.rerender(
+      <SecondBrainBrainstormTalkScreen
+        route={{ params: { continueBrainstorming: true } }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(view.getByLabelText("End brainstorm talk")).toBeTruthy();
+    });
+
+    fireEvent.press(view.getByLabelText("End brainstorm talk"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const entryWriteCalls = apiRequest.mock.calls.filter(
+      ([path, options]) =>
+        path.startsWith("/entries") &&
+        (options?.method === "POST" || options?.method === "PATCH"),
+    );
+    expect(entryWriteCalls.length).toBeGreaterThan(0);
   });
 
   it("stops playback before starting a new listening turn", async () => {

@@ -106,6 +106,91 @@ describe("SecondBrainBrainstormScreen", () => {
     });
   });
 
+  it("hides save as note toggle when continuing brainstorming", async () => {
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { continueBrainstorming: true } }}
+        navigation={{ goBack: jest.fn() }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.queryByLabelText("Save as Note")).toBeNull();
+  });
+
+  it("keeps save enabled by default when continuing brainstorming", async () => {
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/brainstorm" && options?.method === "POST") {
+        const message = String(options?.body?.message || "");
+        if (
+          message.includes(
+            "Summarise this conversation between a human and an AI and generate structured entry fields.",
+          )
+        ) {
+          return Promise.resolve({
+            reply: JSON.stringify({
+              description: "## Summary\nContinued brainstorm summary.",
+              title: "Continued Brainstorm",
+              summary: "Summary",
+              content: "Content",
+            }),
+          });
+        }
+        return Promise.resolve({ reply: "Assistant reply" });
+      }
+      if (path === "/entries" && options?.method === "POST") {
+        return Promise.resolve({ id: 3001, title: "Saved entry" });
+      }
+      return Promise.resolve({});
+    });
+
+    const goBack = jest.fn();
+    const view = render(
+      <SecondBrainBrainstormScreen
+        route={{ params: { continueBrainstorming: true } }}
+        navigation={{ goBack }}
+        token="token"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "Continue this idea",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => {
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/brainstorm",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.objectContaining({ message: "Continue this idea" }),
+        }),
+      );
+    });
+
+    fireEvent.changeText(
+      view.getByPlaceholderText("Share your thought, or type /end"),
+      "/end",
+    );
+    fireEvent.press(view.getByLabelText("Enter note"));
+
+    await waitFor(() => expect(goBack).toHaveBeenCalled());
+
+    const entryCreateCalls = apiRequest.mock.calls.filter(
+      ([path, options]) => path === "/entries" && options?.method === "POST",
+    );
+    expect(entryCreateCalls).toHaveLength(1);
+  });
+
   it("repairs legacy merged assistant truncation from seed entry transcript", async () => {
     const sessionId = "legacy-session-1";
     await writeBrainstormSession({
@@ -1735,7 +1820,11 @@ A personal knowledge app for sharing and discovering daily thoughts and wisdom.
       await Promise.resolve();
     });
 
-    fireEvent(view.getByRole("switch", { name: "Save as Note" }), "valueChange", false);
+    fireEvent(
+      view.getByRole("switch", { name: "Save as Note" }),
+      "valueChange",
+      false,
+    );
 
     fireEvent.changeText(
       view.getByPlaceholderText("Share your thought, or type /end"),

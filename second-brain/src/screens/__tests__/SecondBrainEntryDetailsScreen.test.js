@@ -1147,6 +1147,7 @@ Raw text JSON description."
 
     expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstorm", {
       seedEntry: entry,
+      continueBrainstorming: true,
     });
   });
 
@@ -1168,6 +1169,7 @@ Raw text JSON description."
 
     expect(navigate).toHaveBeenCalledWith("SecondBrainBrainstormTalk", {
       seedEntry: entry,
+      continueBrainstorming: true,
     });
   });
 

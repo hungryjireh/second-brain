@@ -94,6 +94,7 @@ export default function SecondBrainBrainstormScreen({
   const COMPOSER_MIN_HEIGHT = 38;
   const existingSessionId = route?.params?.sessionId || "";
   const seedEntry = route?.params?.seedEntry || null;
+  const continueBrainstorming = Boolean(route?.params?.continueBrainstorming);
   const [session, setSession] = useState(null);
   const [draft, setDraft] = useState("");
   const [isTypebarExpanded, setIsTypebarExpanded] = useState(true);
@@ -608,10 +609,12 @@ export default function SecondBrainBrainstormScreen({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           enabled={Platform.OS !== "web"}
         >
-          <SecondBrainSaveAsNoteToggle
-            value={saveAsNoteEnabled}
-            onValueChange={setSaveAsNoteEnabled}
-          />
+          {!continueBrainstorming ? (
+            <SecondBrainSaveAsNoteToggle
+              value={saveAsNoteEnabled}
+              onValueChange={setSaveAsNoteEnabled}
+            />
+          ) : null}
           <SecondBrainTypebar
             styles={secondBrainScreenStyles}
             bottom={typebarBottom}

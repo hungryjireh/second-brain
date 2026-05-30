@@ -1,6 +1,5 @@
 import { StyleSheet } from "react-native";
 import styles from "../SecondBrainBrainstormTalkScreen.styles";
-import { theme } from "../../theme";
 
 describe("SecondBrainBrainstormTalkScreen styles", () => {
   it("keeps controls wrapper centered", () => {
