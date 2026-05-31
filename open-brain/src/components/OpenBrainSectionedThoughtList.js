@@ -19,6 +19,8 @@ function OpenBrainSectionedThoughtList({
   contentContainerStyle,
   listEmptyComponent,
   listFooterComponent,
+  onRefresh,
+  refreshing = false,
   onEndReached,
   onEndReachedThreshold = 0.4,
 }) {
@@ -41,6 +43,8 @@ function OpenBrainSectionedThoughtList({
       ListEmptyComponent={listEmptyComponent}
       ListFooterComponent={listFooterComponent}
       renderItem={renderListItem}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
       onEndReached={onEndReached}
       onEndReachedThreshold={onEndReachedThreshold}
       initialNumToRender={8}

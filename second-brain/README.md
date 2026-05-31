@@ -36,16 +36,16 @@ AsyncStorage/SecureStore cache + offline queue
 
 ## Tech stack
 
-| Layer | Technology |
-| --- | --- |
-| App runtime | Expo + React Native + React 19 |
-| Navigation | `@react-navigation/native` + native stack |
-| Platforms | iOS, Android, Web |
-| Auth/session storage | `expo-secure-store` (fallback to AsyncStorage) |
-| Local cache/offline queue | AsyncStorage |
-| Audio capture | `expo-audio` |
-| API backend | Existing Vercel serverless API + Supabase |
-| Testing | Jest + `@testing-library/react-native` |
+| Layer                     | Technology                                     |
+| ------------------------- | ---------------------------------------------- |
+| App runtime               | Expo + React Native + React 19                 |
+| Navigation                | `@react-navigation/native` + native stack      |
+| Platforms                 | iOS, Android, Web                              |
+| Auth/session storage      | `expo-secure-store` (fallback to AsyncStorage) |
+| Local cache/offline queue | AsyncStorage                                   |
+| Audio capture             | `expo-audio`                                   |
+| API backend               | Existing Vercel serverless API + Supabase      |
+| Testing                   | Jest + `@testing-library/react-native`         |
 
 ---
 
@@ -69,6 +69,7 @@ pnpm install
 ### 2. Configure environment variables
 
 The mobile app reads env vars from (in order):
+
 1. root `.env`
 2. `second-brain/.env`
 3. root `.env.local` (override)
@@ -76,30 +77,31 @@ The mobile app reads env vars from (in order):
 
 Minimum required mobile variables:
 
-| Variable | Purpose |
-| --- | --- |
-| `EXPO_PUBLIC_API_URL` | Base API URL (app appends `/api` if missing) |
-| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key |
+| Variable                                   | Purpose                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| `EXPO_PUBLIC_API_URL`                      | Base API URL (app appends `/api` if missing)                           |
+| `EXPO_PUBLIC_SUPABASE_URL`                 | Supabase project URL                                                   |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`     | Supabase publishable key                                               |
 | `EXPO_PUBLIC_BRAINSTORM_TALK_STREAMING_V1` | Optional feature flag for brainstorm-talk streaming scaffold (`0`/`1`) |
 
 Required backend/API variables (for `api/` routes used by the app):
 
-| Variable | Purpose |
-| --- | --- |
-| `JWT_SECRET` | JWT signing/verification for auth routes |
-| `AUTH_USERNAME` | Fallback login username |
-| `AUTH_PASSWORD` | Fallback login password |
-| `GROQ_API_KEY` | LLM + Whisper provider key |
-| `GROQ_MODEL` | Model used for text generation/classification |
-| `GROQ_WHISPER_MODEL` | Model used for server-side transcription |
-| `UNREAL_SPEECH_API_KEY` | Brainstorm-talk TTS provider key |
-| `UNREAL_SPEECH_STT_URL` | Optional dedicated Unreal STT endpoint |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot integration |
-| `TELEGRAM_WEBHOOK_SECRET` | Telegram webhook verification secret |
-| `TELEGRAM_TOKEN_ENCRYPTION_KEY` | Encrypts stored Telegram link auth tokens |
+| Variable                        | Purpose                                       |
+| ------------------------------- | --------------------------------------------- |
+| `JWT_SECRET`                    | JWT signing/verification for auth routes      |
+| `AUTH_USERNAME`                 | Fallback login username                       |
+| `AUTH_PASSWORD`                 | Fallback login password                       |
+| `GROQ_API_KEY`                  | LLM + Whisper provider key                    |
+| `GROQ_MODEL`                    | Model used for text generation/classification |
+| `GROQ_WHISPER_MODEL`            | Model used for server-side transcription      |
+| `UNREAL_SPEECH_API_KEY`         | Brainstorm-talk TTS provider key              |
+| `UNREAL_SPEECH_STT_URL`         | Optional dedicated Unreal STT endpoint        |
+| `TELEGRAM_BOT_TOKEN`            | Telegram bot integration                      |
+| `TELEGRAM_WEBHOOK_SECRET`       | Telegram webhook verification secret          |
+| `TELEGRAM_TOKEN_ENCRYPTION_KEY` | Encrypts stored Telegram link auth tokens     |
 
 Notes:
+
 - For physical devices, use your machine LAN IP (not `localhost`) in `EXPO_PUBLIC_API_URL`.
 - Non-local `http://` URLs are normalized to `https://` by the app.
 
@@ -124,6 +126,7 @@ Then open iOS simulator, Android emulator, or web from Expo.
 - Queued edits management screen for pending offline-created entries.
 - Settings modal with timezone update and Telegram link-key generation/copy.
 - Web-only imports for LLM conversation history:
+
 1. JSON upload
 2. ChatGPT/Claude shared conversation URL import
 
@@ -185,13 +188,13 @@ second-brain/
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm run start` | Start Expo dev server |
-| `npm run ios` | Run iOS app |
-| `npm run android` | Run Android app |
-| `npm run web` | Run web target via Expo |
-| `npm run test` | Run Jest test suite |
+| Command           | Description             |
+| ----------------- | ----------------------- |
+| `npm run start`   | Start Expo dev server   |
+| `npm run ios`     | Run iOS app             |
+| `npm run android` | Run Android app         |
+| `npm run web`     | Run web target via Expo |
+| `npm run test`    | Run Jest test suite     |
 
 ---
 

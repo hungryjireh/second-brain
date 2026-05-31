@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { apiRequest, sendFollowNotification } from "../api";
+import { apiRequest, readCachedApiData, sendFollowNotification } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import {
   addThoughtToSecondBrainWithAlert,
@@ -50,6 +50,37 @@ function updateUserAcrossFeed(feed, userId, updater) {
   };
 }
 
+function updateThoughtForTab(feed, tab, thoughtId, updater) {
+  const safeTab = tab === "everyone" ? "everyone" : "following";
+  const list = feed[safeTab] || [];
+  const index = list.findIndex((item) => item?.id === thoughtId);
+  if (index < 0) return feed;
+  const nextList = list.slice();
+  nextList[index] = updater(nextList[index]);
+  return {
+    ...feed,
+    [safeTab]: nextList,
+  };
+}
+
+function updateUserForTab(feed, tab, userId, updater) {
+  const safeTab = tab === "everyone" ? "everyone" : "following";
+  const list = feed[safeTab] || [];
+  let didChange = false;
+  const nextList = list.map((item) => {
+    if (item?.user_id === userId || item?.profile?.id === userId) {
+      didChange = true;
+      return updater(item);
+    }
+    return item;
+  });
+  if (!didChange) return feed;
+  return {
+    ...feed,
+    [safeTab]: nextList,
+  };
+}
+
 function appendUniqueThoughts(existingList, nextList) {
   const merged = [...(existingList || [])];
   const seen = new Set(merged.map((item) => item?.id).filter(Boolean));
@@ -68,12 +99,39 @@ function buildFeedPagePath({ tab, before }) {
   return `/open-brain/feed?tab=${encodeURIComponent(safeTab)}&before=${encodeURIComponent(safeBefore)}`;
 }
 
+function resolveCachedFeedHydration(cachedData) {
+  const hasCachedData = Boolean(cachedData);
+  if (!hasCachedData) {
+    return {
+      hasCachedData: false,
+      loading: true,
+      feed: null,
+      feedPage: null,
+    };
+  }
+
+  return {
+    hasCachedData: true,
+    loading: false,
+    feed: normalizeFeedPayload(cachedData),
+    feedPage: normalizeFeedPagePayload(cachedData),
+  };
+}
+
+function shouldResetFeedAfterLoadError(hasCachedData, hasExistingFeed) {
+  return hasCachedData !== true && hasExistingFeed !== true;
+}
+
 export const __testables = {
   updateThoughtAcrossFeed,
   updateUserAcrossFeed,
+  updateThoughtForTab,
+  updateUserForTab,
   appendUniqueThoughts,
   buildFeedPagePath,
   normalizeFeedPagePayload,
+  resolveCachedFeedHydration,
+  shouldResetFeedAfterLoadError,
 };
 
 function normalizeFeedPayload(data) {
@@ -121,6 +179,7 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     everyone: { hasMore: false, nextCursor: null },
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  const [pullRefreshing, setPullRefreshing] = useState(false);
   const feedRef = useRef(feed);
   const feedPageRef = useRef(feedPage);
   const tabRef = useRef(tab);
@@ -171,31 +230,64 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const isEmptyState = !loading && !error && displayItems.length === 0;
   const isListEmpty = loading || isEmptyState;
 
-  const loadFeed = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const loadFeed = useCallback(
+    async ({ bypassCache = false, keepExistingFeed = false } = {}) => {
+      let hasCachedData = false;
+      const hasExistingFeed =
+        Array.isArray(feedRef.current?.following) &&
+        Array.isArray(feedRef.current?.everyone) &&
+        (feedRef.current.following.length > 0 ||
+          feedRef.current.everyone.length > 0);
+      if (!bypassCache && !keepExistingFeed) {
+        const cachedData = await readCachedApiData("/open-brain/feed", {
+          token,
+        });
+        const hydration = resolveCachedFeedHydration(cachedData);
+        hasCachedData = hydration.hasCachedData;
+        setLoading(hydration.loading);
+        if (hydration.feed) setFeed(hydration.feed);
+        if (hydration.feedPage) setFeedPage(hydration.feedPage);
+      } else if (!keepExistingFeed) {
+        setLoading(true);
+      }
+      setError("");
 
-    try {
-      const data = await apiRequest("/open-brain/feed", {
-        token,
-        cache: { ttlMs: CACHE_TTL_MS.FEED },
-      });
-      setFeed(normalizeFeedPayload(data));
-      setFeedPage(normalizeFeedPagePayload(data));
-    } catch (err) {
-      setError(err.message || "Unable to load feed.");
-      setFeed({ following: [], everyone: [] });
-      setFeedPage({
-        following: { hasMore: false, nextCursor: null },
-        everyone: { hasMore: false, nextCursor: null },
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+      try {
+        const data = await apiRequest("/open-brain/feed", {
+          token,
+          ...(bypassCache ? {} : { cache: { ttlMs: CACHE_TTL_MS.FEED } }),
+        });
+        setFeed(normalizeFeedPayload(data));
+        setFeedPage(normalizeFeedPagePayload(data));
+      } catch (err) {
+        setError(err.message || "Unable to load feed.");
+        if (shouldResetFeedAfterLoadError(hasCachedData, hasExistingFeed)) {
+          setFeed({ following: [], everyone: [] });
+          setFeedPage({
+            following: { hasMore: false, nextCursor: null },
+            everyone: { hasMore: false, nextCursor: null },
+          });
+        }
+      } finally {
+        if (!keepExistingFeed && (!hasCachedData || bypassCache)) {
+          setLoading(false);
+        }
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
     loadFeed();
+  }, [loadFeed]);
+
+  const handlePullToRefresh = useCallback(async () => {
+    setPullRefreshing(true);
+    try {
+      await loadFeed({ bypassCache: true, keepExistingFeed: true });
+    } finally {
+      setPullRefreshing(false);
+    }
   }, [loadFeed]);
 
   const handleReact = useCallback(
@@ -204,8 +296,9 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
       const key = `${thoughtId}-${type}`;
       setReactingKey(key);
       const previousFeed = feedRef.current;
+      const activeTab = tabRef.current;
       setFeed((current) =>
-        updateThoughtAcrossFeed(current, thoughtId, (thought) => {
+        updateThoughtForTab(current, activeTab, thoughtId, (thought) => {
           const mine = { ...(thought?.reactions?.mine || {}) };
           const counts = { ...(thought?.reactions || {}) };
           const currentCount = Number(counts[type] || 0);
@@ -253,8 +346,9 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
       if (!targetUserId || followBusyUserIdRef.current) return;
       setFollowBusyUserId(targetUserId);
       const previousFeed = feedRef.current;
+      const activeTab = tabRef.current;
       setFeed((current) =>
-        updateUserAcrossFeed(current, targetUserId, (thought) => ({
+        updateUserForTab(current, activeTab, targetUserId, (thought) => ({
           ...thought,
           profile: thought?.profile
             ? { ...thought.profile, is_following: !isFollowing }
@@ -458,6 +552,8 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
           data={loading ? [] : displayItems}
           keyExtractor={keyExtractor}
           renderThoughtItem={renderThoughtItem}
+          onRefresh={handlePullToRefresh}
+          refreshing={pullRefreshing}
           onEndReached={loadMore}
           listFooterComponent={listFooterComponent}
           contentContainerStyle={[styles.list, isListEmpty && styles.listEmpty]}

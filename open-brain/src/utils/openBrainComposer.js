@@ -29,17 +29,18 @@ export async function loadOpenBrainComposerState({
   cacheProfileTtlMs,
   cacheThoughtsTtlMs,
   allowThoughtFetchFailure = false,
+  bypassCache = false,
 }) {
   const profileData = await apiRequest("/open-brain/profile", {
     token,
-    cache: { ttlMs: cacheProfileTtlMs },
+    ...(bypassCache ? {} : { cache: { ttlMs: cacheProfileTtlMs } }),
   });
 
   let thoughtData = null;
   try {
     thoughtData = await apiRequest("/open-brain/thoughts", {
       token,
-      cache: { ttlMs: cacheThoughtsTtlMs },
+      ...(bypassCache ? {} : { cache: { ttlMs: cacheThoughtsTtlMs } }),
     });
   } catch (err) {
     if (!allowThoughtFetchFailure) throw err;

@@ -31,28 +31,32 @@ export function useOpenBrainComposer({
   const todayLabel = useMemo(() => formatTodayLabel(new Date()), []);
   const timeLabel = useMemo(() => formatTimeLabel(), []);
 
-  const loadComposerState = useCallback(async () => {
-    const state = await loadOpenBrainComposerState({
-      token,
+  const loadComposerState = useCallback(
+    async ({ bypassCache = false } = {}) => {
+      const state = await loadOpenBrainComposerState({
+        token,
+        apiRequest,
+        cacheProfileTtlMs,
+        cacheThoughtsTtlMs,
+        allowThoughtFetchFailure,
+        bypassCache,
+      });
+      setStreakCount(state.streakCount);
+      setSaveCount(state.saveCount);
+      setDraft(state.draft);
+      setVisibility(state.visibility);
+      setHasPostedToday(state.hasPostedToday);
+      if (state.hasPostedToday) setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
+      return state;
+    },
+    [
+      allowThoughtFetchFailure,
       apiRequest,
       cacheProfileTtlMs,
       cacheThoughtsTtlMs,
-      allowThoughtFetchFailure,
-    });
-    setStreakCount(state.streakCount);
-    setSaveCount(state.saveCount);
-    setDraft(state.draft);
-    setVisibility(state.visibility);
-    setHasPostedToday(state.hasPostedToday);
-    if (state.hasPostedToday) setPostedHeading(randomFrom(THANK_YOU_PROMPTS));
-    return state;
-  }, [
-    allowThoughtFetchFailure,
-    apiRequest,
-    cacheProfileTtlMs,
-    cacheThoughtsTtlMs,
-    token,
-  ]);
+      token,
+    ],
+  );
 
   const postThought = useCallback(async () => {
     if (!draft.trim() || saving || hasPostedToday) return null;

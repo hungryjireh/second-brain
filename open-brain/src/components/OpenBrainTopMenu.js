@@ -378,7 +378,23 @@ export default function OpenBrainTopMenu({
 
   const hasSearched = didSearch && !loading;
   const hasResults = results.users.length > 0 || results.thoughts.length > 0;
-  const unreadCount = notifications.filter((item) => !item?.read_at).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item?.read_at).length,
+    [notifications],
+  );
+  const notificationRows = useMemo(
+    () =>
+      notifications.map((item) => ({
+        id: item?.id,
+        item,
+        unread: !item?.read_at,
+        timestamp: formatRelativeTime(
+          item?.created_at || item?.inserted_at || item?.updated_at,
+        ),
+        model: buildNotificationViewModel(item),
+      })),
+    [notifications],
+  );
   const searchRows = useMemo(
     () => buildOpenBrainSearchRows(results),
     [results],
@@ -500,10 +516,10 @@ export default function OpenBrainTopMenu({
               ) : null}
               {!notificationsLoading &&
               !notificationsError &&
-              notifications.length > 0 ? (
+              notificationRows.length > 0 ? (
                 <FlatList
-                  data={notifications}
-                  keyExtractor={(item) => item.id}
+                  data={notificationRows}
+                  keyExtractor={(row) => row?.id || row?.item?.id}
                   style={styles.notificationsScroll}
                   contentContainerStyle={styles.notificationsScrollContent}
                   showsVerticalScrollIndicator
@@ -512,12 +528,8 @@ export default function OpenBrainTopMenu({
                   updateCellsBatchingPeriod={50}
                   windowSize={7}
                   removeClippedSubviews
-                  renderItem={({ item }) => {
-                    const unread = !item?.read_at;
-                    const timestamp = formatRelativeTime(
-                      item?.created_at || item?.inserted_at || item?.updated_at,
-                    );
-                    const model = buildNotificationViewModel(item);
+                  renderItem={({ item: row }) => {
+                    const { item, unread, timestamp, model } = row;
                     return (
                       <Pressable
                         style={styles.notificationsRow}

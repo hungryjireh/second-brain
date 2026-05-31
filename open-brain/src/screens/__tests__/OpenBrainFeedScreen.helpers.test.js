@@ -64,6 +64,63 @@ describe("OpenBrainFeedScreen helpers", () => {
     });
   });
 
+  describe("resolveCachedFeedHydration", () => {
+    it("keeps loading state when cache is absent", () => {
+      expect(__testables.resolveCachedFeedHydration(null)).toEqual({
+        hasCachedData: false,
+        loading: true,
+        feed: null,
+        feedPage: null,
+      });
+    });
+
+    it("hydrates feed/page state and stops loading when cache exists", () => {
+      const cached = {
+        feed: {
+          following: [{ id: "f1" }],
+          everyone: [{ id: "e1" }],
+        },
+        page: {
+          following: { has_more: true, next_cursor: "cursor-f" },
+          everyone: { has_more: false, next_cursor: null },
+        },
+      };
+
+      expect(__testables.resolveCachedFeedHydration(cached)).toEqual({
+        hasCachedData: true,
+        loading: false,
+        feed: {
+          following: [{ id: "f1" }],
+          everyone: [{ id: "e1" }],
+        },
+        feedPage: {
+          following: { hasMore: true, nextCursor: "cursor-f" },
+          everyone: { hasMore: false, nextCursor: null },
+        },
+      });
+    });
+  });
+
+  describe("shouldResetFeedAfterLoadError", () => {
+    it("resets feed when there is no cached data", () => {
+      expect(__testables.shouldResetFeedAfterLoadError(false, false)).toBe(
+        true,
+      );
+    });
+
+    it("keeps hydrated feed when cached data exists", () => {
+      expect(__testables.shouldResetFeedAfterLoadError(true, false)).toBe(
+        false,
+      );
+    });
+
+    it("keeps existing feed when no cache was hydrated", () => {
+      expect(__testables.shouldResetFeedAfterLoadError(false, true)).toBe(
+        false,
+      );
+    });
+  });
+
   describe("updateThoughtAcrossFeed", () => {
     it("returns original list references when no matching thought exists", () => {
       const feed = {

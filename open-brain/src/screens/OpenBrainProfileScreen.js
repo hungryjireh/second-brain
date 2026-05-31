@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { apiRequest, sendFollowNotification } from "../api";
+import { apiRequest, readCachedApiData, sendFollowNotification } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import OpenBrainThoughtCard from "../components/OpenBrainThoughtCard";
 import OpenBrainBottomNav from "../components/OpenBrainBottomNav";
@@ -26,7 +26,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [followBusy, setFollowBusy] = useState(false);
   const thoughtDisplayItems = useMemo(() => {
-    if (error || !profile) return [];
+    if (!profile) return [];
     const { todayItems, pastItems } = groupThoughtsByDay(
       thoughts,
       formatPublishedDateTime,
@@ -39,18 +39,58 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
   }, [error, profile, thoughts]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const profileCacheScope = String(username || "self")
+      .trim()
+      .toLowerCase();
+    const profileCacheKey = `open-brain-profile-page:${profileCacheScope}:profile`;
+    const thoughtsCacheKey = `open-brain-profile-page:${profileCacheScope}:thoughts`;
+    const hasExistingProfile = Boolean(profile);
+    const hasExistingThoughts = thoughts.length > 0;
+    const hasExistingData = hasExistingProfile || hasExistingThoughts;
+    let hasHydratedCachedData = false;
+    if (!hasExistingData) {
+      setLoading(true);
+    }
     setError("");
     try {
       const query = username ? `?username=${encodeURIComponent(username)}` : "";
-      const profileCacheScope = String(username || "self")
-        .trim()
-        .toLowerCase();
+      const cachedProfileRes = await readCachedApiData(
+        `/open-brain/profile${query}`,
+        {
+          token,
+          cacheKey: profileCacheKey,
+        },
+      );
+      if (cachedProfileRes?.profile) {
+        setProfile(cachedProfileRes.profile);
+        hasHydratedCachedData = true;
+      }
+
+      const cachedProfileId =
+        cachedProfileRes?.profile?.id || profile?.id || null;
+      if (cachedProfileId) {
+        const cachedThoughtRes = await readCachedApiData(
+          `/open-brain/public-thoughts?user_id=${encodeURIComponent(cachedProfileId)}`,
+          {
+            token,
+            cacheKey: thoughtsCacheKey,
+          },
+        );
+        if (Array.isArray(cachedThoughtRes?.thoughts)) {
+          setThoughts(cachedThoughtRes.thoughts);
+          hasHydratedCachedData = true;
+        }
+      }
+
+      if (hasHydratedCachedData || hasExistingData) {
+        setLoading(false);
+      }
+
       const profileRes = await apiRequest(`/open-brain/profile${query}`, {
         token,
         cache: {
           ttlMs: CACHE_TTL_MS.PROFILE_PAGE,
-          key: `open-brain-profile-page:${profileCacheScope}:profile`,
+          key: profileCacheKey,
         },
       });
       const loadedProfile = profileRes.profile;
@@ -62,7 +102,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
           token,
           cache: {
             ttlMs: CACHE_TTL_MS.PROFILE_PAGE,
-            key: `open-brain-profile-page:${profileCacheScope}:thoughts`,
+            key: thoughtsCacheKey,
           },
         },
       );
@@ -71,8 +111,10 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       );
     } catch (err) {
       setError(err.message);
-      setProfile(null);
-      setThoughts([]);
+      if (!hasHydratedCachedData && !hasExistingData) {
+        setProfile(null);
+        setThoughts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -165,7 +207,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
       />
       <View style={styles.fixedHeader}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {!error && profile ? (
+        {profile ? (
           <View style={styles.headerCard}>
             <View style={styles.profileRow}>
               <ProfileAvatar
@@ -222,7 +264,7 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
             </View>
           </View>
         ) : null}
-        {!error && !profile && !loading ? (
+        {!profile && !loading ? (
           <View style={styles.headerCard}>
             <View style={styles.profileRow}>
               <View style={styles.avatarPlaceholder} />
@@ -244,11 +286,11 @@ export default function OpenBrainProfileScreen({ token, route, navigation }) {
         renderThoughtItem={renderThoughtItem}
         contentContainerStyle={styles.listContent}
         listEmptyComponent={
-          !error && loading && !profile ? (
+          loading && !profile ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.muted}>Loading profile...</Text>
             </View>
-          ) : !error && profile && thoughts.length === 0 ? (
+          ) : profile && thoughts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.empty}>No public thoughts yet.</Text>
             </View>
