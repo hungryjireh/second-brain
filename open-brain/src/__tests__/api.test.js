@@ -111,6 +111,50 @@ describe("cache key token handling", () => {
     expect(asyncStorage.multiRemove).toHaveBeenCalledWith([tokenAKey]);
     expect(asyncStorage.multiRemove).not.toHaveBeenCalledWith([tokenBKey]);
   });
+
+  it("reuses scoped cache key index instead of scanning storage on every invalidation", async () => {
+    const { readCachedApiData, invalidateApiCache, asyncStorage } = loadApiWith(
+      {},
+    );
+
+    await readCachedApiData("/entries", { token: "token-A" });
+    const tokenAKey = asyncStorage.getItem.mock.calls[0][0];
+    asyncStorage.getAllKeys.mockResolvedValue([tokenAKey]);
+
+    await invalidateApiCache({ token: "token-A", exactPaths: ["/entries"] });
+    await invalidateApiCache({ token: "token-A", exactPaths: ["/entries"] });
+
+    expect(asyncStorage.getAllKeys).toHaveBeenCalledTimes(1);
+    expect(asyncStorage.multiRemove).toHaveBeenCalledTimes(1);
+    expect(asyncStorage.multiRemove).toHaveBeenCalledWith([tokenAKey]);
+  });
+
+  it("tracks newly cached keys after initial scope load", async () => {
+    const originalFetch = global.fetch;
+    const { apiRequest, invalidateApiCache, asyncStorage } = loadApiWith({});
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ ok: true }),
+    });
+    global.fetch = fetchMock;
+    asyncStorage.getAllKeys.mockResolvedValue([]);
+
+    try {
+      await invalidateApiCache({ token: "token-A", exactPaths: ["/entries"] });
+      await apiRequest("/entries", {
+        token: "token-A",
+        cache: { ttlMs: 60_000, bypass: true },
+      });
+      await invalidateApiCache({ token: "token-A", exactPaths: ["/entries"] });
+
+      expect(asyncStorage.getAllKeys).toHaveBeenCalledTimes(1);
+      expect(asyncStorage.multiRemove).toHaveBeenCalledTimes(1);
+      expect(asyncStorage.multiRemove.mock.calls[0][0]).toHaveLength(1);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe("native auth refresh", () => {

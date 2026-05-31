@@ -1608,6 +1608,505 @@ test("open-brain feed handler scopes author save_count loading to visible author
   assert.deepEqual(capturedReactionThoughtIds, [thoughtId]);
 });
 
+test("open-brain feed handler avoids save/reaction fan-out queries when no thoughts are visible", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  let reactionRpcCalls = 0;
+  let saveCountsRpcCalls = 0;
+  let savedRowsCalls = 0;
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const idEq = parsed.searchParams.get("id");
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: "UTC" }]),
+        };
+      }
+      throw new Error(`Unexpected profiles query: ${parsed.toString()}`);
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      const selected = parsed.searchParams.get("select");
+      if (selected === "created_at") {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+      if (selected === "id,user_id,content,created_at,visibility,share_slug") {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      reactionRpcCalls += 1;
+      return { ok: true, status: 200, text: async () => JSON.stringify({}) };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      saveCountsRpcCalls += 1;
+      return { ok: true, status: 200, text: async () => JSON.stringify({}) };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
+      savedRowsCalls += 1;
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh(
+    "../../lib/open-brain/routes/feed.js",
+    "open-brain-feed-no-thought-fanout",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(Array.isArray(jsonBody(res)?.everyone), true);
+  assert.equal(Array.isArray(jsonBody(res)?.following), true);
+  assert.equal(reactionRpcCalls, 0);
+  assert.equal(saveCountsRpcCalls, 0);
+  assert.equal(savedRowsCalls, 0);
+});
+
+test("open-brain feed handler supports tab cursor pagination metadata", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  const followedAuthorId = "22222222-2222-4222-8222-222222222222";
+  const seenQueries = [];
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const idEq = parsed.searchParams.get("id");
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: "UTC" }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            {
+              id: followedAuthorId,
+              username: "followed",
+              avatar_url: null,
+              streak_count: 2,
+            },
+          ]),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ following_id: followedAuthorId }]),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      const selected = parsed.searchParams.get("select");
+      if (selected === "created_at") {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+      if (selected === "id,user_id,content,created_at,visibility,share_slug") {
+        seenQueries.push(parsed.search);
+        const userEq = parsed.searchParams.get("user_id");
+        if (userEq && userEq.startsWith("in.(")) {
+          const rows = Array.from({ length: 31 }, (_, index) => {
+            const day = String(31 - index).padStart(2, "0");
+            return {
+              id: `f-${index + 1}`,
+              user_id: followedAuthorId,
+              content: { text: `page item ${index + 1}` },
+              created_at: `2026-01-${day}T00:00:00.000Z`,
+              visibility: "public",
+              share_slug: null,
+            };
+          });
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify(rows),
+          };
+        }
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify({}) };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            profile_counts: { [followedAuthorId]: 0 },
+            thought_counts: { f1: 0, f2: 0 },
+          }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh(
+    "../../lib/open-brain/routes/feed.js",
+    "open-brain-feed-pagination",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+    query: {
+      tab: "following",
+      before: "2026-01-05T00:00:00.000Z",
+    },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(Array.isArray(jsonBody(res)?.following), true);
+  assert.equal(jsonBody(res)?.following?.length, 30);
+  assert.equal(jsonBody(res)?.page?.following?.has_more, true);
+  assert.equal(
+    jsonBody(res)?.page?.following?.next_cursor,
+    "2026-01-02T00:00:00.000Z",
+  );
+  assert.equal(jsonBody(res)?.page?.everyone?.has_more, false);
+  assert.equal(
+    seenQueries.some((query) =>
+      query.includes("created_at=lt.2026-01-05T00%3A00%3A00.000Z"),
+    ),
+    true,
+  );
+});
+
+test("open-brain feed handler uses everyone tab cursor without loading following rows", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  const authorId = "22222222-2222-4222-8222-222222222222";
+  let followingThoughtRequests = 0;
+  const seenQueries = [];
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const idEq = parsed.searchParams.get("id");
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: "UTC" }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            {
+              id: authorId,
+              username: "everyone-author",
+              avatar_url: null,
+              streak_count: 1,
+            },
+          ]),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      const selected = parsed.searchParams.get("select");
+      if (selected === "created_at") {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+      if (selected === "id,user_id,content,created_at,visibility,share_slug") {
+        const userEq = parsed.searchParams.get("user_id");
+        if (userEq && userEq.startsWith("in.(")) {
+          followingThoughtRequests += 1;
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify([]),
+          };
+        }
+        seenQueries.push(parsed.search);
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify([
+              {
+                id: "e1",
+                user_id: authorId,
+                content: { text: "everyone thought" },
+                created_at: "2026-01-01T00:00:00.000Z",
+                visibility: "public",
+                share_slug: null,
+              },
+            ]),
+        };
+      }
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify({}) };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            profile_counts: { [authorId]: 0 },
+            thought_counts: { e1: 0 },
+          }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh(
+    "../../lib/open-brain/routes/feed.js",
+    "open-brain-feed-everyone-pagination",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+    query: {
+      tab: "everyone",
+      before: "2026-01-10T00:00:00.000Z",
+    },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(followingThoughtRequests, 0);
+  assert.equal(Array.isArray(jsonBody(res)?.everyone), true);
+  assert.equal(
+    seenQueries.some((query) =>
+      query.includes("created_at=lt.2026-01-10T00%3A00%3A00.000Z"),
+    ),
+    true,
+  );
+});
+
+test("open-brain feed handler falls back to loading both tabs for invalid tab", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  const followedAuthorId = "22222222-2222-4222-8222-222222222222";
+  let everyoneThoughtRequests = 0;
+  let followingThoughtRequests = 0;
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const idEq = parsed.searchParams.get("id");
+      if (idEq === `eq.${viewerId}`) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([{ id: viewerId, timezone: "UTC" }]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify([
+            {
+              id: followedAuthorId,
+              username: "author",
+              avatar_url: null,
+              streak_count: 1,
+            },
+          ]),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify([{ following_id: followedAuthorId }]),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      const selected = parsed.searchParams.get("select");
+      if (selected === "created_at") {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+      if (selected === "id,user_id,content,created_at,visibility,share_slug") {
+        const userEq = parsed.searchParams.get("user_id");
+        if (userEq && userEq.startsWith("in.(")) {
+          followingThoughtRequests += 1;
+          return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify([]),
+          };
+        }
+        everyoneThoughtRequests += 1;
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_reaction_summary")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify({}) };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/rpc/open_brain_save_counts")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({ profile_counts: {}, thought_counts: {} }),
+      };
+    }
+    if (parsed.pathname.endsWith("/rest/v1/thought_second_brain_saves")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: feedHandler } = await importFresh(
+    "../../lib/open-brain/routes/feed.js",
+    "open-brain-feed-invalid-tab-fallback",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+    query: { tab: "bad-tab" },
+  });
+  const res = createRes();
+
+  try {
+    await feedHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(everyoneThoughtRequests, 1);
+  assert.equal(followingThoughtRequests, 1);
+});
+
 test("open-brain search handler returns boolean is_self and is_following flags", async () => {
   const original = {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
@@ -1845,6 +2344,83 @@ test("open-brain search handler scopes follows lookup to candidate result users"
       ?.is_following,
     true,
   );
+});
+
+test("open-brain search handler skips author/follows fan-out when there are no candidates", async () => {
+  const original = {
+    EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    fetch: global.fetch,
+  };
+
+  process.env.EXPO_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "anon-key";
+
+  const viewerId = "11111111-1111-4111-8111-111111111111";
+  let followsCalls = 0;
+  let authorProfilesCalls = 0;
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+
+    if (parsed.pathname.endsWith("/auth/v1/user")) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: viewerId }),
+      };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/profiles")) {
+      const usernameFilter = parsed.searchParams.get("username");
+      const idIn = parsed.searchParams.get("id");
+      if (usernameFilter) {
+        return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+      }
+      if (idIn) {
+        authorProfilesCalls += 1;
+      }
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/thoughts")) {
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    if (parsed.pathname.endsWith("/rest/v1/follows")) {
+      followsCalls += 1;
+      return { ok: true, status: 200, text: async () => JSON.stringify([]) };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${parsed.toString()}`);
+  };
+
+  const { default: searchHandler } = await importFresh(
+    "../../lib/open-brain/routes/search.js",
+    "open-brain-search-no-fanout",
+  );
+  const authToken = createTestJwt({ sub: viewerId });
+  const req = createReq({
+    method: "GET",
+    headers: { authorization: `Bearer ${authToken}` },
+    query: { q: "zz" },
+  });
+  const res = createRes();
+
+  try {
+    await searchHandler(req, res);
+  } finally {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = original.EXPO_PUBLIC_SUPABASE_URL;
+    process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+      original.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    global.fetch = original.fetch;
+  }
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(jsonBody(res), { users: [], thoughts: [] });
+  assert.equal(authorProfilesCalls, 0);
+  assert.equal(followsCalls, 0);
 });
 
 test("open-brain thoughts handler returns created thought with profile metadata", async () => {

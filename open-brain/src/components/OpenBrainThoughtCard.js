@@ -26,6 +26,8 @@ const REACTIONS = [
 
 const PREVIEW_CHAR_LIMIT = 220;
 const ACTION_ICON_ONLY_MAX_WIDTH = 768;
+const PARSED_THOUGHT_CACHE_LIMIT = 300;
+const parsedThoughtCache = new Map();
 
 function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
   const normalized = normalizeThoughtText(text);
@@ -45,7 +47,19 @@ function getThoughtPreview(text, limit = PREVIEW_CHAR_LIMIT) {
 function parseThoughtForCard(text) {
   const normalized = normalizeThoughtText(text);
   if (!normalized) return { title: "", blocks: [], hasTitle: false };
-  return { title: "", blocks: parseThoughtBlocks(normalized), hasTitle: false };
+  const cached = parsedThoughtCache.get(normalized);
+  if (cached) return cached;
+  const parsed = {
+    title: "",
+    blocks: parseThoughtBlocks(normalized),
+    hasTitle: false,
+  };
+  parsedThoughtCache.set(normalized, parsed);
+  if (parsedThoughtCache.size > PARSED_THOUGHT_CACHE_LIMIT) {
+    const oldestKey = parsedThoughtCache.keys().next().value;
+    if (oldestKey) parsedThoughtCache.delete(oldestKey);
+  }
+  return parsed;
 }
 
 function coerceCount(value) {

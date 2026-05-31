@@ -54,6 +54,8 @@ const TOKEN_STORAGE_OPTIONS = {
   keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 };
 const CACHE_PREFIX = "apiCache:";
+const cacheKeysByScope = new Map();
+const loadedCacheScopes = new Set();
 let authExpiredHandler = null;
 
 function stableSerialize(value) {
@@ -158,6 +160,27 @@ async function writeCache(cacheKey, data) {
   } catch {
     // Cache writes are best-effort.
   }
+}
+
+function rememberCacheKeyForScope(cacheScope, cacheKey) {
+  if (!cacheScope || !cacheKey) return;
+  const knownKeys = cacheKeysByScope.get(cacheScope) || new Set();
+  knownKeys.add(cacheKey);
+  cacheKeysByScope.set(cacheScope, knownKeys);
+}
+
+async function getCacheKeysForScope(cacheScope) {
+  if (!cacheScope) return [];
+  if (!loadedCacheScopes.has(cacheScope)) {
+    const scopeSuffix = `::${stableSerialize({ tokenScope: cacheScope })}`;
+    const allKeys = await AsyncStorage.getAllKeys();
+    const scopedKeys = (allKeys || []).filter(
+      (key) => key.startsWith(CACHE_PREFIX) && key.endsWith(scopeSuffix),
+    );
+    cacheKeysByScope.set(cacheScope, new Set(scopedKeys));
+    loadedCacheScopes.add(cacheScope);
+  }
+  return Array.from(cacheKeysByScope.get(cacheScope) || []);
 }
 
 export function setAuthExpiredHandler(handler) {
@@ -296,14 +319,15 @@ export async function invalidateApiCache({
     const targetPrefixes = pathPrefixes
       .map((prefix) => String(prefix || "").trim())
       .filter(Boolean);
-    const keys = await AsyncStorage.getAllKeys();
-    if (!keys?.length) return;
+    const cacheScope = hashTokenForCacheScope(token);
+    const keys = await getCacheKeysForScope(cacheScope);
+    if (!keys.length) return;
 
     const removeKeys = keys.filter((key) => {
       if (!key.startsWith(CACHE_PREFIX)) return false;
       const cachePath = parseCachePathFromKey(key);
       if (!cachePath) return false;
-      const cacheTokenSuffix = `::${stableSerialize({ tokenScope: hashTokenForCacheScope(token) })}`;
+      const cacheTokenSuffix = `::${stableSerialize({ tokenScope: cacheScope })}`;
       if (!key.endsWith(cacheTokenSuffix)) return false;
       if (targetPaths.has(cachePath)) return true;
       return targetPrefixes.some((prefix) => cachePath.startsWith(prefix));
@@ -311,6 +335,11 @@ export async function invalidateApiCache({
 
     if (removeKeys.length) {
       await AsyncStorage.multiRemove(removeKeys);
+      const knownKeys = cacheKeysByScope.get(cacheScope) || new Set();
+      for (const key of removeKeys) {
+        knownKeys.delete(key);
+      }
+      cacheKeysByScope.set(cacheScope, knownKeys);
     }
   } catch {
     // Cache invalidation is best-effort.
@@ -326,6 +355,7 @@ export async function apiRequest(
   const ttlMs = Number.isFinite(cache?.ttlMs) ? Math.max(0, cache.ttlMs) : 0;
   const staleOnError = cache?.staleOnError !== false;
   const cacheKey = cacheEnabled ? buildCacheKey(path, token, cache?.key) : "";
+  const cacheScope = hashTokenForCacheScope(token);
   const hasUsableCache = cacheEnabled && ttlMs > 0;
   const bypassCache = cache?.bypass === true;
 
@@ -412,6 +442,7 @@ export async function apiRequest(
 
   if (hasUsableCache) {
     await writeCache(cacheKey, data);
+    rememberCacheKeyForScope(cacheScope, cacheKey);
   }
 
   return data;

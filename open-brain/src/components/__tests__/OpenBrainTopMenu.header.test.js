@@ -165,4 +165,25 @@ describe("OpenBrainTopMenu header", () => {
     expect(notificationsList).toBeTruthy();
     expect(notificationsList.props.keyExtractor(notifications[0])).toBe("n-1");
   });
+
+  it("does not refetch notifications when opening the drawer within the TTL window", async () => {
+    mockApiRequest.mockResolvedValue({
+      notifications: [{ id: "n-1", read_at: null }],
+    });
+    const navigation = createNavigation();
+    const screen = render(
+      <OpenBrainTopMenu token="token-value" navigation={navigation} />,
+    );
+
+    await waitFor(() => {
+      expect(mockApiRequest).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.press(screen.getByLabelText("Notifications"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Notifications")).toBeTruthy();
+    });
+    expect(mockApiRequest).toHaveBeenCalledTimes(1);
+  });
 });

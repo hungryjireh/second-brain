@@ -18,6 +18,9 @@ function OpenBrainSectionedThoughtList({
   listStyle,
   contentContainerStyle,
   listEmptyComponent,
+  listFooterComponent,
+  onEndReached,
+  onEndReachedThreshold = 0.4,
 }) {
   const renderListItem = useCallback(
     ({ item }) => {
@@ -36,7 +39,10 @@ function OpenBrainSectionedThoughtList({
       keyExtractor={keyExtractor}
       contentContainerStyle={contentContainerStyle}
       ListEmptyComponent={listEmptyComponent}
+      ListFooterComponent={listFooterComponent}
       renderItem={renderListItem}
+      onEndReached={onEndReached}
+      onEndReachedThreshold={onEndReachedThreshold}
       initialNumToRender={8}
       maxToRenderPerBatch={6}
       updateCellsBatchingPeriod={50}

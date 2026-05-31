@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import { apiRequest, readCachedApiData, sendFollowNotification } from "../api";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { apiRequest, sendFollowNotification } from "../api";
 import { CACHE_TTL_MS } from "../constants/cache";
 import {
   addThoughtToSecondBrainWithAlert,
@@ -50,9 +50,30 @@ function updateUserAcrossFeed(feed, userId, updater) {
   };
 }
 
+function appendUniqueThoughts(existingList, nextList) {
+  const merged = [...(existingList || [])];
+  const seen = new Set(merged.map((item) => item?.id).filter(Boolean));
+  for (const item of nextList || []) {
+    if (!item?.id || seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+  return merged;
+}
+
+function buildFeedPagePath({ tab, before }) {
+  const safeTab = tab === "everyone" ? "everyone" : "following";
+  const safeBefore = String(before || "").trim();
+  if (!safeBefore) return `/open-brain/feed?tab=${encodeURIComponent(safeTab)}`;
+  return `/open-brain/feed?tab=${encodeURIComponent(safeTab)}&before=${encodeURIComponent(safeBefore)}`;
+}
+
 export const __testables = {
   updateThoughtAcrossFeed,
   updateUserAcrossFeed,
+  appendUniqueThoughts,
+  buildFeedPagePath,
+  normalizeFeedPagePayload,
 };
 
 function normalizeFeedPayload(data) {
@@ -64,6 +85,30 @@ function normalizeFeedPayload(data) {
   };
 }
 
+function normalizeFeedPagePayload(data) {
+  const page = data?.page && typeof data.page === "object" ? data.page : {};
+  const followingPage =
+    page.following && typeof page.following === "object" ? page.following : {};
+  const everyonePage =
+    page.everyone && typeof page.everyone === "object" ? page.everyone : {};
+  return {
+    following: {
+      hasMore: followingPage.has_more === true,
+      nextCursor:
+        typeof followingPage.next_cursor === "string"
+          ? followingPage.next_cursor
+          : null,
+    },
+    everyone: {
+      hasMore: everyonePage.has_more === true,
+      nextCursor:
+        typeof everyonePage.next_cursor === "string"
+          ? everyonePage.next_cursor
+          : null,
+    },
+  };
+}
+
 export default function OpenBrainFeedScreen({ token, navigation }) {
   const [tab, setTab] = useState("following");
   const [feed, setFeed] = useState({ following: [], everyone: [] });
@@ -71,13 +116,30 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
   const [error, setError] = useState("");
   const [reactingKey, setReactingKey] = useState("");
   const [followBusyUserId, setFollowBusyUserId] = useState("");
+  const [feedPage, setFeedPage] = useState({
+    following: { hasMore: false, nextCursor: null },
+    everyone: { hasMore: false, nextCursor: null },
+  });
+  const [loadingMore, setLoadingMore] = useState(false);
   const feedRef = useRef(feed);
+  const feedPageRef = useRef(feedPage);
+  const tabRef = useRef(tab);
+  const loadingMoreRef = useRef(loadingMore);
   const reactingKeyRef = useRef(reactingKey);
   const followBusyUserIdRef = useRef(followBusyUserId);
 
   useEffect(() => {
     feedRef.current = feed;
   }, [feed]);
+  useEffect(() => {
+    feedPageRef.current = feedPage;
+  }, [feedPage]);
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
 
   useEffect(() => {
     reactingKeyRef.current = reactingKey;
@@ -113,29 +175,22 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     setLoading(true);
     setError("");
 
-    let hydratedFromCache = false;
-    const cachedData = await readCachedApiData("/open-brain/feed", { token });
-    if (cachedData) {
-      setFeed(normalizeFeedPayload(cachedData));
-      setLoading(false);
-      hydratedFromCache = true;
-    }
-
     try {
       const data = await apiRequest("/open-brain/feed", {
         token,
         cache: { ttlMs: CACHE_TTL_MS.FEED },
       });
       setFeed(normalizeFeedPayload(data));
+      setFeedPage(normalizeFeedPagePayload(data));
     } catch (err) {
-      if (!hydratedFromCache) {
-        setError(err.message || "Unable to load feed.");
-        setFeed({ following: [], everyone: [] });
-      }
+      setError(err.message || "Unable to load feed.");
+      setFeed({ following: [], everyone: [] });
+      setFeedPage({
+        following: { hasMore: false, nextCursor: null },
+        everyone: { hasMore: false, nextCursor: null },
+      });
     } finally {
-      if (!hydratedFromCache) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [token]);
 
@@ -309,6 +364,59 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
     [loadFeed],
   );
 
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMoreRef.current) return;
+    const activeTab = tabRef.current === "everyone" ? "everyone" : "following";
+    const page = feedPageRef.current?.[activeTab];
+    const nextCursor =
+      typeof page?.nextCursor === "string" ? page.nextCursor : "";
+    const hasMore = page?.hasMore === true;
+    if (!hasMore || !nextCursor) return;
+
+    setLoadingMore(true);
+    setError("");
+    try {
+      const data = await apiRequest(
+        buildFeedPagePath({ tab: activeTab, before: nextCursor }),
+        { token },
+      );
+      const nextFeed = normalizeFeedPayload(data);
+      const nextPage = normalizeFeedPagePayload(data);
+      setFeed((current) => {
+        if (activeTab === "everyone") {
+          return {
+            ...current,
+            everyone: appendUniqueThoughts(current.everyone, nextFeed.everyone),
+          };
+        }
+        return {
+          ...current,
+          following: appendUniqueThoughts(
+            current.following,
+            nextFeed.following,
+          ),
+        };
+      });
+      setFeedPage((current) => ({
+        ...current,
+        [activeTab]: nextPage[activeTab],
+      }));
+    } catch (err) {
+      setError(err.message || "Unable to load more thoughts.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loading, token]);
+
+  const listFooterComponent = useMemo(() => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.emptyState}>
+        <ActivityIndicator />
+      </View>
+    );
+  }, [loadingMore]);
+
   return (
     <View style={styles.container}>
       <OpenBrainTopMenu
@@ -350,6 +458,8 @@ export default function OpenBrainFeedScreen({ token, navigation }) {
           data={loading ? [] : displayItems}
           keyExtractor={keyExtractor}
           renderThoughtItem={renderThoughtItem}
+          onEndReached={loadMore}
+          listFooterComponent={listFooterComponent}
           contentContainerStyle={[styles.list, isListEmpty && styles.listEmpty]}
           listEmptyComponent={
             loading ? (

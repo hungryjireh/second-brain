@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react-native";
+import { FlatList } from "react-native";
 import OpenBrainSectionedThoughtList from "../OpenBrainSectionedThoughtList";
 
 describe("OpenBrainSectionedThoughtList", () => {
@@ -28,5 +29,25 @@ describe("OpenBrainSectionedThoughtList", () => {
       2,
       expect.objectContaining({ item: data[2] }),
     );
+  });
+
+  it("wires pagination props to FlatList", () => {
+    const onEndReached = jest.fn();
+    const listFooterComponent = jest.fn(() => null);
+    const { UNSAFE_getByType } = render(
+      <OpenBrainSectionedThoughtList
+        data={[]}
+        keyExtractor={(item) => item.key}
+        renderThoughtItem={() => null}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.25}
+        listFooterComponent={listFooterComponent}
+      />,
+    );
+
+    const list = UNSAFE_getByType(FlatList);
+    expect(list.props.onEndReached).toBe(onEndReached);
+    expect(list.props.onEndReachedThreshold).toBe(0.25);
+    expect(list.props.ListFooterComponent).toBe(listFooterComponent);
   });
 });

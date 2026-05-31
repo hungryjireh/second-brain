@@ -191,6 +191,7 @@ export default function OpenBrainTopMenu({
   const notificationsOpenedAtRef = useRef(0);
   const searchOpenedAtRef = useRef(0);
   const notificationsLoadingRef = useRef(false);
+  const notificationsLastLoadedAtRef = useRef(0);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
@@ -213,26 +214,36 @@ export default function OpenBrainTopMenu({
     fallbackErrorMessage: "Search failed.",
   });
 
-  const fetchNotifications = useCallback(async () => {
-    if (!token || notificationsLoadingRef.current) return;
-    notificationsLoadingRef.current = true;
-    setNotificationsLoading(true);
-    setNotificationsError("");
-    try {
-      const data = await apiRequest("/open-brain/notifications", {
-        token,
-        cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS },
-      });
-      setNotifications(
-        Array.isArray(data?.notifications) ? data.notifications : [],
-      );
-    } catch (err) {
-      setNotificationsError(err.message || "Failed to load notifications.");
-    } finally {
-      notificationsLoadingRef.current = false;
-      setNotificationsLoading(false);
-    }
-  }, [token]);
+  const fetchNotifications = useCallback(
+    async ({ force = false } = {}) => {
+      if (!token || notificationsLoadingRef.current) return;
+      const now = Date.now();
+      const recentlyLoaded =
+        notificationsLastLoadedAtRef.current > 0 &&
+        now - notificationsLastLoadedAtRef.current < CACHE_TTL_MS.NOTIFICATIONS;
+      if (!force && recentlyLoaded) return;
+
+      notificationsLoadingRef.current = true;
+      setNotificationsLoading(true);
+      setNotificationsError("");
+      try {
+        const data = await apiRequest("/open-brain/notifications", {
+          token,
+          cache: { ttlMs: CACHE_TTL_MS.NOTIFICATIONS },
+        });
+        setNotifications(
+          Array.isArray(data?.notifications) ? data.notifications : [],
+        );
+        notificationsLastLoadedAtRef.current = Date.now();
+      } catch (err) {
+        setNotificationsError(err.message || "Failed to load notifications.");
+      } finally {
+        notificationsLoadingRef.current = false;
+        setNotificationsLoading(false);
+      }
+    },
+    [token],
+  );
 
   async function handleSearch() {
     await runSearch();
@@ -316,6 +327,7 @@ export default function OpenBrainTopMenu({
       setNotifications([]);
       setNotificationsError("");
       setNotificationsLoading(false);
+      notificationsLastLoadedAtRef.current = 0;
       return;
     }
     fetchNotifications();
